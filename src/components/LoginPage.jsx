@@ -155,7 +155,7 @@ const LoginPage = () => {
         </RegisterText>
         
         <ForgotPasswordText>
-          <ForgotPasswordLink onClick={() => console.log('Esqueci minha senha')}>
+          <ForgotPasswordLink onClick={() => navigate('/forgot-password')}>
             Esqueci minha senha
           </ForgotPasswordLink>
         </ForgotPasswordText>
