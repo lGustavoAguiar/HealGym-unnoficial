@@ -345,7 +345,7 @@ const RegisterPage = () => {
           </FormContainer>
           
           <LoginText>
-            Já tem uma conta? <LoginLink>Entrar</LoginLink>
+            Já tem uma conta? <LoginLink onClick={() => navigate('/login')}>Entrar</LoginLink>
           </LoginText>
         </motion.div>
       </FormSection>
@@ -379,7 +379,7 @@ const LogoTitle = styled.h1`
 `;
 
 const Container = styled.div`
-  width: 100vw;
+  width: 100%;
   min-height: 100vh;
   margin: 0;
   padding: min(15vh, 120px) 0;
@@ -447,6 +447,7 @@ const Input = styled.input`
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
+  animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
 
   &:focus {
     outline: none;
@@ -457,6 +458,12 @@ const Input = styled.input`
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
     font-style: italic;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+    20%, 40%, 60%, 80% { transform: translateX(3px); }
   }
 `;
 

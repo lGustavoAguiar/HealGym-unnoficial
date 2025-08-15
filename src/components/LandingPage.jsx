@@ -98,7 +98,7 @@ const LandingPage = () => {
 };
 
 const Container = styled.div`
-  width: 100vw;
+  width: 100%;
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -107,7 +107,7 @@ const Container = styled.div`
 
 const Hero = styled.section`
   height: 100vh;
-  width: 100vw;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,7 +185,7 @@ const Features = styled.section`
   padding: min(10vh, 100px) 0;
   background: linear-gradient(to bottom, var(--gradient-start) 0%, var(--gradient-mid) 100%);
   position: relative;
-  width: 100vw;
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
