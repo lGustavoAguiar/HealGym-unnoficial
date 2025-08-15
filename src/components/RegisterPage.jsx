@@ -2,36 +2,28 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import '../styles/RegisterPage.css';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
 
-  // Efeito para rolar para o topo quando a página é carregada
   useEffect(() => {
-    // Função para garantir o scroll para o topo
     const scrollToTop = () => {
-      // Força o scroll para o topo de várias maneiras para garantir que funcione
       window.scrollTo(0, 0);
       document.documentElement.scrollTo(0, 0);
       document.body.scrollTo(0, 0);
     };
 
-    // Executa imediatamente
     scrollToTop();
-
-    // Adiciona um listener para o evento load
     window.addEventListener('load', scrollToTop);
-
-    // Executa depois de um pequeno delay para garantir
     const timeoutId = setTimeout(scrollToTop, 50);
 
-    // Cleanup
     return () => {
       window.removeEventListener('load', scrollToTop);
       clearTimeout(timeoutId);
     };
-  }, []); // Array vazio significa que só executa uma vez quando o componente monta
+  }, []);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -41,6 +33,23 @@ const RegisterPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [hasErrors, setHasErrors] = useState(false);
+
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    if (hasErrors) {
+      htmlElement.classList.remove('no-scroll');
+      htmlElement.classList.add('can-scroll');
+    } else {
+      htmlElement.classList.remove('can-scroll');
+      htmlElement.classList.add('no-scroll');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    return () => {
+      htmlElement.classList.remove('no-scroll', 'can-scroll');
+    };
+  }, [hasErrors]);
 
   const validateField = (name, value) => {
     let error = '';
@@ -77,37 +86,55 @@ const RegisterPage = () => {
       const sanitizedValue = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '');
       setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
       if (touched[name]) {
-        setErrors(prev => ({ ...prev, [name]: validateField(name, sanitizedValue) }));
+        const newError = validateField(name, sanitizedValue);
+        setErrors(prev => {
+          const newErrors = { ...prev, [name]: newError };
+          const hasAnyError = Object.values(newErrors).some(error => error !== '');
+          setHasErrors(hasAnyError);
+          return newErrors;
+        });
       }
       return;
     }
     
     setFormData(prev => ({ ...prev, [name]: value }));
     if (touched[name]) {
-      setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+      const newError = validateField(name, value);
+      setErrors(prev => {
+        const newErrors = { ...prev, [name]: newError };
+        const hasAnyError = Object.values(newErrors).some(error => error !== '');
+        setHasErrors(hasAnyError);
+        return newErrors;
+      });
     }
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
-    setErrors(prev => ({ ...prev, [name]: validateField(name, value) }));
+    const newError = validateField(name, value);
+    setErrors(prev => {
+      const newErrors = { ...prev, [name]: newError };
+      const hasAnyError = Object.values(newErrors).some(error => error !== '');
+      setHasErrors(hasAnyError);
+      return newErrors;
+    });
   };
 
   useEffect(() => {
     const hasErrors = Object.keys(errors).length > 0;
     if (hasErrors && formRef.current) {
-      const yOffset = -50; // ajuste fino para posição vertical
+      const yOffset = -50;
       const formElement = formRef.current;
       const y = formElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
       
       const smoothScroll = () => {
         const startPosition = window.pageYOffset;
         const distance = y - startPosition;
-        const duration = 1200; // 1.2 segundos
+        const duration = 1200;
         let start = null;
 
-        const easeOutQuart = t => 1 - (--t) * t * t * t; // função de easing mais suave no final
+        const easeOutQuart = t => 1 - (--t) * t * t * t;
 
         const step = currentTime => {
           if (!start) start = currentTime;
@@ -265,40 +292,50 @@ const RegisterPage = () => {
 
                 if (Object.keys(newErrors).length > 0) {
                   setErrors(newErrors);
-                  if (formRef.current) {
-                    const yOffset = -50; // ajuste fino para posição vertical
-                    const formElement = formRef.current;
-                    const y = formElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                  setHasErrors(true);
+                  
+                  // Encontra o primeiro campo com erro
+                  const firstErrorField = Object.keys(newErrors)[0];
+                  const inputElement = document.querySelector(`input[name="${firstErrorField}"]`);
+                  
+                  if (inputElement) {
+                    const viewportHeight = window.innerHeight;
+                    const fieldRect = inputElement.getBoundingClientRect();
+                    const targetScroll = fieldRect.top + window.pageYOffset - (viewportHeight / 3);
+                    const startPosition = window.pageYOffset;
+                    const distance = targetScroll - startPosition;
                     
-                    const smoothScroll = () => {
-                      const startPosition = window.pageYOffset;
-                      const distance = y - startPosition;
-                      const duration = 1200; // 1.2 segundos
-                      let start = null;
-
-                      const easeOutQuart = t => 1 - (--t) * t * t * t; // função de easing mais suave no final
-
-                      const step = currentTime => {
-                        if (!start) start = currentTime;
-                        const progress = Math.min((currentTime - start) / duration, 1);
-                        
-                        if (progress === 1) {
-                          window.scrollTo(0, y);
-                          return;
-                        }
-
-                        const currentPosition = startPosition + (distance * easeOutQuart(progress));
-                        window.scrollTo(0, currentPosition);
-                        window.requestAnimationFrame(step);
-                      };
-
-                      window.requestAnimationFrame(step);
+                    // Animação customizada para scroll mais fluido
+                    const duration = 400; // 400ms de duração total
+                    let start = null;
+                    
+                    // Função de easing suave
+                    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+                    
+                    const step = (currentTime) => {
+                      if (!start) start = currentTime;
+                      const progress = Math.min((currentTime - start) / duration, 1);
+                      
+                      const currentPosition = startPosition + (distance * easeOutCubic(progress));
+                      window.scrollTo(0, currentPosition);
+                      
+                      if (progress < 1) {
+                        requestAnimationFrame(step);
+                      } else {
+                        // Adiciona o highlight após o scroll terminar
+                        inputElement.style.transition = 'box-shadow 0.2s ease-out';
+                        inputElement.style.boxShadow = '0 0 12px var(--error, #ff6b6b)';
+                        setTimeout(() => {
+                          inputElement.style.boxShadow = 'none';
+                        }, 400);
+                      }
                     };
-
-                    smoothScroll();
+                    
+                    // Inicia a animação imediatamente
+                    requestAnimationFrame(step);
                   }
                 } else {
-                  // Aqui você pode adicionar a lógica de cadastro
+                  setHasErrors(false);
                   console.log('Formulário válido:', formData);
                 }
               }}

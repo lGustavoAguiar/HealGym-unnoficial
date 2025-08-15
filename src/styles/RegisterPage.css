@@ -1,0 +1,22 @@
+html.no-scroll,
+html.no-scroll body {
+  overflow: hidden !important;
+  height: 100% !important;
+  width: 100% !important;
+  position: fixed !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+html.can-scroll,
+html.can-scroll body {
+  overflow: auto !important;
+  position: relative !important;
+  height: auto !important;
+  width: 100% !important;
+}
+
+/* Garante que as transições sejam suaves */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1) !important;
+}

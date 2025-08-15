@@ -8,31 +8,22 @@ import { useEffect } from 'react';
 const LandingPage = () => {
   const navigate = useNavigate();
 
-  // Efeito para rolar para o topo quando a página é carregada
   useEffect(() => {
-    // Função para garantir o scroll para o topo
     const scrollToTop = () => {
-      // Força o scroll para o topo de várias maneiras para garantir que funcione
       window.scrollTo(0, 0);
       document.documentElement.scrollTo(0, 0);
       document.body.scrollTo(0, 0);
     };
 
-    // Executa imediatamente
     scrollToTop();
-
-    // Adiciona um listener para o evento load
     window.addEventListener('load', scrollToTop);
-
-    // Executa depois de um pequeno delay para garantir
     const timeoutId = setTimeout(scrollToTop, 50);
 
-    // Cleanup
     return () => {
       window.removeEventListener('load', scrollToTop);
       clearTimeout(timeoutId);
     };
-  }, []); // Array vazio significa que só executa uma vez quando o componente monta
+  }, []);
 
   return (
     <Container>
