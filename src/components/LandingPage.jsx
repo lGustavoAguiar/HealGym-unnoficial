@@ -2,8 +2,38 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { FiActivity, FiTarget, FiUser } from 'react-icons/fi';
 import { GiMuscleUp } from 'react-icons/gi';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
+  // Efeito para rolar para o topo quando a página é carregada
+  useEffect(() => {
+    // Função para garantir o scroll para o topo
+    const scrollToTop = () => {
+      // Força o scroll para o topo de várias maneiras para garantir que funcione
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTo(0, 0);
+      document.body.scrollTo(0, 0);
+    };
+
+    // Executa imediatamente
+    scrollToTop();
+
+    // Adiciona um listener para o evento load
+    window.addEventListener('load', scrollToTop);
+
+    // Executa depois de um pequeno delay para garantir
+    const timeoutId = setTimeout(scrollToTop, 50);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('load', scrollToTop);
+      clearTimeout(timeoutId);
+    };
+  }, []); // Array vazio significa que só executa uma vez quando o componente monta
+
   return (
     <Container>
       <Hero>
@@ -17,6 +47,7 @@ const LandingPage = () => {
           <StartButton
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => navigate('/register')}
           >
             Comece Agora
           </StartButton>

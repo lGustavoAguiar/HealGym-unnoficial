@@ -1,6 +1,4 @@
 import { createGlobalStyle } from 'styled-components';
-import '@fontsource/cormorant/700.css';
-import '@fontsource/italiana';
 import '@fontsource/marcellus';
 import '@fontsource/cinzel/600.css';
 
