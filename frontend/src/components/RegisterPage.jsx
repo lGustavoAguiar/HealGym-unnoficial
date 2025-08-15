@@ -2,13 +2,20 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/RegisterPage.css';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
+  const { register, loading, isAuthenticated } = useAuth();
 
   useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/dashboard');
+      return;
+    }
+
     const scrollToTop = () => {
       window.scrollTo(0, 0);
       document.documentElement.scrollTo(0, 0);
@@ -23,7 +30,7 @@ const RegisterPage = () => {
       window.removeEventListener('load', scrollToTop);
       clearTimeout(timeoutId);
     };
-  }, []);
+  }, [isAuthenticated, loading, navigate]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -34,6 +41,8 @@ const RegisterPage = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [hasErrors, setHasErrors] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
 
   useEffect(() => {
     const htmlElement = document.documentElement;
@@ -81,7 +90,6 @@ const RegisterPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Se for o campo nome, remove números e caracteres especiais
     if (name === 'name') {
       const sanitizedValue = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '');
       setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
@@ -119,6 +127,90 @@ const RegisterPage = () => {
       setHasErrors(hasAnyError);
       return newErrors;
     });
+  };
+
+  const handleSubmit = async () => {
+    const newErrors = {};
+    Object.keys(formData).forEach(key => {
+      const error = validateField(key, formData[key]);
+      if (error) newErrors[key] = error;
+    });
+
+    setTouched({
+      name: true,
+      email: true,
+      password: true,
+      confirmPassword: true
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setHasErrors(true);
+      
+      const firstErrorField = Object.keys(newErrors)[0];
+      const inputElement = document.querySelector(`input[name="${firstErrorField}"]`);
+      
+      if (inputElement) {
+        const viewportHeight = window.innerHeight;
+        const fieldRect = inputElement.getBoundingClientRect();
+        const targetScroll = fieldRect.top + window.pageYOffset - (viewportHeight / 3);
+        const startPosition = window.pageYOffset;
+        const distance = targetScroll - startPosition;
+        
+        const duration = 400;
+        let start = null;
+        
+        const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+        
+        const step = (currentTime) => {
+          if (!start) start = currentTime;
+          const progress = Math.min((currentTime - start) / duration, 1);
+          
+          const currentPosition = startPosition + (distance * easeOutCubic(progress));
+          window.scrollTo(0, currentPosition);
+          
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            inputElement.style.transition = 'box-shadow 0.2s ease-out';
+            inputElement.style.boxShadow = '0 0 12px var(--error, #ff6b6b)';
+            setTimeout(() => {
+              inputElement.style.boxShadow = 'none';
+            }, 400);
+          }
+        };
+        
+        requestAnimationFrame(step);
+      }
+      return;
+    }
+
+    setHasErrors(false);
+    setIsSubmitting(true);
+    setSubmitMessage('');
+
+    try {
+      const userData = {
+        name: formData.name.trim(),
+        email: formData.email.toLowerCase().trim(),
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
+      };
+
+      await register(userData);
+      
+      setSubmitMessage('Cadastro realizado com sucesso! Redirecionando...');
+      
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Erro ao cadastrar:', error);
+      setSubmitMessage(error.message || 'Erro ao realizar cadastro. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -277,71 +369,22 @@ const RegisterPage = () => {
               whileTap={{ scale: 0.95 }}
               onClick={(e) => {
                 e.preventDefault();
-                const newErrors = {};
-                Object.keys(formData).forEach(key => {
-                  const error = validateField(key, formData[key]);
-                  if (error) newErrors[key] = error;
-                });
-
-                setTouched({
-                  name: true,
-                  email: true,
-                  password: true,
-                  confirmPassword: true
-                });
-
-                if (Object.keys(newErrors).length > 0) {
-                  setErrors(newErrors);
-                  setHasErrors(true);
-                  
-                  // Encontra o primeiro campo com erro
-                  const firstErrorField = Object.keys(newErrors)[0];
-                  const inputElement = document.querySelector(`input[name="${firstErrorField}"]`);
-                  
-                  if (inputElement) {
-                    const viewportHeight = window.innerHeight;
-                    const fieldRect = inputElement.getBoundingClientRect();
-                    const targetScroll = fieldRect.top + window.pageYOffset - (viewportHeight / 3);
-                    const startPosition = window.pageYOffset;
-                    const distance = targetScroll - startPosition;
-                    
-                    // Animação customizada para scroll mais fluido
-                    const duration = 400; // 400ms de duração total
-                    let start = null;
-                    
-                    // Função de easing suave
-                    const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-                    
-                    const step = (currentTime) => {
-                      if (!start) start = currentTime;
-                      const progress = Math.min((currentTime - start) / duration, 1);
-                      
-                      const currentPosition = startPosition + (distance * easeOutCubic(progress));
-                      window.scrollTo(0, currentPosition);
-                      
-                      if (progress < 1) {
-                        requestAnimationFrame(step);
-                      } else {
-                        // Adiciona o highlight após o scroll terminar
-                        inputElement.style.transition = 'box-shadow 0.2s ease-out';
-                        inputElement.style.boxShadow = '0 0 12px var(--error, #ff6b6b)';
-                        setTimeout(() => {
-                          inputElement.style.boxShadow = 'none';
-                        }, 400);
-                      }
-                    };
-                    
-                    // Inicia a animação imediatamente
-                    requestAnimationFrame(step);
-                  }
-                } else {
-                  setHasErrors(false);
-                  console.log('Formulário válido:', formData);
-                }
+                handleSubmit();
               }}
+              disabled={isSubmitting || loading}
             >
-              Cadastrar
+              {isSubmitting || loading ? 'Cadastrando...' : 'Cadastrar'}
             </RegisterButton>
+
+            {submitMessage && (
+              <SubmitMessage 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={submitMessage.includes('sucesso') ? 'success' : 'error'}
+              >
+                {submitMessage}
+              </SubmitMessage>
+            )}
           </FormContainer>
           
           <LoginText>
@@ -476,6 +519,27 @@ const ErrorMessage = styled(motion.span)`
   display: block;
   text-align: left;
   padding-left: 2px;
+`;
+
+const SubmitMessage = styled(motion.div)`
+  margin-top: 15px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: 'Cormorant', serif;
+  font-size: min(1.8vw, 1rem);
+  text-align: center;
+  
+  &.success {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+  }
+  
+  &.error {
+    background-color: rgba(255, 107, 107, 0.1);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+  }
 `;
 
 const RegisterButton = styled(motion.button)`

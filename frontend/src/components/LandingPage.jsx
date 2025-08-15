@@ -4,11 +4,19 @@ import { FiActivity, FiTarget, FiUser } from 'react-icons/fi';
 import { GiMuscleUp } from 'react-icons/gi';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/dashboard');
+      return;
+    }
+
     const scrollToTop = () => {
       window.scrollTo(0, 0);
       document.documentElement.scrollTo(0, 0);
@@ -23,7 +31,11 @@ const LandingPage = () => {
       window.removeEventListener('load', scrollToTop);
       clearTimeout(timeoutId);
     };
-  }, []);
+  }, [isAuthenticated, loading, navigate]);
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <Container>

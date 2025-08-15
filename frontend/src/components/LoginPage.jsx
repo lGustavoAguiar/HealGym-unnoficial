@@ -2,10 +2,12 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
+  const { login, loading, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -13,9 +15,15 @@ const LoginPage = () => {
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
 
   useEffect(() => {
-    // Bloqueia completamente o scroll da página
+    if (!loading && isAuthenticated) {
+      navigate('/dashboard');
+      return;
+    }
+
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
     
@@ -23,7 +31,7 @@ const LoginPage = () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
     };
-  }, []);
+  }, [isAuthenticated, loading, navigate]);
 
   const validateField = (name, value) => {
     let error = '';
@@ -57,6 +65,49 @@ const LoginPage = () => {
     setTouched(prev => ({ ...prev, [name]: true }));
     const newError = validateField(name, value);
     setErrors(prev => ({ ...prev, [name]: newError }));
+  };
+
+  const handleSubmit = async () => {
+    const newErrors = {};
+    Object.keys(formData).forEach(key => {
+      const error = validateField(key, formData[key]);
+      if (error) newErrors[key] = error;
+    });
+
+    setTouched({
+      email: true,
+      password: true
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+    setSubmitMessage('');
+
+    try {
+      const credentials = {
+        email: formData.email.toLowerCase().trim(),
+        password: formData.password
+      };
+
+      await login(credentials);
+      
+      setSubmitMessage('Login realizado com sucesso! Redirecionando...');
+      
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Erro ao fazer login:', error);
+      setSubmitMessage(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -125,29 +176,22 @@ const LoginPage = () => {
             whileTap={{ scale: 0.95 }}
             onClick={(e) => {
               e.preventDefault();
-              const newErrors = {};
-              Object.keys(formData).forEach(key => {
-                const error = validateField(key, formData[key]);
-                if (error) newErrors[key] = error;
-              });
-
-              setTouched({
-                email: true,
-                password: true
-              });
-
-              if (Object.keys(newErrors).length > 0) {
-                setErrors(newErrors);
-              } else {
-                setErrors({});
-                console.log('Login válido:', formData);
-                // Aqui você faria a autenticação do usuário
-                // navigate('/dashboard'); // ou alguma rota após login
-              }
+              handleSubmit();
             }}
+            disabled={isSubmitting || loading}
           >
-            Entrar
+            {isSubmitting || loading ? 'Entrando...' : 'Entrar'}
           </LoginButton>
+
+          {submitMessage && (
+            <SubmitMessage 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={submitMessage.includes('sucesso') ? 'success' : 'error'}
+            >
+              {submitMessage}
+            </SubmitMessage>
+          )}
         </FormContainer>
         
         <RegisterText>
@@ -345,6 +389,27 @@ const ForgotPasswordLink = styled.span`
   &:hover {
     color: var(--accent);
     text-decoration: underline;
+  }
+`;
+
+const SubmitMessage = styled(motion.div)`
+  margin-top: 15px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-family: 'Cormorant', serif;
+  font-size: min(1.8vw, 1rem);
+  text-align: center;
+  
+  &.success {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+  }
+  
+  &.error {
+    background-color: rgba(255, 107, 107, 0.1);
+    color: #ff6b6b;
+    border: 1px solid rgba(255, 107, 107, 0.3);
   }
 `;
 

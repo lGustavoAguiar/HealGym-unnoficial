@@ -16,7 +16,6 @@ const ForgotPasswordPage = () => {
   const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
-    // Bloqueia completamente o scroll da página
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
     
@@ -72,7 +71,6 @@ const ForgotPasswordPage = () => {
       setErrors({});
       setIsSubmitted(true);
       console.log('E-mail para recuperação:', formData.email);
-      // Aqui você faria a chamada para a API de recuperação de senha
     }
   };
   
