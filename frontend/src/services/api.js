@@ -26,14 +26,16 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro na requisição');
+        const error = new Error(data.error || 'Erro na requisição');
+        error.response = { data, status: response.status };
+        throw error;
       }
 
       return data;
     } catch (error) {
       console.error('Erro na API:', error);
       
-      if (error.message.includes('Token expirado') || error.message.includes('Token inválido')) {
+      if (error.message && (error.message.includes('Token expirado') || error.message.includes('Token inválido'))) {
         this.logout();
       }
       
@@ -83,6 +85,20 @@ class ApiService {
   async verifyToken() {
     return this.request('/auth/verify-token', {
       method: 'POST',
+    });
+  }
+
+  async forgotPassword(email) {
+    return this.request('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async resetPassword(token, passwordData) {
+    return this.request(`/auth/reset-password/${token}`, {
+      method: 'POST',
+      body: JSON.stringify(passwordData),
     });
   }
 

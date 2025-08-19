@@ -2,6 +2,7 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
+import api from '../services/api';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const ForgotPasswordPage = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [animationKey, setAnimationKey] = useState(0);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ const ForgotPasswordPage = () => {
     setErrors(prev => ({ ...prev, [name]: newError }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
     Object.keys(formData).forEach(key => {
@@ -67,10 +69,20 @@ const ForgotPasswordPage = () => {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-    } else {
-      setErrors({});
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
+      await api.forgotPassword(formData.email);
       setIsSubmitted(true);
-      console.log('E-mail para recuperação:', formData.email);
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || error.message || 'Erro ao enviar email de recuperação';
+      setErrors({ general: errorMessage });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -90,6 +102,16 @@ const ForgotPasswordPage = () => {
               <FormSubtitle>
                 Digite seu e-mail e enviaremos um código para redefinir sua senha
               </FormSubtitle>
+              
+              {errors.general && (
+                <GeneralErrorMessage
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {errors.general}
+                </GeneralErrorMessage>
+              )}
               
               <FormContainer onSubmit={handleSubmit}>
                 <InputGroup>
@@ -118,10 +140,11 @@ const ForgotPasswordPage = () => {
                 
                 <SendCodeButton
                   type="submit"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  disabled={isSubmitting}
+                  whileHover={!isSubmitting ? { scale: 1.05 } : {}}
+                  whileTap={!isSubmitting ? { scale: 0.95 } : {}}
                 >
-                  Enviar Código
+                  {isSubmitting ? 'Enviando...' : 'Enviar Código'}
                 </SendCodeButton>
               </FormContainer>
               
@@ -300,6 +323,18 @@ const ErrorMessage = styled(motion.span)`
   padding-left: 2px;
 `;
 
+const GeneralErrorMessage = styled(motion.div)`
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: min(1.8vw, 0.9rem);
+  font-family: 'Cormorant', serif;
+`;
+
 const SendCodeButton = styled(motion.button)`
   font-family: 'Poppins', sans-serif;
   padding: min(2vh, 15px);
@@ -316,7 +351,13 @@ const SendCodeButton = styled(motion.button)`
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 
-  &:hover {
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: rgba(198, 169, 100, 0.5);
+  }
+
+  &:hover:not(:disabled) {
     box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
   }
 `;

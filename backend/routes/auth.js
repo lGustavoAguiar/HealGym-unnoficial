@@ -251,4 +251,106 @@ router.post('/verify-token', authenticate, (req, res) => {
   });
 });
 
+// Rota para solicitar recuperação de senha
+router.post('/forgot-password', [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('E-mail inválido')
+], handleValidationErrors, async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      // Por segurança, sempre retornamos sucesso mesmo se o usuário não existir
+      return res.json({
+        message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperação de senha.'
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(400).json({
+        error: 'Conta desativada. Entre em contato com o suporte.'
+      });
+    }
+
+    // Gerar token de recuperação
+    const resetToken = user.createPasswordResetToken();
+    await user.save({ validateBeforeSave: false });
+
+    try {
+      // Enviar email - importar aqui para garantir que .env foi carregado
+      const EmailService = (await import('../utils/email.js')).default;
+      await EmailService.sendPasswordResetEmail(user.email, resetToken);
+      
+      res.json({
+        message: 'E-mail de recuperação enviado com sucesso!'
+      });
+    } catch (emailError) {
+      // Se falhar ao enviar email, limpar os campos de reset
+      user.passwordResetToken = undefined;
+      user.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      console.error('Erro ao enviar email de recuperação:', emailError);
+      res.status(500).json({
+        error: 'Erro ao enviar e-mail de recuperação. Tente novamente.'
+      });
+    }
+  } catch (error) {
+    console.error('Erro na recuperação de senha:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Rota para redefinir senha com token
+router.post('/reset-password/:token', [
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Nova senha deve ter pelo menos 6 caracteres')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número'),
+  body('confirmPassword')
+    .custom((value, { req }) => {
+      if (value !== req.body.password) {
+        throw new Error('Confirmação de senha não confere');
+      }
+      return true;
+    })
+], handleValidationErrors, async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({
+      passwordResetToken: { $exists: true },
+      passwordResetExpires: { $gt: Date.now() }
+    }).select('+passwordResetToken +passwordResetExpires');
+
+    if (!user || !user.validatePasswordResetToken(token)) {
+      return res.status(400).json({
+        error: 'Token de recuperação inválido ou expirado'
+      });
+    }
+
+    // Redefinir a senha
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    res.json({
+      message: 'Senha redefinida com sucesso!'
+    });
+  } catch (error) {
+    console.error('Erro ao redefinir senha:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
 export default router;
