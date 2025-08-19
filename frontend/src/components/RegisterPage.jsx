@@ -199,6 +199,9 @@ const RegisterPage = () => {
 
       await register(userData);
       
+      // Limpar erros quando cadastro for bem-sucedido
+      setHasErrors(false);
+      
       setSubmitMessage('Cadastro realizado com sucesso! Redirecionando...');
       
       setTimeout(() => {
@@ -208,6 +211,46 @@ const RegisterPage = () => {
     } catch (error) {
       console.error('Erro ao cadastrar:', error);
       setSubmitMessage(error.message || 'Erro ao realizar cadastro. Tente novamente.');
+      
+      // Habilitar scroll quando houver erro de validação do backend
+      setHasErrors(true);
+      
+      // Scroll suave para a mensagem de erro usando a mesma animação dos inputs
+      setTimeout(() => {
+        if (formRef.current) {
+          const yOffset = -50;
+          const formElement = formRef.current;
+          const y = formElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          
+          const smoothScroll = () => {
+            const startPosition = window.pageYOffset;
+            const distance = y - startPosition;
+            const duration = 1200;
+            let start = null;
+
+            const easeOutQuart = t => 1 - (--t) * t * t * t;
+
+            const step = currentTime => {
+              if (!start) start = currentTime;
+              const progress = Math.min((currentTime - start) / duration, 1);
+              
+              if (progress === 1) {
+                window.scrollTo(0, y);
+                return;
+              }
+
+              const currentPosition = startPosition + (distance * easeOutQuart(progress));
+              window.scrollTo(0, currentPosition);
+              window.requestAnimationFrame(step);
+            };
+
+            window.requestAnimationFrame(step);
+          };
+
+          smoothScroll();
+        }
+      }, 100);
+      
     } finally {
       setIsSubmitting(false);
     }

@@ -256,7 +256,6 @@ const FeatureCard = styled(motion.div)`
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(198, 169, 100, 0.1);
   backdrop-filter: blur(10px);
-  transition: all 0.4s ease;
   aspect-ratio: 1 / 1;
   display: flex;
   flex-direction: column;
