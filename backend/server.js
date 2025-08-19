@@ -42,15 +42,29 @@ app.use(express.urlencoded({ extended: true }));
 
 const connectDatabase = async () => {
   try {
-    if (process.env.NODE_ENV === 'development' && !process.env.MONGODB_URI.includes('mongodb+srv')) {
+    // Se USE_MEMORY_DB estiver definida, sempre usar MongoDB em memória
+    if (process.env.USE_MEMORY_DB === 'true') {
+      console.log('🧠 Usando MongoDB Memory Server...');
       await connectTestDB();
-    } else {
-      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/healgym');
+    } else if (process.env.NODE_ENV === 'development' && process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('mongodb+srv')) {
+      await connectTestDB();
+    } else if (process.env.MONGODB_URI) {
+      await mongoose.connect(process.env.MONGODB_URI);
       console.log('✅ Conectado ao MongoDB');
+    } else {
+      // Fallback para MongoDB em memória se não houver MONGODB_URI
+      console.log('⚠️ MONGODB_URI não encontrada, usando MongoDB em memória');
+      await connectTestDB();
     }
   } catch (error) {
     console.error('❌ Erro ao conectar ao MongoDB:', error);
-    process.exit(1);
+    console.log('🔄 Tentando usar MongoDB em memória como fallback...');
+    try {
+      await connectTestDB();
+    } catch (fallbackError) {
+      console.error('❌ Erro no fallback:', fallbackError);
+      process.exit(1);
+    }
   }
 };
 
