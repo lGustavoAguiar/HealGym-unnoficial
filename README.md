@@ -26,5 +26,5 @@ Full focus on individual needs to achieve optimal results
 Philosophy
 No great results without both proper training and proper diet. HealGym integrates both into a single, adaptive ecosystem.
 
-![HealGym Logo](/Img1.png)
-![HealGym Logo](/Img2.png)
+![HealGym Logo](/img/Img1.png)
+![HealGym Logo](/img/Img2.png)
