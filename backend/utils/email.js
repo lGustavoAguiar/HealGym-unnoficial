@@ -78,7 +78,7 @@ class EmailService {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
     
     const mailOptions = {
-      from: `"HealGym - Recuperação de Senha" <${process.env.EMAIL_FROM}>`,
+      from: process.env.EMAIL_FROM,
       to: email,
       subject: '🔐 Recuperação de Senha - HealGym',
       html: this.getPasswordResetTemplate(resetUrl),

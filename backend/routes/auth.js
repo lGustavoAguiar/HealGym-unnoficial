@@ -264,9 +264,10 @@ router.post('/forgot-password', [
 
     const user = await User.findOne({ email });
     if (!user) {
-      // Por segurança, sempre retornamos sucesso mesmo se o usuário não existir
-      return res.json({
-        message: 'Se o e-mail estiver cadastrado, você receberá instruções para recuperação de senha.'
+      // Email não encontrado no banco de dados
+      console.log(`❌ Tentativa de recuperação para email não cadastrado: ${email}`);
+      return res.status(404).json({
+        error: 'E-mail não encontrado. Verifique se o e-mail está correto ou cadastre-se primeiro.'
       });
     }
 
@@ -285,6 +286,7 @@ router.post('/forgot-password', [
       const EmailService = (await import('../utils/email.js')).default;
       await EmailService.sendPasswordResetEmail(user.email, resetToken);
       
+      console.log(`✅ Email de recuperação enviado para: ${user.email}`);
       res.json({
         message: 'E-mail de recuperação enviado com sucesso!'
       });
