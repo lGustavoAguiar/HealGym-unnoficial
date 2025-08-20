@@ -113,7 +113,7 @@ const ForgotPasswordPage = () => {
                 </GeneralErrorMessage>
               )}
               
-              <FormContainer onSubmit={handleSubmit}>
+              <FormContainer onSubmit={handleSubmit} noValidate>
                 <InputGroup>
                   <Input
                     type="email"

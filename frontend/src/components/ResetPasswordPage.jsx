@@ -190,7 +190,7 @@ const ResetPasswordPage = () => {
                 </ErrorMessage>
               )}
               
-              <FormContainer onSubmit={handleSubmit}>
+              <FormContainer onSubmit={handleSubmit} noValidate>
                 <InputGroup>
                   <Input
                     type="password"
