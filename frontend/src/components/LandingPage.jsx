@@ -38,7 +38,7 @@ const LandingPage = () => {
   }
 
   return (
-    <Container>
+    <Container className="custom-scroll">
       <Hero>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -115,6 +115,7 @@ const Container = styled.div`
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  overflow-y: auto;
 `;
 
 const Hero = styled.section`

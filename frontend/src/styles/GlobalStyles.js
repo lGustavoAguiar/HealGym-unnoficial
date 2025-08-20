@@ -30,6 +30,7 @@ export const GlobalStyles = createGlobalStyle`
     overflow-x: hidden;
     margin: 0;
     padding: 0;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -39,6 +40,70 @@ export const GlobalStyles = createGlobalStyle`
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.8;
+    /* Custom scrollbar styles */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) var(--secondary);
+  }
+
+  /* Webkit scrollbar styles for better browser support */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--secondary);
+    border-radius: 10px;
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    border-radius: 10px;
+    border: 2px solid var(--secondary);
+    box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.3);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--accent);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: var(--secondary);
+  }
+
+  /* Custom scrollbar for specific containers */
+  .custom-scroll {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
+
+  .custom-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 8px;
+  }
+
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 0 10px rgba(198, 169, 100, 0.3);
+  }
+
+  .custom-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-light);
+    box-shadow: 0 0 15px rgba(198, 169, 100, 0.5);
   }
 
   h1, h2 {

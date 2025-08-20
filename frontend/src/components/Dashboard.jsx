@@ -15,7 +15,7 @@ const Dashboard = () => {
   };
 
   return (
-    <Container>
+    <Container className="custom-scroll">
       <Header>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -157,6 +157,8 @@ const Container = styled.div`
   min-height: 100vh;
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
   color: var(--text);
+  overflow-y: auto;
+  overflow-x: hidden;
 `;
 
 const Header = styled.header`

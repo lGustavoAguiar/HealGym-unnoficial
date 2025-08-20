@@ -111,7 +111,7 @@ const LoginPage = () => {
   };
   
   return (
-    <Container>
+    <Container className="custom-scroll">
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
       <FormSection ref={formRef}>
         <motion.div
@@ -239,7 +239,8 @@ const Container = styled.div`
   height: 100vh;
   margin: 0;
   padding: min(15vh, 120px) 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
   display: flex;
   align-items: flex-start;
