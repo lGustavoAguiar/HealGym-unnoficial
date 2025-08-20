@@ -1,11 +1,12 @@
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
+  const formRef = useRef(null);
   const { token } = useParams();
 
   const [formData, setFormData] = useState({
@@ -167,7 +168,7 @@ const ResetPasswordPage = () => {
   return (
     <Container>
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
-      <FormSection>
+      <FormSection ref={formRef}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -182,7 +183,7 @@ const ResetPasswordPage = () => {
               
               {errors.general && (
                 <ErrorMessage
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
                 >
@@ -287,13 +288,16 @@ const ResetPasswordPage = () => {
 
 // Styled Components
 const Container = styled.div`
-  min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: min(15vh, 120px) 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   position: relative;
-  padding: 20px;
 `;
 
 const LogoTitle = styled.h1`
@@ -322,103 +326,123 @@ const LogoTitle = styled.h1`
 `;
 
 const FormSection = styled.div`
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
-  border-radius: 20px;
-  padding: 40px;
-  min-width: 400px;
-  max-width: 500px;
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  width: min(90vw, 500px);
+  padding: min(5vh, 40px);
+  background: var(--card-bg);
+  border-radius: 2px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(198, 169, 100, 0.1);
+  backdrop-filter: blur(10px);
+  margin-top: min(10vh, 80px);
 `;
 
 const FormTitle = styled.h2`
-  font-size: 2rem;
-  font-weight: 700;
-  color: white;
-  text-align: center;
-  margin-bottom: 10px;
+  font-size: min(5vw, 2rem);
+  color: var(--white);
+  margin-bottom: min(3vh, 20px);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
   background: var(--gold-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  text-align: center;
+  letter-spacing: 0.2vw;
+  cursor: default;
 `;
 
 const FormSubtitle = styled.p`
-  color: rgba(255, 255, 255, 0.7);
+  font-size: min(2.5vw, 1.2rem);
+  color: var(--text-secondary);
+  margin-bottom: min(6vh, 30px);
   text-align: center;
-  margin-bottom: 30px;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-family: 'Cormorant', serif;
+  letter-spacing: 0.1vw;
+  cursor: default;
 `;
 
 const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: min(3vh, 20px);
 `;
 
 const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  width: 100%;
 `;
 
 const Input = styled.input`
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid ${props => 
-    props.error ? 'rgba(255, 107, 107, 0.5)' : 'rgba(255, 255, 255, 0.2)'
-  };
-  color: white;
-  padding: 15px 20px;
-  border-radius: 12px;
-  font-size: 1rem;
+  width: 100%;
+  padding: min(2vh, 15px);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border-radius: 2px;
+  color: var(--white);
+  font-size: min(2vw, 1.2rem);
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-  }
+  font-family: 'Cormorant', serif;
+  letter-spacing: 0.5px;
+  animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
 
   &:focus {
     outline: none;
-    border-color: ${props => 
-      props.error ? 'rgba(255, 107, 107, 0.8)' : 'var(--gold-color)'
-    };
-    box-shadow: 0 0 0 3px ${props => 
-      props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(212, 175, 55, 0.2)'
-    };
+    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
+    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+  }
+
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+    20%, 40%, 60%, 80% { transform: translateX(3px); }
   }
 `;
 
 const ErrorText = styled(motion.span)`
-  color: #ff6b6b;
-  font-size: 0.875rem;
+  color: var(--error, #ff6b6b);
+  font-size: min(1.6vw, 0.875rem);
+  font-family: 'Cormorant', serif;
+  font-style: italic;
   margin-top: 5px;
+  display: block;
+  text-align: left;
+  padding-left: 2px;
 `;
 
 const ErrorMessage = styled(motion.div)`
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  color: #ff6b6b;
-  padding: 12px;
+  margin-top: 15px;
+  padding: 12px 16px;
   border-radius: 8px;
-  margin-bottom: 20px;
+  font-family: 'Cormorant', serif;
+  font-size: min(1.8vw, 1rem);
   text-align: center;
-  font-size: 0.9rem;
+  background-color: rgba(255, 107, 107, 0.1);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.3);
 `;
 
 const SubmitButton = styled(motion.button)`
+  font-family: 'Poppins', sans-serif;
+  padding: min(2vh, 15px);
+  font-size: min(2vw, 1.1rem);
   background: var(--gold-gradient);
-  color: black;
+  color: var(--background);
+  border-radius: 2px;
   border: none;
-  padding: 15px 30px;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  transition: all 0.4s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.2vw;
+  margin-top: min(2vh, 15px);
+  width: 100%;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+  }
   
   &:disabled {
     opacity: 0.6;
@@ -427,20 +451,21 @@ const SubmitButton = styled(motion.button)`
 `;
 
 const BackText = styled.p`
-  color: rgba(255, 255, 255, 0.7);
   text-align: center;
-  margin-top: 25px;
-  font-size: 0.9rem;
+  margin-top: min(3vh, 20px);
+  color: var(--text-secondary);
+  font-size: min(1.8vw, 1rem);
+  cursor: default;
 `;
 
 const BackLink = styled.span`
-  color: var(--gold-color);
+  color: var(--accent);
   cursor: pointer;
-  font-weight: 600;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    color: #FFD700;
+    color: var(--accent-light);
+    text-decoration: underline;
   }
 `;
 
@@ -467,55 +492,69 @@ const ErrorIcon = styled.div`
 
 const SuccessTitle = styled.h2`
   color: #4CAF50;
-  font-size: 1.8rem;
+  font-size: min(4vw, 1.8rem);
   font-weight: 700;
   margin-bottom: 15px;
+  font-family: 'Poppins', sans-serif;
 `;
 
 const ErrorTitle = styled.h2`
   color: #ff6b6b;
-  font-size: 1.8rem;
+  font-size: min(4vw, 1.8rem);
   font-weight: 700;
   margin-bottom: 15px;
+  font-family: 'Poppins', sans-serif;
 `;
 
 const SuccessMessage = styled.p`
   color: rgba(255, 255, 255, 0.9);
-  font-size: 1.1rem;
+  font-size: min(2vw, 1.1rem);
   margin-bottom: 10px;
+  font-family: 'Cormorant', serif;
 `;
 
 const SuccessSubtext = styled.p`
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-size: min(1.6vw, 0.95rem);
   margin-bottom: 30px;
   line-height: 1.5;
+  font-family: 'Cormorant', serif;
 `;
 
 const ErrorSubtext = styled.p`
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-size: min(1.6vw, 0.95rem);
   margin-bottom: 30px;
   line-height: 1.5;
+  font-family: 'Cormorant', serif;
 `;
 
 const ActionButtons = styled.div`
   display: flex;
-  gap: 15px;
+  gap: min(2vw, 15px);
   justify-content: center;
   flex-wrap: wrap;
+  margin-top: min(2vh, 15px);
 `;
 
 const ActionButton = styled(motion.button)`
+  font-family: 'Poppins', sans-serif;
+  padding: min(2vh, 12px) min(3vw, 24px);
+  font-size: min(2vw, 1rem);
   background: ${props => props.variant === 'secondary' ? 'transparent' : 'var(--gold-gradient)'};
-  color: ${props => props.variant === 'secondary' ? 'var(--gold-color)' : 'black'};
-  border: ${props => props.variant === 'secondary' ? '1px solid var(--gold-color)' : 'none'};
-  padding: 12px 24px;
+  color: ${props => props.variant === 'secondary' ? 'var(--accent)' : 'var(--background)'};
+  border: ${props => props.variant === 'secondary' ? '1px solid var(--accent)' : 'none'};
   border-radius: 25px;
-  font-size: 1rem;
-  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1vw;
+  font-weight: 600;
+  box-shadow: ${props => props.variant === 'secondary' ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)'};
+
+  &:hover {
+    box-shadow: ${props => props.variant === 'secondary' ? '0 2px 10px rgba(198, 169, 100, 0.2)' : '0 6px 20px rgba(255, 215, 0, 0.4)'};
+  }
 `;
 
 export default ResetPasswordPage;
