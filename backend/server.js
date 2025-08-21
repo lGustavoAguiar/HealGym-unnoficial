@@ -6,14 +6,12 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
-import { connectTestDB } from './utils/testDatabase.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Carregar .env com caminho específico
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
@@ -31,9 +29,20 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://seudominio.com'] 
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: function (origin, callback) {
+    // Permitir requisições sem origin (como Postman, aplicativos móveis)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+      ? (process.env.FRONTEND_URL?.split(',') || ['http://localhost'])
+      : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost'];
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -42,29 +51,15 @@ app.use(express.urlencoded({ extended: true }));
 
 const connectDatabase = async () => {
   try {
-    // Se USE_MEMORY_DB estiver definida, sempre usar MongoDB em memória
-    if (process.env.USE_MEMORY_DB === 'true') {
-      console.log('🧠 Usando MongoDB Memory Server...');
-      await connectTestDB();
-    } else if (process.env.NODE_ENV === 'development' && process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('mongodb+srv')) {
-      await connectTestDB();
-    } else if (process.env.MONGODB_URI) {
-      await mongoose.connect(process.env.MONGODB_URI);
-      console.log('✅ Conectado ao MongoDB');
-    } else {
-      // Fallback para MongoDB em memória se não houver MONGODB_URI
-      console.log('⚠️ MONGODB_URI não encontrada, usando MongoDB em memória');
-      await connectTestDB();
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI not configured');
     }
+    
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Connected to MongoDB');
   } catch (error) {
-    console.error('❌ Erro ao conectar ao MongoDB:', error);
-    console.log('🔄 Tentando usar MongoDB em memória como fallback...');
-    try {
-      await connectTestDB();
-    } catch (fallbackError) {
-      console.error('❌ Erro no fallback:', fallbackError);
-      process.exit(1);
-    }
+    console.error('MongoDB connection error:', error);
+    process.exit(1);
   }
 };
 
@@ -75,49 +70,48 @@ app.use('/api/users', userRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ 
-    message: 'HealGym API está funcionando!', 
+    message: 'HealGym API is running', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV 
   });
 });
 
 app.use((error, req, res, next) => {
-  console.error('❌ Erro:', error);
+  console.error('Error:', error);
   
   if (error.name === 'ValidationError') {
     return res.status(400).json({
-      error: 'Dados inválidos',
+      error: 'Invalid data',
       details: Object.values(error.errors).map(err => err.message)
     });
   }
   
   if (error.name === 'JsonWebTokenError') {
     return res.status(401).json({
-      error: 'Token inválido'
+      error: 'Invalid token'
     });
   }
   
   if (error.name === 'TokenExpiredError') {
     return res.status(401).json({
-      error: 'Token expirado'
+      error: 'Token expired'
     });
   }
   
   res.status(500).json({
-    error: 'Erro interno do servidor'
+    error: 'Internal server error'
   });
 });
 
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Rota não encontrada'
+    error: 'Route not found'
   });
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`📍 URL: http://localhost:${PORT}`);
-  console.log(`🌍 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;

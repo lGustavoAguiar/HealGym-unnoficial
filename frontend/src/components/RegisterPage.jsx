@@ -4,34 +4,28 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/RegisterPage.css';
-
 const RegisterPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
   const { register, loading, isAuthenticated } = useAuth();
-
   useEffect(() => {
     if (!loading && isAuthenticated) {
       navigate('/dashboard');
       return;
     }
-
     const scrollToTop = () => {
       window.scrollTo(0, 0);
       document.documentElement.scrollTo(0, 0);
       document.body.scrollTo(0, 0);
     };
-
     scrollToTop();
     window.addEventListener('load', scrollToTop);
     const timeoutId = setTimeout(scrollToTop, 50);
-
     return () => {
       window.removeEventListener('load', scrollToTop);
       clearTimeout(timeoutId);
     };
   }, [isAuthenticated, loading, navigate]);
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -43,7 +37,6 @@ const RegisterPage = () => {
   const [hasErrors, setHasErrors] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
-
   useEffect(() => {
     const htmlElement = document.documentElement;
     if (hasErrors) {
@@ -54,12 +47,10 @@ const RegisterPage = () => {
       htmlElement.classList.add('no-scroll');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    
     return () => {
       htmlElement.classList.remove('no-scroll', 'can-scroll');
     };
   }, [hasErrors]);
-
   const validateField = (name, value) => {
     let error = '';
     switch (name) {
@@ -86,10 +77,8 @@ const RegisterPage = () => {
     }
     return error;
   };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
     if (name === 'name') {
       const sanitizedValue = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '');
       setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
@@ -104,7 +93,6 @@ const RegisterPage = () => {
       }
       return;
     }
-    
     setFormData(prev => ({ ...prev, [name]: value }));
     if (touched[name]) {
       const newError = validateField(name, value);
@@ -116,7 +104,6 @@ const RegisterPage = () => {
       });
     }
   };
-
   const handleBlur = (e) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
@@ -128,47 +115,37 @@ const RegisterPage = () => {
       return newErrors;
     });
   };
-
   const handleSubmit = async () => {
     const newErrors = {};
     Object.keys(formData).forEach(key => {
       const error = validateField(key, formData[key]);
       if (error) newErrors[key] = error;
     });
-
     setTouched({
       name: true,
       email: true,
       password: true,
       confirmPassword: true
     });
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       setHasErrors(true);
-      
       const firstErrorField = Object.keys(newErrors)[0];
       const inputElement = document.querySelector(`input[name="${firstErrorField}"]`);
-      
       if (inputElement) {
         const viewportHeight = window.innerHeight;
         const fieldRect = inputElement.getBoundingClientRect();
         const targetScroll = fieldRect.top + window.pageYOffset - (viewportHeight / 3);
         const startPosition = window.pageYOffset;
         const distance = targetScroll - startPosition;
-        
         const duration = 400;
         let start = null;
-        
         const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-        
         const step = (currentTime) => {
           if (!start) start = currentTime;
           const progress = Math.min((currentTime - start) / duration, 1);
-          
           const currentPosition = startPosition + (distance * easeOutCubic(progress));
           window.scrollTo(0, currentPosition);
-          
           if (progress < 1) {
             requestAnimationFrame(step);
           } else {
@@ -179,16 +156,13 @@ const RegisterPage = () => {
             }, 400);
           }
         };
-        
         requestAnimationFrame(step);
       }
       return;
     }
-
     setHasErrors(false);
     setIsSubmitting(true);
     setSubmitMessage('');
-
     try {
       const userData = {
         name: formData.name.trim(),
@@ -196,102 +170,75 @@ const RegisterPage = () => {
         password: formData.password,
         confirmPassword: formData.confirmPassword
       };
-
       await register(userData);
-      
-      // Limpar erros quando cadastro for bem-sucedido
       setHasErrors(false);
-      
       setSubmitMessage('Cadastro realizado com sucesso! Redirecionando...');
-      
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
-      
     } catch (error) {
       console.error('Erro ao cadastrar:', error);
       setSubmitMessage(error.message || 'Erro ao realizar cadastro. Tente novamente.');
-      
-      // Habilitar scroll quando houver erro de validação do backend
       setHasErrors(true);
-      
-      // Scroll suave para a mensagem de erro usando a mesma animação dos inputs
       setTimeout(() => {
         if (formRef.current) {
           const yOffset = -50;
           const formElement = formRef.current;
           const y = formElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          
           const smoothScroll = () => {
             const startPosition = window.pageYOffset;
             const distance = y - startPosition;
             const duration = 1200;
             let start = null;
-
             const easeOutQuart = t => 1 - (--t) * t * t * t;
-
             const step = currentTime => {
               if (!start) start = currentTime;
               const progress = Math.min((currentTime - start) / duration, 1);
-              
               if (progress === 1) {
                 window.scrollTo(0, y);
                 return;
               }
-
               const currentPosition = startPosition + (distance * easeOutQuart(progress));
               window.scrollTo(0, currentPosition);
               window.requestAnimationFrame(step);
             };
-
             window.requestAnimationFrame(step);
           };
-
           smoothScroll();
         }
       }, 100);
-      
     } finally {
       setIsSubmitting(false);
     }
   };
-
   useEffect(() => {
     const hasErrors = Object.keys(errors).length > 0;
     if (hasErrors && formRef.current) {
       const yOffset = -50;
       const formElement = formRef.current;
       const y = formElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      
       const smoothScroll = () => {
         const startPosition = window.pageYOffset;
         const distance = y - startPosition;
         const duration = 1200;
         let start = null;
-
         const easeOutQuart = t => 1 - (--t) * t * t * t;
-
         const step = currentTime => {
           if (!start) start = currentTime;
           const progress = Math.min((currentTime - start) / duration, 1);
-          
           if (progress === 1) {
             window.scrollTo(0, y);
             return;
           }
-
           const currentPosition = startPosition + (distance * easeOutQuart(progress));
           window.scrollTo(0, currentPosition);
           window.requestAnimationFrame(step);
         };
-
         window.requestAnimationFrame(step);
       };
-
       smoothScroll();
     }
   }, [errors]);
-  
   return (
     <Container>
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
@@ -303,7 +250,6 @@ const RegisterPage = () => {
         >
           <FormTitle>Criar Conta</FormTitle>
           <FormSubtitle>Comece sua jornada fitness hoje</FormSubtitle>
-          
           <FormContainer>
             <InputGroup>
               <Input
@@ -334,7 +280,6 @@ const RegisterPage = () => {
                 )}
               </AnimatePresence>
             </InputGroup>
-            
             <InputGroup>
               <Input
                 type="email"
@@ -358,7 +303,6 @@ const RegisterPage = () => {
                 )}
               </AnimatePresence>
             </InputGroup>
-            
             <InputGroup>
               <Input
                 type="password"
@@ -382,7 +326,6 @@ const RegisterPage = () => {
                 )}
               </AnimatePresence>
             </InputGroup>
-            
             <InputGroup>
               <Input
                 type="password"
@@ -406,7 +349,6 @@ const RegisterPage = () => {
                 )}
               </AnimatePresence>
             </InputGroup>
-            
             <RegisterButton
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -418,7 +360,6 @@ const RegisterPage = () => {
             >
               {isSubmitting || loading ? 'Cadastrando...' : 'Cadastrar'}
             </RegisterButton>
-
             {submitMessage && (
               <SubmitMessage 
                 initial={{ opacity: 0, y: 10 }}
@@ -429,7 +370,6 @@ const RegisterPage = () => {
               </SubmitMessage>
             )}
           </FormContainer>
-          
           <LoginText>
             Já tem uma conta? <LoginLink onClick={() => navigate('/login')}>Entrar</LoginLink>
           </LoginText>
@@ -438,7 +378,6 @@ const RegisterPage = () => {
     </Container>
   );
 };
-
 const LogoTitle = styled.h1`
   font-size: min(2.5vw, 2.5rem);
   text-decoration: underline;
@@ -458,12 +397,10 @@ const LogoTitle = styled.h1`
   cursor: pointer;
   transition: transform 0.3s ease;
   z-index: 2;
-
   &:hover {
     transform: translateX(-50%) scale(1.05);
   }
 `;
-
 const Container = styled.div`
   width: 100%;
   min-height: 100vh;
@@ -476,7 +413,6 @@ const Container = styled.div`
   justify-content: center;
   position: relative;
 `;
-
 const FormSection = styled.section`
   width: min(90vw, 500px);
   padding: min(5vh, 40px);
@@ -487,7 +423,6 @@ const FormSection = styled.section`
   backdrop-filter: blur(10px);
   margin-top: min(10vh, 80px);
 `;
-
 const FormTitle = styled.h1`
   font-size: min(6vw, 2.5rem);
   color: var(--white);
@@ -501,7 +436,6 @@ const FormTitle = styled.h1`
   letter-spacing: 0.2vw;
   cursor: default;
 `;
-
 const FormSubtitle = styled.p`
   font-size: min(2.5vw, 1.2rem);
   color: var(--text-secondary);
@@ -511,17 +445,14 @@ const FormSubtitle = styled.p`
   letter-spacing: 0.1vw;
   cursor: default;
 `;
-
 const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
   gap: min(3vh, 20px);
 `;
-
 const InputGroup = styled.div`
   width: 100%;
 `;
-
 const Input = styled.input`
   width: 100%;
   padding: min(2vh, 15px);
@@ -534,25 +465,21 @@ const Input = styled.input`
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
   animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
-
   &:focus {
     outline: none;
     border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
     box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
   }
-
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
     font-style: italic;
   }
-
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
     20%, 40%, 60%, 80% { transform: translateX(3px); }
   }
 `;
-
 const ErrorMessage = styled(motion.span)`
   color: var(--error, #ff6b6b);
   font-size: min(1.6vw, 0.875rem);
@@ -563,7 +490,6 @@ const ErrorMessage = styled(motion.span)`
   text-align: left;
   padding-left: 2px;
 `;
-
 const SubmitMessage = styled(motion.div)`
   margin-top: 15px;
   padding: 12px 16px;
@@ -571,20 +497,17 @@ const SubmitMessage = styled(motion.div)`
   font-family: 'Cormorant', serif;
   font-size: min(1.8vw, 1rem);
   text-align: center;
-  
   &.success {
     background-color: rgba(76, 175, 80, 0.1);
     color: #4caf50;
     border: 1px solid rgba(76, 175, 80, 0.3);
   }
-  
   &.error {
     background-color: rgba(255, 107, 107, 0.1);
     color: #ff6b6b;
     border: 1px solid rgba(255, 107, 107, 0.3);
   }
 `;
-
 const RegisterButton = styled(motion.button)`
   font-family: 'Poppins', sans-serif;
   padding: min(2vh, 15px);
@@ -600,12 +523,10 @@ const RegisterButton = styled(motion.button)`
   width: 100%;
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-
   &:hover {
     box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
   }
 `;
-
 const LoginText = styled.p`
   text-align: center;
   margin-top: min(3vh, 20px);
@@ -613,16 +534,13 @@ const LoginText = styled.p`
   font-size: min(1.8vw, 1rem);
   cursor: default;
 `;
-
 const LoginLink = styled.span`
   color: var(--accent);
   cursor: pointer;
   transition: all 0.3s ease;
-
   &:hover {
     color: var(--accent-light);
     text-decoration: underline;
   }
 `;
-
 export default RegisterPage;

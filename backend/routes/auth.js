@@ -252,7 +252,6 @@ router.post('/verify-token', authenticate, (req, res) => {
   });
 });
 
-// Rota para solicitar recuperação de senha
 router.post('/forgot-password', [
   body('email')
     .isEmail()
@@ -264,7 +263,6 @@ router.post('/forgot-password', [
 
     const user = await User.findOne({ email });
     if (!user) {
-      // Email não encontrado no banco de dados
       console.log(`❌ Tentativa de recuperação para email não cadastrado: ${email}`);
       return res.status(404).json({
         error: 'E-mail não encontrado. Verifique se o e-mail está correto ou cadastre-se primeiro.'
@@ -277,12 +275,12 @@ router.post('/forgot-password', [
       });
     }
 
-    // Gerar token de recuperação
+
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
     try {
-      // Enviar email - importar aqui para garantir que .env foi carregado
+
       const EmailService = (await import('../utils/email.js')).default;
       await EmailService.sendPasswordResetEmail(user.email, resetToken);
       
@@ -291,7 +289,7 @@ router.post('/forgot-password', [
         message: 'E-mail de recuperação enviado com sucesso!'
       });
     } catch (emailError) {
-      // Se falhar ao enviar email, limpar os campos de reset
+
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save({ validateBeforeSave: false });
@@ -309,7 +307,7 @@ router.post('/forgot-password', [
   }
 });
 
-// Rota para redefinir senha com token
+
 router.post('/reset-password/:token', [
   body('password')
     .isLength({ min: 6 })
@@ -339,7 +337,7 @@ router.post('/reset-password/:token', [
       });
     }
 
-    // Redefinir a senha
+
     user.password = password;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;

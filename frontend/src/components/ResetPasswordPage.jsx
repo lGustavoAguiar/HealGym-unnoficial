@@ -3,12 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
   const { token } = useParams();
-
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -18,29 +16,21 @@ const ResetPasswordPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [tokenValid, setTokenValid] = useState(null);
-
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
     };
   }, []);
-
   useEffect(() => {
-    // Verificar se o token é válido quando a página carrega
     if (!token) {
       setTokenValid(false);
       return;
     }
-    
-    // Token presente, consideramos válido inicialmente
-    // A validação real acontecerá quando o formulário for enviado
     setTokenValid(true);
   }, [token]);
-
   const validateField = (name, value) => {
     let error = '';
     switch (name) {
@@ -59,60 +49,47 @@ const ResetPasswordPage = () => {
     }
     return error;
   };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
     setFormData(prev => ({ ...prev, [name]: value }));
     if (touched[name]) {
       const newError = validateField(name, value);
       setErrors(prev => ({ ...prev, [name]: newError }));
     }
-    
-    // Revalidar confirmPassword se a senha principal mudou
     if (name === 'password' && touched.confirmPassword) {
       const confirmError = formData.confirmPassword !== value ? 'Senhas não conferem' : '';
       setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
     }
   };
-
   const handleBlur = (e) => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
     const newError = validateField(name, value);
     setErrors(prev => ({ ...prev, [name]: newError }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     const newErrors = {};
     Object.keys(formData).forEach(key => {
       const error = validateField(key, formData[key]);
       if (error) newErrors[key] = error;
     });
-
     setTouched({ password: true, confirmPassword: true });
-
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-
     setIsSubmitting(true);
     setErrors({});
-
     try {
       await api.post(`/auth/reset-password/${token}`, {
         password: formData.password,
         confirmPassword: formData.confirmPassword
       });
-
       setIsSuccess(true);
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Erro ao redefinir senha. Tente novamente.';
       setErrors({ general: errorMessage });
-      
       if (error.response?.status === 400 && errorMessage.includes('Token')) {
         setTokenValid(false);
       }
@@ -120,7 +97,6 @@ const ResetPasswordPage = () => {
       setIsSubmitting(false);
     }
   };
-
   if (tokenValid === false || !token) {
     return (
       <Container>
@@ -140,7 +116,6 @@ const ResetPasswordPage = () => {
               <ErrorSubtext>
                 Solicite um novo link de recuperação ou entre em contato com o suporte.
               </ErrorSubtext>
-              
               <ActionButtons>
                 <ActionButton
                   whileHover={{ scale: 1.05 }}
@@ -164,7 +139,6 @@ const ResetPasswordPage = () => {
       </Container>
     );
   }
-
   return (
     <Container>
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
@@ -180,7 +154,6 @@ const ResetPasswordPage = () => {
               <FormSubtitle>
                 Digite sua nova senha abaixo
               </FormSubtitle>
-              
               {errors.general && (
                 <ErrorMessage
                   initial={{ opacity: 0, y: 10 }}
@@ -190,7 +163,6 @@ const ResetPasswordPage = () => {
                   {errors.general}
                 </ErrorMessage>
               )}
-              
               <FormContainer onSubmit={handleSubmit} noValidate>
                 <InputGroup>
                   <Input
@@ -215,7 +187,6 @@ const ResetPasswordPage = () => {
                     )}
                   </AnimatePresence>
                 </InputGroup>
-
                 <InputGroup>
                   <Input
                     type="password"
@@ -239,7 +210,6 @@ const ResetPasswordPage = () => {
                     )}
                   </AnimatePresence>
                 </InputGroup>
-                
                 <SubmitButton
                   type="submit"
                   disabled={isSubmitting}
@@ -249,7 +219,6 @@ const ResetPasswordPage = () => {
                   {isSubmitting ? 'Redefinindo...' : 'Redefinir Senha'}
                 </SubmitButton>
               </FormContainer>
-              
               <BackText>
                 Lembrou da senha? <BackLink onClick={() => navigate('/login')}>Voltar ao login</BackLink>
               </BackText>
@@ -268,7 +237,6 @@ const ResetPasswordPage = () => {
               <SuccessSubtext>
                 Agora você pode fazer login com sua nova senha.
               </SuccessSubtext>
-              
               <ActionButtons>
                 <ActionButton
                   whileHover={{ scale: 1.05 }}
@@ -285,8 +253,6 @@ const ResetPasswordPage = () => {
     </Container>
   );
 };
-
-// Styled Components
 const Container = styled.div`
   width: 100%;
   height: 100vh;
@@ -299,7 +265,6 @@ const Container = styled.div`
   justify-content: center;
   position: relative;
 `;
-
 const LogoTitle = styled.h1`
   font-size: min(2.5vw, 2.5rem);
   text-decoration: underline;
@@ -319,12 +284,10 @@ const LogoTitle = styled.h1`
   cursor: pointer;
   transition: transform 0.3s ease;
   z-index: 1000;
-
   &:hover {
     transform: translateX(-50%) scale(1.05);
   }
 `;
-
 const FormSection = styled.div`
   width: min(90vw, 500px);
   padding: min(5vh, 40px);
@@ -335,7 +298,6 @@ const FormSection = styled.div`
   backdrop-filter: blur(10px);
   margin-top: min(10vh, 80px);
 `;
-
 const FormTitle = styled.h2`
   font-size: min(5vw, 2rem);
   color: var(--white);
@@ -349,7 +311,6 @@ const FormTitle = styled.h2`
   letter-spacing: 0.2vw;
   cursor: default;
 `;
-
 const FormSubtitle = styled.p`
   font-size: min(2.5vw, 1.2rem);
   color: var(--text-secondary);
@@ -359,17 +320,14 @@ const FormSubtitle = styled.p`
   letter-spacing: 0.1vw;
   cursor: default;
 `;
-
 const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
   gap: min(3vh, 20px);
 `;
-
 const InputGroup = styled.div`
   width: 100%;
 `;
-
 const Input = styled.input`
   width: 100%;
   padding: min(2vh, 15px);
@@ -382,25 +340,21 @@ const Input = styled.input`
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
   animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
-
   &:focus {
     outline: none;
     border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
     box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
   }
-
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
     font-style: italic;
   }
-
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
     10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
     20%, 40%, 60%, 80% { transform: translateX(3px); }
   }
 `;
-
 const ErrorText = styled(motion.span)`
   color: var(--error, #ff6b6b);
   font-size: min(1.6vw, 0.875rem);
@@ -411,7 +365,6 @@ const ErrorText = styled(motion.span)`
   text-align: left;
   padding-left: 2px;
 `;
-
 const ErrorMessage = styled(motion.div)`
   margin-top: 15px;
   padding: 12px 16px;
@@ -423,7 +376,6 @@ const ErrorMessage = styled(motion.div)`
   color: #ff6b6b;
   border: 1px solid rgba(255, 107, 107, 0.3);
 `;
-
 const SubmitButton = styled(motion.button)`
   font-family: 'Poppins', sans-serif;
   padding: min(2vh, 15px);
@@ -439,17 +391,14 @@ const SubmitButton = styled(motion.button)`
   width: 100%;
   cursor: pointer;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-
   &:hover {
     box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
   }
-  
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
 `;
-
 const BackText = styled.p`
   text-align: center;
   margin-top: min(3vh, 20px);
@@ -457,39 +406,31 @@ const BackText = styled.p`
   font-size: min(1.8vw, 1rem);
   cursor: default;
 `;
-
 const BackLink = styled.span`
   color: var(--accent);
   cursor: pointer;
   transition: all 0.3s ease;
-
   &:hover {
     color: var(--accent-light);
     text-decoration: underline;
   }
 `;
-
-// Success and Error Containers
 const SuccessContainer = styled(motion.div)`
   text-align: center;
   padding: 20px;
 `;
-
 const ErrorContainer = styled.div`
   text-align: center;
   padding: 20px;
 `;
-
 const SuccessIcon = styled.div`
   font-size: 4rem;
   margin-bottom: 20px;
 `;
-
 const ErrorIcon = styled.div`
   font-size: 4rem;
   margin-bottom: 20px;
 `;
-
 const SuccessTitle = styled.h2`
   color: #4CAF50;
   font-size: min(4vw, 1.8rem);
@@ -497,7 +438,6 @@ const SuccessTitle = styled.h2`
   margin-bottom: 15px;
   font-family: 'Poppins', sans-serif;
 `;
-
 const ErrorTitle = styled.h2`
   color: #ff6b6b;
   font-size: min(4vw, 1.8rem);
@@ -505,14 +445,12 @@ const ErrorTitle = styled.h2`
   margin-bottom: 15px;
   font-family: 'Poppins', sans-serif;
 `;
-
 const SuccessMessage = styled.p`
   color: rgba(255, 255, 255, 0.9);
   font-size: min(2vw, 1.1rem);
   margin-bottom: 10px;
   font-family: 'Cormorant', serif;
 `;
-
 const SuccessSubtext = styled.p`
   color: var(--text-secondary);
   font-size: min(1.6vw, 0.95rem);
@@ -520,7 +458,6 @@ const SuccessSubtext = styled.p`
   line-height: 1.5;
   font-family: 'Cormorant', serif;
 `;
-
 const ErrorSubtext = styled.p`
   color: var(--text-secondary);
   font-size: min(1.6vw, 0.95rem);
@@ -528,7 +465,6 @@ const ErrorSubtext = styled.p`
   line-height: 1.5;
   font-family: 'Cormorant', serif;
 `;
-
 const ActionButtons = styled.div`
   display: flex;
   gap: min(2vw, 15px);
@@ -536,7 +472,6 @@ const ActionButtons = styled.div`
   flex-wrap: wrap;
   margin-top: min(2vh, 15px);
 `;
-
 const ActionButton = styled(motion.button)`
   font-family: 'Poppins', sans-serif;
   padding: min(2vh, 12px) min(3vw, 24px);
@@ -551,10 +486,8 @@ const ActionButton = styled(motion.button)`
   letter-spacing: 0.1vw;
   font-weight: 600;
   box-shadow: ${props => props.variant === 'secondary' ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)'};
-
   &:hover {
     box-shadow: ${props => props.variant === 'secondary' ? '0 2px 10px rgba(198, 169, 100, 0.2)' : '0 6px 20px rgba(255, 215, 0, 0.4)'};
   }
 `;
-
 export default ResetPasswordPage;

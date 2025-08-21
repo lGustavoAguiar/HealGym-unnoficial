@@ -1,82 +1,53 @@
 import nodemailer from 'nodemailer';
-
 class EmailService {
   constructor() {
     this.transporter = null;
     this.initializeTransporter();
   }
-
   async initializeTransporter() {
-    // Se tiver configuração de email, usar Gmail ou Outlook
-    if (process.env.EMAIL_FROM && process.env.EMAIL_PASSWORD) {
-      const emailService = process.env.EMAIL_SERVICE || 'gmail';
-      console.log(`📧 Configurando ${emailService} para envio de emails...`);
-      
-      let transportConfig = {
-        service: emailService,
+    if (!process.env.EMAIL_FROM || !process.env.EMAIL_PASSWORD) {
+      throw new Error('❌ Configuração de email não encontrada. Defina EMAIL_FROM e EMAIL_PASSWORD no arquivo .env');
+    }
+    
+    const emailService = process.env.EMAIL_SERVICE || 'gmail';
+    console.log(`📧 Configurando ${emailService} para envio de emails...`);
+    
+    let transportConfig = {
+      service: emailService,
+      auth: {
+        user: process.env.EMAIL_FROM,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    };
+    
+    if (emailService === 'outlook') {
+      transportConfig = {
+        host: 'smtp-mail.outlook.com',
+        port: 587,
+        secure: false,
         auth: {
           user: process.env.EMAIL_FROM,
           pass: process.env.EMAIL_PASSWORD
         }
       };
-
-      // Configuração específica para Outlook/Hotmail
-      if (emailService === 'outlook') {
-        transportConfig = {
-          host: 'smtp-mail.outlook.com',
-          port: 587,
-          secure: false,
-          auth: {
-            user: process.env.EMAIL_FROM,
-            pass: process.env.EMAIL_PASSWORD
-          }
-        };
-      }
-
-      this.transporter = nodemailer.createTransport(transportConfig);
-
-      // Testar a conexão
-      try {
-        await this.transporter.verify();
-        console.log(`✅ Conectado ao ${emailService} com sucesso!`);
-        console.log('📨 Emails serão enviados de:', process.env.EMAIL_FROM);
-      } catch (error) {
-        console.error(`❌ Erro na conexão com ${emailService}:`, error.message);
-        console.log('⚠️ Fallback para Ethereal Email...');
-        await this.createTestTransporter();
-      }
-    } else {
-      console.log('⚠️ Configuração de email não encontrada. Usando Ethereal Email.');
-      await this.createTestTransporter();
     }
-  }
-
-  async createTestTransporter() {
+    
+    this.transporter = nodemailer.createTransport(transportConfig);
+    
     try {
-      const testAccount = await nodemailer.createTestAccount();
-      this.transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass
-        }
-      });
-      console.log('📧 Usando Ethereal Email para desenvolvimento');
+      await this.transporter.verify();
+      console.log(`✅ Conectado ao ${emailService} com sucesso!`);
+      console.log('📨 Emails serão enviados de:', process.env.EMAIL_FROM);
     } catch (error) {
-      console.error('Erro ao criar transportador de teste:', error);
+      console.error(`❌ Erro na conexão com ${emailService}:`, error.message);
+      throw new Error(`Falha ao conectar com o serviço de email: ${error.message}`);
     }
   }
-
   async sendPasswordResetEmail(email, resetToken) {
-    // Garantir que o transporter esteja inicializado
     if (!this.transporter) {
       await this.initializeTransporter();
     }
-
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
-    
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: email,
@@ -84,25 +55,18 @@ class EmailService {
       html: this.getPasswordResetTemplate(resetUrl),
       text: `Olá! Você solicitou a recuperação de senha do HealGym. Acesse o link para redefinir sua senha: ${resetUrl} (O link expira em 15 minutos)`
     };
-
     try {
       console.log(`📤 Enviando email de recuperação para: ${email}`);
       const info = await this.transporter.sendMail(mailOptions);
-      
       console.log('✅ Email enviado com sucesso!');
       console.log('📧 Message ID:', info.messageId);
-      
-      if (process.env.NODE_ENV === 'development' && nodemailer.getTestMessageUrl && nodemailer.getTestMessageUrl(info)) {
-        console.log('� Preview URL (Ethereal):', nodemailer.getTestMessageUrl(info));
-      }
-      
+      console.log(`✅ Email de recuperação enviado para: ${email}`);
       return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error('❌ Erro ao enviar email:', error);
       throw new Error(`Falha ao enviar email de recuperação: ${error.message}`);
     }
   }
-
   getPasswordResetTemplate(resetUrl) {
     return `
       <!DOCTYPE html>
@@ -114,13 +78,11 @@ class EmailService {
         <title>Recuperação de Senha - HealGym</title>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-          
           * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
           }
-          
           body {
             font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             line-height: 1.7;
@@ -130,14 +92,12 @@ class EmailService {
             padding: 30px 15px;
             min-height: 100vh;
           }
-          
           .email-wrapper {
             width: 100%;
             max-width: 680px;
             margin: 0 auto;
             background: transparent;
           }
-          
           .container {
             background: #ffffff;
             border-radius: 28px;
@@ -145,7 +105,6 @@ class EmailService {
             box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3);
             position: relative;
           }
-          
           .container::before {
             content: '';
             position: absolute;
@@ -157,7 +116,6 @@ class EmailService {
             pointer-events: none;
             z-index: 1;
           }
-          
           .header {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
             color: white;
@@ -166,7 +124,6 @@ class EmailService {
             position: relative;
             overflow: hidden;
           }
-          
           .header::before {
             content: '';
             position: absolute;
@@ -183,21 +140,17 @@ class EmailService {
             );
             animation: float 20s ease-in-out infinite;
           }
-          
           @keyframes float {
             0%, 100% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-20px) rotate(5deg); }
           }
-          
           .header-content {
             position: relative;
             z-index: 2;
           }
-          
           .logo-container {
             margin-bottom: 20px;
           }
-          
           .logo {
             font-size: 3.5em;
             font-weight: 800;
@@ -209,7 +162,6 @@ class EmailService {
             display: inline-block;
             text-shadow: 0 4px 8px rgba(0,0,0,0.3);
           }
-          
           .logo-icon {
             display: inline-block;
             width: 60px;
@@ -224,12 +176,10 @@ class EmailService {
             box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
             animation: pulse 2s ease-in-out infinite;
           }
-          
           @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
           }
-          
           .subtitle {
             font-size: 1.3em;
             font-weight: 300;
@@ -237,7 +187,6 @@ class EmailService {
             margin-bottom: 0;
             letter-spacing: 1px;
           }
-          
           .tagline {
             font-size: 0.95em;
             opacity: 0.8;
@@ -245,13 +194,11 @@ class EmailService {
             margin-top: 10px;
             font-style: italic;
           }
-          
           .content {
             padding: 60px 50px;
             background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
             position: relative;
           }
-          
           .content::before {
             content: '';
             position: absolute;
@@ -261,12 +208,10 @@ class EmailService {
             height: 1px;
             background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
           }
-          
           .welcome-section {
             text-align: center;
             margin-bottom: 50px;
           }
-          
           .welcome-title {
             font-size: 2.5em;
             font-weight: 700;
@@ -276,7 +221,6 @@ class EmailService {
             background-clip: text;
             margin-bottom: 20px;
           }
-          
           .lock-icon {
             display: inline-block;
             width: 80px;
@@ -292,13 +236,11 @@ class EmailService {
             box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
             animation: lockShake 3s ease-in-out infinite;
           }
-          
           @keyframes lockShake {
             0%, 100% { transform: rotate(0deg); }
             25% { transform: rotate(-5deg); }
             75% { transform: rotate(5deg); }
           }
-          
           .greeting {
             font-size: 1.4em;
             font-weight: 600;
@@ -306,7 +248,6 @@ class EmailService {
             margin-bottom: 25px;
             text-align: center;
           }
-          
           .message {
             font-size: 1.15em;
             margin-bottom: 30px;
@@ -314,7 +255,6 @@ class EmailService {
             color: #4a5568;
             text-align: center;
           }
-          
           .highlight {
             background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
             -webkit-background-clip: text;
@@ -322,12 +262,10 @@ class EmailService {
             background-clip: text;
             font-weight: 600;
           }
-          
           .button-container {
             text-align: center;
             margin: 50px 0;
           }
-          
           .reset-button {
             display: inline-block;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -347,7 +285,6 @@ class EmailService {
             letter-spacing: 0.5px;
             text-transform: uppercase;
           }
-          
           .reset-button::before {
             content: '';
             position: absolute;
@@ -358,16 +295,13 @@ class EmailService {
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
             transition: left 0.6s;
           }
-          
           .reset-button:hover {
             transform: translateY(-3px) scale(1.02);
             box-shadow: 0 20px 50px rgba(102, 126, 234, 0.5);
           }
-          
           .reset-button:hover::before {
             left: 100%;
           }
-          
           .security-section {
             background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
             border-left: 6px solid #f56565;
@@ -376,7 +310,6 @@ class EmailService {
             margin: 40px 0;
             position: relative;
           }
-          
           .security-section::before {
             content: '⚠️';
             position: absolute;
@@ -392,7 +325,6 @@ class EmailService {
             justify-content: center;
             font-size: 18px;
           }
-          
           .security-title {
             font-weight: 700;
             color: #c53030;
@@ -400,27 +332,23 @@ class EmailService {
             margin-left: 20px;
             font-size: 1.2em;
           }
-          
           .security-list {
             list-style: none;
             color: #c53030;
             margin-left: 20px;
           }
-          
           .security-list li {
             margin-bottom: 12px;
             padding-left: 25px;
             position: relative;
             font-weight: 500;
           }
-          
           .security-list li::before {
             content: '🔒';
             position: absolute;
             left: 0;
             top: 2px;
           }
-          
           .url-section {
             background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
             border: 3px dashed #cbd5e1;
@@ -429,14 +357,12 @@ class EmailService {
             margin: 35px 0;
             text-align: center;
           }
-          
           .url-title {
             font-weight: 600;
             color: #2d3748;
             margin-bottom: 15px;
             font-size: 1.1em;
           }
-          
           .url-box {
             background: #f7fafc;
             border: 2px solid #e2e8f0;
@@ -448,7 +374,6 @@ class EmailService {
             color: #4a5568;
             font-weight: 500;
           }
-          
           .protection-section {
             background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
             border-left: 6px solid #48bb78;
@@ -457,7 +382,6 @@ class EmailService {
             margin: 40px 0;
             position: relative;
           }
-          
           .protection-section::before {
             content: '🛡️';
             position: absolute;
@@ -473,7 +397,6 @@ class EmailService {
             justify-content: center;
             font-size: 18px;
           }
-          
           .protection-title {
             font-weight: 700;
             color: #2f855a;
@@ -481,14 +404,12 @@ class EmailService {
             margin-left: 20px;
             font-size: 1.2em;
           }
-          
           .protection-text {
             color: #2f855a;
             line-height: 1.7;
             margin-left: 20px;
             font-weight: 500;
           }
-          
           .signature {
             text-align: center;
             margin-top: 50px;
@@ -497,13 +418,11 @@ class EmailService {
             border-radius: 20px;
             color: white;
           }
-          
           .signature-text {
             font-size: 1.2em;
             font-weight: 600;
             margin-bottom: 10px;
           }
-          
           .signature-team {
             font-size: 1.4em;
             font-weight: 800;
@@ -512,7 +431,6 @@ class EmailService {
             -webkit-text-fill-color: transparent;
             background-clip: text;
           }
-          
           .footer {
             background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
             color: #a0aec0;
@@ -520,7 +438,6 @@ class EmailService {
             text-align: center;
             position: relative;
           }
-          
           .footer-brand {
             font-size: 1.8em;
             font-weight: 800;
@@ -530,7 +447,6 @@ class EmailService {
             background-clip: text;
             margin-bottom: 20px;
           }
-          
           .footer-tagline {
             font-size: 1.1em;
             font-weight: 500;
@@ -538,11 +454,9 @@ class EmailService {
             margin-bottom: 30px;
             font-style: italic;
           }
-          
           .footer-links {
             margin-bottom: 25px;
           }
-          
           .footer-links a {
             color: #667eea;
             text-decoration: none;
@@ -552,35 +466,29 @@ class EmailService {
             padding: 5px 10px;
             border-radius: 5px;
           }
-          
           .footer-links a:hover {
             background: #667eea;
             color: white;
             transform: translateY(-2px);
           }
-          
           .footer-divider {
             height: 1px;
             background: linear-gradient(90deg, transparent, #4a5568, transparent);
             margin: 30px 0;
           }
-          
           .footer-copyright {
             font-size: 0.9em;
             color: #718096;
             line-height: 1.6;
           }
-          
           .social-section {
             margin: 30px 0;
           }
-          
           .social-icons {
             display: flex;
             justify-content: center;
             gap: 20px;
           }
-          
           .social-icon {
             width: 50px;
             height: 50px;
@@ -595,42 +503,33 @@ class EmailService {
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
           }
-          
           .social-icon:hover {
             transform: translateY(-3px) scale(1.1);
             box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
           }
-          
           @media (max-width: 640px) {
             body {
               padding: 15px 10px;
             }
-            
             .content, .header {
               padding: 40px 25px;
             }
-            
             .logo {
               font-size: 2.5em;
             }
-            
             .welcome-title {
               font-size: 2em;
             }
-            
             .reset-button {
               padding: 18px 35px;
               font-size: 1.1em;
             }
-            
             .message {
               font-size: 1.05em;
             }
-            
             .footer {
               padding: 40px 25px;
             }
-            
             .social-icons {
               flex-wrap: wrap;
             }
@@ -649,27 +548,22 @@ class EmailService {
                 <p class="tagline">Sua jornada de superação começa aqui</p>
               </div>
             </div>
-            
             <div class="content">
               <div class="welcome-section">
                 <div class="lock-icon">🔐</div>
                 <h1 class="welcome-title">Recuperação de Senha</h1>
                 <div class="greeting">Olá, <span class="highlight">Guerreiro(a)</span>! 💪</div>
               </div>
-              
               <div class="message">
                 Recebemos sua solicitação para redefinir a senha da sua conta no <strong class="highlight">HealGym</strong>. 
                 Sabemos que cada detalhe importa na sua jornada de transformação, e a segurança da sua conta é nossa prioridade!
               </div>
-              
               <div class="message">
                 Clique no botão abaixo para criar uma nova senha forte e continuar conquistando seus objetivos:
               </div>
-              
               <div class="button-container">
                 <a href="${resetUrl}" class="reset-button">✨ Redefinir Minha Senha</a>
               </div>
-              
               <div class="security-section">
                 <div class="security-title">Informações de Segurança</div>
                 <ul class="security-list">
@@ -679,14 +573,12 @@ class EmailService {
                   <li>Nunca compartilhe este link com terceiros</li>
                 </ul>
               </div>
-              
               <div class="url-section">
                 <div class="url-title">🔗 O botão não está funcionando? Use o link abaixo:</div>
                 <div class="url-box">
                   ${resetUrl}
                 </div>
               </div>
-              
               <div class="protection-section">
                 <div class="protection-title">Proteção da Sua Conta</div>
                 <div class="protection-text">
@@ -695,13 +587,11 @@ class EmailService {
                   Sua conta permanece 100% protegida. Por precaução, considere alterar sua senha se suspeitar de qualquer atividade não autorizada.
                 </div>
               </div>
-              
               <div class="signature">
                 <div class="signature-text">Continue forte na sua jornada de transformação! 🚀</div>
                 <div class="signature-team">Equipe HealGym</div>
               </div>
             </div>
-            
             <div class="footer">
               <div class="footer-brand">HealGym</div>
               <div class="footer-tagline">"Onde a transformação acontece"</div>              
@@ -718,5 +608,4 @@ class EmailService {
     `;
   }
 }
-
 export default new EmailService();
