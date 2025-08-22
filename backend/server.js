@@ -14,6 +14,11 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+console.log('🚀 Starting HealGym Backend...');
+console.log('📍 Current directory:', __dirname);
+console.log('🔧 NODE_ENV:', process.env.NODE_ENV || 'not set');
+console.log('🔧 PORT:', PORT);
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -83,19 +88,34 @@ app.use(express.urlencoded({ extended: true }));
 
 const connectDatabase = async () => {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI not configured');
+    const mongoUri = process.env.MONGODB_URI;
+    
+    if (!mongoUri) {
+      console.warn('⚠️  MONGODB_URI not configured. Skipping database connection for now.');
+      // Em vez de sair, vamos continuar sem database para debug
+      return;
     }
     
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Connected to MongoDB');
+    console.log('🔌 Attempting to connect to MongoDB...');
+    await mongoose.connect(mongoUri);
+    console.log('✅ Connected to MongoDB');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    process.exit(1);
+    console.error('❌ MongoDB connection error:', error.message);
+    // Em vez de process.exit(1), vamos continuar para debug
+    console.warn('⚠️  Continuing without database connection for debugging...');
   }
 };
 
 connectDatabase();
+
+// Endpoint de teste simples
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'HealGym Backend is alive!', 
+    timestamp: new Date().toISOString(),
+    status: 'ok'
+  });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -109,29 +129,14 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use((error, req, res, next) => {
-  console.error('Error:', error);
+  console.error('❌ Error caught by middleware:', error.message);
+  console.error('❌ Stack:', error.stack);
   
-  if (error.name === 'ValidationError') {
-    return res.status(400).json({
-      error: 'Invalid data',
-      details: Object.values(error.errors).map(err => err.message)
-    });
-  }
-  
-  if (error.name === 'JsonWebTokenError') {
-    return res.status(401).json({
-      error: 'Invalid token'
-    });
-  }
-  
-  if (error.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      error: 'Token expired'
-    });
-  }
-  
+  // Não crashar o servidor, sempre retornar uma resposta
   res.status(500).json({
-    error: 'Internal server error'
+    error: 'Internal server error',
+    message: error.message,
+    timestamp: new Date().toISOString()
   });
 });
 
