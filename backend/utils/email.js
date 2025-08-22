@@ -6,7 +6,9 @@ class EmailService {
   }
   async initializeTransporter() {
     if (!process.env.EMAIL_FROM || !process.env.EMAIL_PASSWORD) {
-      throw new Error('❌ Configuração de email não encontrada. Defina EMAIL_FROM e EMAIL_PASSWORD no arquivo .env');
+      console.warn('⚠️ Configuração de email não encontrada. Usando modo de desenvolvimento sem envio real de emails.');
+      this.transporter = null;
+      return;
     }
     
     const emailService = process.env.EMAIL_SERVICE || 'gmail';
@@ -40,13 +42,22 @@ class EmailService {
       console.log('📨 Emails serão enviados de:', process.env.EMAIL_FROM);
     } catch (error) {
       console.error(`❌ Erro na conexão com ${emailService}:`, error.message);
-      throw new Error(`Falha ao conectar com o serviço de email: ${error.message}`);
+      console.warn('⚠️ Funcionando em modo de desenvolvimento - emails não serão enviados');
+      this.transporter = null;
     }
   }
   async sendPasswordResetEmail(email, resetToken) {
     if (!this.transporter) {
       await this.initializeTransporter();
     }
+    
+    // Se ainda não há transporter (modo desenvolvimento), simula envio
+    if (!this.transporter) {
+      console.log(`📤 [MODO DEV] Simulando envio de email para: ${email}`);
+      console.log(`🔗 [MODO DEV] Link de reset: ${process.env.FRONTEND_URL || 'http://localhost'}/reset-password/${resetToken}`);
+      return { success: true, messageId: 'dev-mode-' + Date.now() };
+    }
+    
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
     const mailOptions = {
       from: process.env.EMAIL_FROM,

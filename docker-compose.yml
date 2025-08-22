@@ -27,9 +27,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-refresh-secret-in-production}
       FRONTEND_URL: http://localhost
-      EMAIL_SERVICE: ${EMAIL_SERVICE:-gmail}
-      EMAIL_FROM: ${EMAIL_FROM}
-      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
+      EMAIL_SERVICE: gmail
+      EMAIL_FROM: zgustavoaguiar@gmail.com
+      EMAIL_PASSWORD: qdsjjdhoqclqmyoh
     depends_on:
       - mongodb
     networks:
@@ -43,7 +43,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      VITE_API_URL: http://localhost:5000/api
+      VITE_API_URL: http://backend:5000/api
     depends_on:
       - backend
     networks:
