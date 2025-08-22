@@ -28,17 +28,27 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-app.use(cors({
+// Configuração CORS mais permissiva para produção
+const corsOptions = {
   origin: function (origin, callback) {
     // Permitir requisições sem origin (como Postman, aplicativos móveis)
     if (!origin) return callback(null, true);
     
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? [
-          'https://healgym-frontend.onrender.com',
-          ...(process.env.FRONTEND_URL?.split(',') || [])
-        ]
-      : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost'];
+    const allowedOrigins = [
+      'https://healgym-frontend.onrender.com',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost'
+    ];
+    
+    // Em produção, ser mais permissivo se necessário
+    if (process.env.NODE_ENV === 'production') {
+      // Permitir qualquer subdomínio do onrender.com temporariamente para debug
+      if (origin.includes('onrender.com')) {
+        console.log(`✅ Allowing onrender.com origin: ${origin}`);
+        return callback(null, true);
+      }
+    }
     
     console.log(`🌐 CORS check for origin: ${origin}`);
     console.log(`🌐 Allowed origins:`, allowedOrigins);
@@ -48,13 +58,28 @@ app.use(cors({
       return callback(null, true);
     } else {
       console.log(`❌ Origin ${origin} not allowed`);
-      return callback(new Error('Not allowed by CORS'));
+      return callback(new Error(`CORS: Origin ${origin} not allowed`));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// Middleware de debug para CORS
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} from origin: ${req.get('Origin') || 'no-origin'}`);
+  console.log(`📥 Headers:`, {
+    origin: req.get('Origin'),
+    'access-control-request-method': req.get('Access-Control-Request-Method'),
+    'access-control-request-headers': req.get('Access-Control-Request-Headers')
+  });
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
