@@ -81,16 +81,38 @@ const ResetPasswordPage = () => {
     }
     setIsSubmitting(true);
     setErrors({});
+    
     try {
-      await api.post(`/auth/reset-password/${token}`, {
-        password: formData.password,
-        confirmPassword: formData.confirmPassword
+      // Usar fetch direto para garantir que a URL está correta
+      const backendUrl = window.location.hostname === 'healgym-frontend.onrender.com' 
+        ? 'https://healgym-backend.onrender.com/api'
+        : 'http://localhost:5000/api';
+      
+      console.log('🚀 Direct fetch to:', `${backendUrl}/auth/reset-password/${token}`);
+      
+      const response = await fetch(`${backendUrl}/auth/reset-password/${token}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: formData.password,
+          confirmPassword: formData.confirmPassword
+        }),
       });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao redefinir senha');
+      }
+      
       setIsSuccess(true);
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Erro ao redefinir senha. Tente novamente.';
+      console.error('❌ Reset password error:', error);
+      const errorMessage = error.message || 'Erro ao redefinir senha. Tente novamente.';
       setErrors({ general: errorMessage });
-      if (error.response?.status === 400 && errorMessage.includes('Token')) {
+      if (error.message && error.message.includes('Token')) {
         setTokenValid(false);
       }
     } finally {

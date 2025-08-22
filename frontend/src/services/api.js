@@ -1,7 +1,19 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.PROD ? 'https://healgym-backend.onrender.com/api' : 'http://localhost:5000/api');
+// Configuração da URL da API baseada no ambiente
+let API_BASE_URL;
+
+if (typeof window !== 'undefined' && window.location.hostname === 'healgym-frontend.onrender.com') {
+  // Se estiver rodando no Render (produção)
+  API_BASE_URL = 'https://healgym-backend.onrender.com/api';
+} else if (import.meta.env.VITE_API_URL) {
+  // Se a variável de ambiente estiver definida
+  API_BASE_URL = import.meta.env.VITE_API_URL;
+} else {
+  // Desenvolvimento local
+  API_BASE_URL = 'http://localhost:5000/api';
+}
 
 console.log('🔍 API Base URL:', API_BASE_URL);
+console.log('🔍 Current hostname:', typeof window !== 'undefined' ? window.location.hostname : 'SSR');
 console.log('🔍 Environment:', import.meta.env.MODE);
 
 class ApiService {
@@ -102,6 +114,9 @@ class ApiService {
   }
 
   async resetPassword(token, passwordData) {
+    console.log('🔐 Reset password called with token:', token);
+    console.log('🔐 Will make request to:', `${this.baseURL}/auth/reset-password/${token}`);
+    
     return this.request(`/auth/reset-password/${token}`, {
       method: 'POST',
       body: JSON.stringify(passwordData),

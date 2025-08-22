@@ -76,10 +76,31 @@ const ForgotPasswordPage = () => {
     setErrors({});
 
     try {
-      await api.forgotPassword(formData.email);
+      // Usar fetch direto para garantir que a URL está correta
+      const backendUrl = window.location.hostname === 'healgym-frontend.onrender.com' 
+        ? 'https://healgym-backend.onrender.com/api'
+        : 'http://localhost:5000/api';
+      
+      console.log('🚀 Direct fetch to:', `${backendUrl}/auth/forgot-password`);
+      
+      const response = await fetch(`${backendUrl}/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao enviar email de recuperação');
+      }
+      
       setIsSubmitted(true);
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error.message || 'Erro ao enviar email de recuperação';
+      console.error('❌ Forgot password error:', error);
+      const errorMessage = error.message || 'Erro ao enviar email de recuperação';
       setErrors({ general: errorMessage });
     } finally {
       setIsSubmitting(false);
