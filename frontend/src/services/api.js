@@ -1,6 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.PROD ? 'https://healgym-backend.onrender.com/api' : 'http://localhost:5000/api');
 
+console.log('🔍 API Base URL:', API_BASE_URL);
+console.log('🔍 Environment:', import.meta.env.MODE);
+
 class ApiService {
   constructor() {
     this.baseURL = API_BASE_URL;
@@ -8,6 +11,8 @@ class ApiService {
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    
+    console.log(`🌐 Making request to: ${url}`);
     
     const config = {
       headers: {
