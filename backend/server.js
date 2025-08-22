@@ -17,13 +17,20 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
 
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // Aumentei temporariamente
   message: {
     error: 'Muitas tentativas. Tente novamente em alguns minutos.'
+  },
+  skip: (req) => {
+    // Pular rate limiting para OPTIONS (preflight)
+    return req.method === 'OPTIONS';
   }
 });
 app.use(limiter);
