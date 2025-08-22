@@ -34,16 +34,26 @@ app.use(cors({
     if (!origin) return callback(null, true);
     
     const allowedOrigins = process.env.NODE_ENV === 'production' 
-      ? (process.env.FRONTEND_URL?.split(',') || ['http://localhost'])
+      ? [
+          'https://healgym-frontend.onrender.com',
+          ...(process.env.FRONTEND_URL?.split(',') || [])
+        ]
       : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost'];
     
+    console.log(`🌐 CORS check for origin: ${origin}`);
+    console.log(`🌐 Allowed origins:`, allowedOrigins);
+    
     if (allowedOrigins.includes(origin)) {
+      console.log(`✅ Origin ${origin} allowed`);
       return callback(null, true);
     } else {
+      console.log(`❌ Origin ${origin} not allowed`);
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json({ limit: '10mb' }));
