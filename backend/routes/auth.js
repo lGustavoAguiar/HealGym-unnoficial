@@ -261,6 +261,8 @@ router.post('/forgot-password', [
 ], handleValidationErrors, async (req, res) => {
   try {
     const { email } = req.body;
+    
+    console.log(`📧 Recebida solicitação de forgot-password para: ${email}`);
 
     const user = await User.findOne({ email });
     if (!user) {
