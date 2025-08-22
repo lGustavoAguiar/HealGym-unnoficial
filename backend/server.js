@@ -17,10 +17,13 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  crossOriginEmbedderPolicy: false
-}));
+// Desabilitar helmet temporariamente para debug
+// app.use(helmet({
+//   crossOriginResourcePolicy: false,
+//   crossOriginEmbedderPolicy: false
+// }));
+
+console.log('🔧 Helmet desabilitado para debug');
 
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
@@ -35,47 +38,34 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// Configuração CORS mais permissiva para produção
+// Configuração CORS completamente aberta para debug
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Permitir requisições sem origin (como Postman, aplicativos móveis)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'https://healgym-frontend.onrender.com',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost'
-    ];
-    
-    // Em produção, ser mais permissivo se necessário
-    if (process.env.NODE_ENV === 'production') {
-      // Permitir qualquer subdomínio do onrender.com temporariamente para debug
-      if (origin.includes('onrender.com')) {
-        console.log(`✅ Allowing onrender.com origin: ${origin}`);
-        return callback(null, true);
-      }
-    }
-    
-    console.log(`🌐 CORS check for origin: ${origin}`);
-    console.log(`🌐 Allowed origins:`, allowedOrigins);
-    
-    if (allowedOrigins.includes(origin)) {
-      console.log(`✅ Origin ${origin} allowed`);
-      return callback(null, true);
-    } else {
-      console.log(`❌ Origin ${origin} not allowed`);
-      return callback(new Error(`CORS: Origin ${origin} not allowed`));
-    }
-  },
-  credentials: true,
+  origin: '*', // Temporariamente permitir todas as origens
+  credentials: false, // Desabilitar credentials temporariamente
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  allowedHeaders: ['*'],
   preflightContinue: false,
   optionsSuccessStatus: 200
 };
 
+console.log('🔧 CORS configurado como permissivo para debug');
+
 app.use(cors(corsOptions));
+
+// Adicionar headers CORS manualmente como fallback
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    console.log('🔧 Handling OPTIONS preflight request');
+    res.sendStatus(200);
+    return;
+  }
+  
+  next();
+});
 
 // Middleware de debug para CORS
 app.use((req, res, next) => {
@@ -152,8 +142,11 @@ app.use('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔧 CORS: Completamente aberto para debug`);
+  console.log(`🔧 Helmet: Desabilitado para debug`);
+  console.log(`📧 Frontend URL: ${process.env.FRONTEND_URL || 'não definida'}`);
 });
 
 export default app;
