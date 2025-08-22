@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -326,22 +327,31 @@ router.post('/reset-password/:token', [
     const { token } = req.params;
     const { password } = req.body;
 
+    // Hash do token recebido para comparar com o armazenado
+    const crypto = await import('crypto');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Buscar usuário com o token específico e que não tenha expirado
     const user = await User.findOne({
-      passwordResetToken: { $exists: true },
+      passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() }
     }).select('+passwordResetToken +passwordResetExpires');
 
-    if (!user || !user.validatePasswordResetToken(token)) {
+    if (!user) {
+      console.log(`❌ Token inválido ou expirado: ${token.substring(0, 10)}...`);
       return res.status(400).json({
         error: 'Token de recuperação inválido ou expirado'
       });
     }
 
+    console.log(`✅ Token válido para usuário: ${user.email}`);
 
     user.password = password;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
+
+    console.log(`✅ Senha redefinida com sucesso para: ${user.email}`);
 
     res.json({
       message: 'Senha redefinida com sucesso!'
