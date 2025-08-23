@@ -76,14 +76,14 @@ const ForgotPasswordPage = () => {
     setErrors({});
 
     try {
-      // Usar fetch direto para garantir que a URL está correta
+      // Usar URL relativa em produção para aproveitar o proxy
       const backendUrl = window.location.hostname === 'healgym-frontend.onrender.com' 
-        ? 'https://healgym-backend.onrender.com/api'
-        : 'http://localhost:5000/api';
+        ? '' // URL relativa - vai usar o proxy do _redirects
+        : 'http://localhost:5000';
       
-      console.log('🚀 Direct fetch to:', `${backendUrl}/auth/forgot-password`);
+      console.log('🚀 Direct fetch to:', `${backendUrl}/api/auth/forgot-password`);
       
-      const response = await fetch(`${backendUrl}/auth/forgot-password`, {
+      const response = await fetch(`${backendUrl}/api/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

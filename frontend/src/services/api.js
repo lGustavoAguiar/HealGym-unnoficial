@@ -2,14 +2,14 @@
 let API_BASE_URL;
 
 if (typeof window !== 'undefined' && window.location.hostname === 'healgym-frontend.onrender.com') {
-  // Se estiver rodando no Render (produção)
-  API_BASE_URL = 'https://healgym-backend.onrender.com/api';
+  // Se estiver rodando no Render (produção), usar URL relativa para aproveitar o proxy
+  API_BASE_URL = '';
 } else if (import.meta.env.VITE_API_URL) {
   // Se a variável de ambiente estiver definida
   API_BASE_URL = import.meta.env.VITE_API_URL;
 } else {
   // Desenvolvimento local
-  API_BASE_URL = 'http://localhost:5000/api';
+  API_BASE_URL = 'http://localhost:5000';
 }
 
 console.log('🔍 API Base URL:', API_BASE_URL);
