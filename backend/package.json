@@ -2,11 +2,12 @@
   "name": "healgym-backend",
   "version": "1.0.0",
   "description": "Backend API para o HealGym",
-  "main": "server.js",
+  "main": "server-simple.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node server-simple.js",
+    "dev": "nodemon server-simple.js",
+    "start-full": "node server.js"
   },
   "keywords": [
     "express",

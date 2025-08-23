@@ -4,8 +4,21 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
+// Importar rotas com try/catch para evitar crashes
+let authRoutes, userRoutes;
+try {
+  authRoutes = (await import('./routes/auth.js')).default;
+  console.log('✅ Auth routes imported');
+} catch (error) {
+  console.error('❌ Error importing auth routes:', error.message);
+}
+
+try {
+  userRoutes = (await import('./routes/users.js')).default;
+  console.log('✅ User routes imported');
+} catch (error) {
+  console.error('❌ Error importing user routes:', error.message);
+}
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,32 +27,23 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+const PORT = process.env.PORT || 5000;
+
 console.log('🚀 Starting HealGym Backend...');
 console.log('📍 Current directory:', __dirname);
 console.log('🔧 NODE_ENV:', process.env.NODE_ENV || 'not set');
 console.log('🔧 PORT:', PORT);
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 // Desabilitar helmet temporariamente para debug
-// app.use(helmet({
-//   crossOriginResourcePolicy: false,
-//   crossOriginEmbedderPolicy: false
-// }));
-
 console.log('🔧 Helmet desabilitado para debug');
 
+// Rate limiting mais simples
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // Aumentei temporariamente
-  message: {
-    error: 'Muitas tentativas. Tente novamente em alguns minutos.'
-  },
-  skip: (req) => {
-    // Pular rate limiting para OPTIONS (preflight)
-    return req.method === 'OPTIONS';
-  }
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 1000 requests per windowMs
+  skip: (req) => req.method === 'OPTIONS'
 });
 app.use(limiter);
 
@@ -117,8 +121,20 @@ app.get('/', (req, res) => {
   });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+// Registrar rotas condicionalmente
+if (authRoutes) {
+  app.use('/api/auth', authRoutes);
+  console.log('✅ Auth routes registered');
+} else {
+  console.warn('⚠️  Auth routes not available');
+}
+
+if (userRoutes) {
+  app.use('/api/users', userRoutes);
+  console.log('✅ User routes registered');
+} else {
+  console.warn('⚠️  User routes not available');
+}
 
 app.get('/api/health', (req, res) => {
   res.json({ 
