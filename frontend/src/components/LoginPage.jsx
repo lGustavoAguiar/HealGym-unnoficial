@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 const LoginPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
-  const { login, loading, isAuthenticated } = useAuth();
+  const { login, loading, isAuthenticated, needsProfileSetup } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -94,12 +94,17 @@ const LoginPage = () => {
         password: formData.password
       };
 
-      await login(credentials);
+      const response = await login(credentials);
       
       setSubmitMessage('Login realizado com sucesso! Redirecionando...');
       
       setTimeout(() => {
-        navigate('/dashboard');
+        // Verificar se o usuário precisa completar o perfil
+        if (needsProfileSetup()) {
+          navigate('/profile-setup');
+        } else {
+          navigate('/dashboard');
+        }
       }, 2000);
       
     } catch (error) {

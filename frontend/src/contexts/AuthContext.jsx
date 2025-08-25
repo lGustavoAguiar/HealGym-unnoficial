@@ -76,7 +76,11 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = (userData) => {
     setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
+    // Não salvar no localStorage para evitar inconsistências
+  };
+
+  const needsProfileSetup = () => {
+    return user && !user.profileSetupCompleted;
   };
 
   const value = {
@@ -87,6 +91,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
+    needsProfileSetup,
   };
 
   return (

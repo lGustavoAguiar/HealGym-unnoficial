@@ -1,8 +1,102 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Rota para pular setup do perfil
+router.post('/profile-setup/skip', authenticate, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          'profileSetupCompleted': true
+        }
+      },
+      { new: true, select: '-password' }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    res.json({
+      message: 'Setup marcado como completo',
+      user
+    });
+  } catch (error) {
+    console.error('Erro ao pular setup:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+// Rota para completar setup do perfil
+router.post('/profile-setup', [
+  authenticate,
+  body('gender')
+    .isIn(['masculino', 'feminino'])
+    .withMessage('Gênero inválido'),
+  body('height')
+    .isFloat({ min: 100, max: 250 })
+    .withMessage('Altura deve estar entre 100 e 250 cm'),
+  body('weight')
+    .isFloat({ min: 30, max: 300 })
+    .withMessage('Peso deve estar entre 30 e 300 kg'),
+  body('bodyType')
+    .isIn(['ectomorfo', 'mesomorfo', 'endomorfo'])
+    .withMessage('Biotipo inválido')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Dados inválidos',
+        details: errors.array()
+      });
+    }
+
+    const { gender, height, weight, bodyType } = req.body;
+    const userId = req.user._id;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          'profile.gender': gender,
+          'profile.height': height,
+          'profile.weight': weight,
+          'profile.bodyType': bodyType,
+          'profileSetupCompleted': true
+        }
+      },
+      { new: true, select: '-password' }
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    res.json({
+      message: 'Perfil atualizado com sucesso',
+      user
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar perfil:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
 
 router.get('/', authenticate, authorize('admin'), async (req, res) => {
   try {

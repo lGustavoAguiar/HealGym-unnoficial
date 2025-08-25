@@ -25,6 +25,9 @@ class ApiService {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 Token found and added to headers');
+    } else {
+      console.log('⚠️ No token found in localStorage');
     }
 
     try {
@@ -50,21 +53,36 @@ class ApiService {
   }
 
   async register(userData) {
-    return this.request('/auth/register', {
+    console.log('📝 Registrando usuário...');
+    const response = await this.request('/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
+
+    if (response.token) {
+      console.log('🔑 Token recebido no registro, salvando...');
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify(response.user));
+    } else {
+      console.log('⚠️ Nenhum token recebido na resposta do registro');
+    }
+
+    return response;
   }
 
   async login(credentials) {
+    console.log('🔐 Fazendo login...');
     const response = await this.request('/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
 
     if (response.token) {
+      console.log('🔑 Token recebido no login, salvando...');
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
+    } else {
+      console.log('⚠️ Nenhum token recebido na resposta do login');
     }
 
     return response;
@@ -149,6 +167,19 @@ class ApiService {
 
   async getUserStats() {
     return this.request('/users/stats/overview');
+  }
+
+  async setupProfile(profileData) {
+    return this.request('/users/profile-setup', {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    });
+  }
+
+  async skipProfileSetup() {
+    return this.request('/users/profile-setup/skip', {
+      method: 'POST',
+    });
   }
 
   async healthCheck() {

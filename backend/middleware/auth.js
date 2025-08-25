@@ -5,31 +5,39 @@ export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.header('Authorization');
     
+    console.log('🔍 Auth Header:', authHeader ? 'Present' : 'Missing');
+    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ Token not provided or invalid format');
       return res.status(401).json({
         error: 'Acesso negado. Token não fornecido.'
       });
     }
 
     const token = authHeader.substring(7);
+    console.log('🔑 Token extracted:', token.substring(0, 10) + '...');
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('✅ Token decoded successfully for user:', decoded.userId);
       
       const user = await User.findById(decoded.userId).select('-password');
       
       if (!user) {
+        console.log('❌ User not found for token');
         return res.status(401).json({
           error: 'Token inválido. Usuário não encontrado.'
         });
       }
 
       if (!user.isActive) {
+        console.log('❌ User account is inactive');
         return res.status(401).json({
           error: 'Conta desativada. Entre em contato com o suporte.'
         });
       }
 
+      console.log('✅ User authenticated successfully:', user.name);
       req.user = user;
       next();
     } catch (tokenError) {

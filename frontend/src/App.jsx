@@ -6,8 +6,10 @@ import RegisterPage from './components/RegisterPage'
 import LoginPage from './components/LoginPage'
 import ForgotPasswordPage from './components/ForgotPasswordPage'
 import ResetPasswordPage from './components/ResetPasswordPage'
+import ProfileSetupPage from './components/ProfileSetupPage'
 import Dashboard from './components/Dashboard'
 import ProtectedRoute from './components/ProtectedRoute'
+import ProfileSetupGuard from './components/ProfileSetupGuard'
 
 function App() {
   return (
@@ -21,10 +23,20 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route 
+            path="/profile-setup" 
+            element={
+              <ProtectedRoute>
+                <ProfileSetupPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/dashboard" 
             element={
               <ProtectedRoute>
-                <Dashboard />
+                <ProfileSetupGuard>
+                  <Dashboard />
+                </ProfileSetupGuard>
               </ProtectedRoute>
             } 
           />

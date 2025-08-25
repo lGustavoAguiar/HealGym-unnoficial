@@ -53,13 +53,31 @@ const userSchema = new mongoose.Schema({
     dateOfBirth: Date,
     gender: {
       type: String,
-      enum: ['masculino', 'feminino', 'outro', 'nao-informar']
+      enum: ['masculino', 'feminino']
+    },
+    height: {
+      type: Number,
+      min: [100, 'Altura deve ser pelo menos 100 cm'],
+      max: [250, 'Altura deve ser no máximo 250 cm']
+    },
+    weight: {
+      type: Number,
+      min: [30, 'Peso deve ser pelo menos 30 kg'],
+      max: [300, 'Peso deve ser no máximo 300 kg']
+    },
+    bodyType: {
+      type: String,
+      enum: ['ectomorfo', 'mesomorfo', 'endomorfo']
     },
     goals: [String],
     fitnessLevel: {
       type: String,
       enum: ['iniciante', 'intermediario', 'avancado']
     }
+  },
+  profileSetupCompleted: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

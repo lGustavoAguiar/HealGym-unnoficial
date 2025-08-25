@@ -81,7 +81,8 @@ router.post('/register', [
         name: user.name,
         email: user.email,
         role: user.role,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        profileSetupCompleted: user.profileSetupCompleted
       }
     });
   } catch (error) {
@@ -137,7 +138,8 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         role: user.role,
-        lastLogin: user.lastLogin
+        lastLogin: user.lastLogin,
+        profileSetupCompleted: user.profileSetupCompleted
       }
     });
   } catch (error) {
