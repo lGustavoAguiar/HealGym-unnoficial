@@ -151,7 +151,8 @@ const ProfileSetupPage = () => {
         >
           <FormTitle>Complete seu Perfil</FormTitle>
           <FormSubtitle>
-            Vamos personalizar sua experiência! Preencha algumas informações sobre você.
+            <div>Vamos personalizar sua experiência!</div>
+            <div>Preencha algumas informações sobre você.</div>
           </FormSubtitle>
           
           <FormContainer onSubmit={handleSubmit} noValidate>
@@ -348,7 +349,7 @@ const FormSection = styled.section`
 `;
 
 const FormTitle = styled.h1`
-  font-size: min(6vw, 2.5rem);
+  font-size: min(2vw, 2.5rem);
   color: var(--white);
   margin-bottom: min(2vh, 15px);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
@@ -370,6 +371,14 @@ const FormSubtitle = styled.p`
   letter-spacing: 0.1vw;
   cursor: default;
   line-height: 1.6;
+  
+  div {
+    margin-bottom: 0.5rem;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
 `;
 
 const FormContainer = styled.form`
