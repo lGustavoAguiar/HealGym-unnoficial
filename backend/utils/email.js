@@ -92,23 +92,17 @@ class EmailService {
             <td align="center">
               <table width="800" cellpadding="0" cellspacing="0" style="background: rgba(255,255,255,0.95); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.2);">
                 
-                <!-- Header Elaborado -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%); padding: 60px 80px; text-align: center; position: relative;">
-                    <!-- Background Pattern -->
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: radial-gradient(circle at 25% 25%, rgba(102,126,234,0.1) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(240,147,251,0.1) 0%, transparent 50%); opacity: 0.7;"></div>
                     
-                    <!-- Logo Container -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="position: relative; z-index: 2;">
                       <tr>
                         <td align="center">
-                          <!-- Logo Icon -->
                           <div style="display: inline-block; width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); border-radius: 50%; line-height: 120px; font-size: 60px; color: white; margin-bottom: 25px; box-shadow: 0 15px 40px rgba(102,126,234,0.4), 0 0 0 8px rgba(255,255,255,0.1); border: 3px solid rgba(255,255,255,0.2);">💪</div>
                           
-                          <!-- Brand Name -->
                           <h1 style="margin: 0; font-size: 4.5em; font-weight: 900; color: white; letter-spacing: -2px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 15px;">HealGym</h1>
                           
-                          <!-- Taglines -->
                           <p style="margin: 0; font-size: 1.8em; color: rgba(255,255,255,0.9); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px;">Transformando Vidas, Fortalecendo Sonhos</p>
                           <p style="margin: 0; font-size: 1.3em; color: rgba(255,255,255,0.8); font-style: italic; font-weight: 400;">Sua jornada de superação começa aqui ✨</p>
                         </td>
@@ -117,15 +111,12 @@ class EmailService {
                   </td>
                 </tr>
                 
-                <!-- Content Principal -->
                 <tr>
                   <td style="padding: 80px; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);">
                     
-                    <!-- Welcome Section -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 50px;">
                       <tr>
                         <td align="center">
-                          <!-- Lock Icon Grande -->
                           <div style="display: inline-block; width: 140px; height: 140px; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); border-radius: 50%; line-height: 140px; font-size: 70px; color: white; margin-bottom: 40px; box-shadow: 0 25px 60px rgba(102,126,234,0.4), 0 0 0 12px rgba(102,126,234,0.1), 0 0 0 24px rgba(102,126,234,0.05); border: 4px solid rgba(255,255,255,0.3);">🔐</div>
                           
                           <h2 style="margin: 0; font-size: 3.5em; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 30px; letter-spacing: -1px;">Recuperação de Senha</h2>
@@ -137,7 +128,6 @@ class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Message Content -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 50px;">
                       <tr>
                         <td>
@@ -154,11 +144,9 @@ class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Call to Action Button -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 60px 0;">
                       <tr>
                         <td align="center">
-                          <!-- Decorative Sparkle -->
                           <div style="font-size: 30px; margin-bottom: 20px; opacity: 0.8;">✨</div>
                           
                           <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); color: white; text-decoration: none; padding: 25px 60px; border-radius: 50px; font-weight: 700; font-size: 1.6em; text-align: center; box-shadow: 0 20px 50px rgba(102,126,234,0.4), 0 0 0 0 rgba(102,126,234,0.3); border: none; letter-spacing: 1px; text-transform: uppercase; transition: all 0.3s ease;">
@@ -168,12 +156,10 @@ class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Security Warning -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 50px 0;">
                       <tr>
                         <td>
                           <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 8px solid #ef4444; border-radius: 15px; padding: 40px; position: relative; box-shadow: 0 10px 30px rgba(239,68,68,0.1);">
-                            <!-- Warning Icon -->
                             <div style="position: absolute; top: -15px; left: 30px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; width: 60px; height: 60px; border-radius: 50%; line-height: 60px; text-align: center; font-size: 24px; box-shadow: 0 8px 20px rgba(239,68,68,0.3);">⚠️</div>
                             
                             <h3 style="color: #dc2626; margin: 10px 0 25px 40px; font-size: 1.6em; font-weight: 800;">🛡️ Informações de Segurança</h3>
@@ -197,7 +183,6 @@ class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Alternative URL -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 40px 0;">
                       <tr>
                         <td>
@@ -211,12 +196,10 @@ class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Protection Notice -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 40px 0;">
                       <tr>
                         <td>
                           <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border-left: 6px solid #17a2b8; border-radius: 15px; padding: 35px; position: relative;">
-                            <!-- Shield Icon -->
                             <div style="position: absolute; top: -12px; left: 25px; background: #17a2b8; color: white; width: 50px; height: 50px; border-radius: 50%; line-height: 50px; text-align: center; font-size: 20px;">🛡️</div>
                             
                             <h3 style="color: #0c5460; margin: 10px 0 20px 35px; font-size: 1.5em; font-weight: 700;">🔒 Proteção da Sua Conta</h3>
@@ -231,12 +214,10 @@ class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Signature -->
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin: 60px 0 20px 0;">
                       <tr>
                         <td>
                           <div style="text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); color: white; border-radius: 20px; box-shadow: 0 15px 40px rgba(102,126,234,0.3); position: relative; overflow: hidden;">
-                            <!-- Subtle overlay -->
                             <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); opacity: 0.7;"></div>
                             
                             <div style="position: relative; z-index: 2;">
@@ -251,7 +232,6 @@ class EmailService {
                   </td>
                 </tr>
                 
-                <!-- Footer -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%); color: #95a5a6; padding: 60px 80px; text-align: center;">
                     <table width="100%" cellpadding="0" cellspacing="0">

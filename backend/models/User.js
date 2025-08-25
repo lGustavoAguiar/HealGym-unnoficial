@@ -86,10 +86,13 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
+  console.log('🔐 Hasheando senha para usuário:', this.email);
   try {
     this.password = await bcrypt.hash(this.password, 12);
+    console.log('✅ Senha hasheada com sucesso');
     next();
   } catch (error) {
+    console.error('❌ Erro ao hashear senha:', error);
     next(error);
   }
 });

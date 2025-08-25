@@ -174,7 +174,6 @@ const RegisterPage = () => {
       setHasErrors(false);
       setSubmitMessage('Cadastro realizado com sucesso! Redirecionando...');
       setTimeout(() => {
-        // Após registro, sempre redirecionar para setup de perfil
         navigate('/profile-setup');
       }, 2000);
     } catch (error) {

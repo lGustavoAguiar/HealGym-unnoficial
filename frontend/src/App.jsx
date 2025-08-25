@@ -7,6 +7,7 @@ import LoginPage from './components/LoginPage'
 import ForgotPasswordPage from './components/ForgotPasswordPage'
 import ResetPasswordPage from './components/ResetPasswordPage'
 import ProfileSetupPage from './components/ProfileSetupPage'
+import EditProfilePage from './components/EditProfilePage'
 import Dashboard from './components/Dashboard'
 import ProtectedRoute from './components/ProtectedRoute'
 import ProfileSetupGuard from './components/ProfileSetupGuard'
@@ -27,6 +28,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProfileSetupPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/edit-profile" 
+            element={
+              <ProtectedRoute>
+                <ProfileSetupGuard>
+                  <EditProfilePage />
+                </ProfileSetupGuard>
               </ProtectedRoute>
             } 
           />

@@ -82,7 +82,8 @@ router.post('/register', [
         email: user.email,
         role: user.role,
         createdAt: user.createdAt,
-        profileSetupCompleted: user.profileSetupCompleted
+        profileSetupCompleted: user.profileSetupCompleted,
+        profile: user.profile
       }
     });
   } catch (error) {
@@ -105,8 +106,11 @@ router.post('/login', [
   try {
     const { email, password } = req.body;
 
+    console.log('🔐 Tentativa de login para email:', email);
+
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
+      console.log('❌ Usuário não encontrado para email:', email);
       return res.status(401).json({
         error: 'Credenciais inválidas'
       });
@@ -119,6 +123,9 @@ router.post('/login', [
     }
 
     const isValidPassword = await user.comparePassword(password);
+    console.log('🔐 Verificação de senha para', user.email, ':', isValidPassword ? 'SUCESSO' : 'FALHA');
+    console.log('🔍 Hash da senha no banco:', user.password ? user.password.substring(0, 20) + '...' : 'VAZIO');
+    console.log('🔍 Senha enviada:', password ? '[PRESENTE]' : '[VAZIA]');
     if (!isValidPassword) {
       return res.status(401).json({
         error: 'Credenciais inválidas'
@@ -139,7 +146,8 @@ router.post('/login', [
         email: user.email,
         role: user.role,
         lastLogin: user.lastLogin,
-        profileSetupCompleted: user.profileSetupCompleted
+        profileSetupCompleted: user.profileSetupCompleted,
+        profile: user.profile
       }
     });
   } catch (error) {
@@ -173,31 +181,82 @@ router.put('/profile', authenticate, [
     .optional()
     .isEmail()
     .normalizeEmail()
-    .withMessage('E-mail inválido')
+    .withMessage('E-mail inválido'),
+  body('gender')
+    .optional()
+    .isIn(['masculino', 'feminino'])
+    .withMessage('Gênero deve ser masculino ou feminino'),
+  body('height')
+    .optional()
+    .isNumeric()
+    .isFloat({ min: 100, max: 250 })
+    .withMessage('Altura deve estar entre 100 e 250 cm'),
+  body('weight')
+    .optional()
+    .isNumeric()
+    .isFloat({ min: 30, max: 300 })
+    .withMessage('Peso deve estar entre 30 e 300 kg'),
+  body('bodyType')
+    .optional()
+    .isIn(['ectomorfo', 'mesomorfo', 'endomorfo'])
+    .withMessage('Biotipo deve ser ectomorfo, mesomorfo ou endomorfo'),
+  body('newPassword')
+    .optional()
+    .isLength({ min: 6 })
+    .withMessage('Nova senha deve ter pelo menos 6 caracteres')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número')
 ], handleValidationErrors, async (req, res) => {
   try {
-    const { name, email, profile } = req.body;
+    const { name, gender, height, weight, bodyType, newPassword } = req.body;
     const userId = req.user._id;
-
-    if (email && email !== req.user.email) {
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({
-          error: 'E-mail já está em uso'
-        });
-      }
-    }
 
     const updateData = {};
     if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (profile) updateData.profile = { ...req.user.profile, ...profile };
+    
+    if (gender || height || weight || bodyType) {
+      updateData.profile = {
+        ...req.user.profile,
+        ...(gender && { gender }),
+        ...(height && { height: parseFloat(height) }),
+        ...(weight && { weight: parseFloat(weight) }),
+        ...(bodyType && { bodyType })
+      };
+    }
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const user = await User.findById(userId);
+    console.log('🔍 Usuário encontrado para atualização:', user ? user.email : 'NENHUM');
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+    
+    if (name) user.name = name;
+    if (newPassword) {
+      console.log('🔐 Alterando senha do usuário:', user.email);
+      user.password = newPassword;
+    }
+    
+    if (gender || height || weight || bodyType) {
+      user.profile = {
+        ...user.profile,
+        ...(gender && { gender }),
+        ...(height && { height: parseFloat(height) }),
+        ...(weight && { weight: parseFloat(weight) }),
+        ...(bodyType && { bodyType })
+      };
+    }
+
+    await user.save();
+
+    console.log('✅ Perfil atualizado com sucesso para:', user.email);
+    
+    if (newPassword) {
+      const testPassword = await user.comparePassword(newPassword);
+      console.log('🧪 Teste imediato da nova senha:', testPassword ? 'PASSOU' : 'FALHOU');
+    }
 
     res.json({
       message: 'Perfil atualizado com sucesso',
@@ -366,6 +425,34 @@ router.post('/reset-password/:token', [
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
+  }
+});
+
+router.get('/debug-user/:email', authenticate, async (req, res) => {
+  try {
+    const { email } = req.params;
+    
+    if (req.user.role !== 'admin' && req.user.email !== email) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    
+    const user = await User.findOne({ email }).select('+password');
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+    
+    res.json({
+      email: user.email,
+      name: user.name,
+      hasPassword: !!user.password,
+      passwordLength: user.password ? user.password.length : 0,
+      passwordStartsWith: user.password ? user.password.substring(0, 10) + '...' : null,
+      profile: user.profile
+    });
+  } catch (error) {
+    console.error('Erro no debug:', error);
+    res.status(500).json({ error: 'Erro interno' });
   }
 });
 

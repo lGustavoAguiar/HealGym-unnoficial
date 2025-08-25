@@ -263,11 +263,11 @@ const FormSection = styled.section`
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(198, 169, 100, 0.1);
   backdrop-filter: blur(10px);
-  margin-top: min(10vh, 80px);
+  margin-top: min(50vh, 130px);
 `;
 
 const FormTitle = styled.h1`
-  font-size: min(6vw, 2.5rem);
+  font-size: min(2vw, 2rem);
   color: var(--white);
   margin-bottom: min(3vh, 20px);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
@@ -281,7 +281,7 @@ const FormTitle = styled.h1`
 `;
 
 const FormSubtitle = styled.p`
-  font-size: min(2.5vw, 1.2rem);
+  font-size: min(2vw, 1.2rem);
   color: var(--text-secondary);
   margin-bottom: min(6vh, 30px);
   text-align: center;

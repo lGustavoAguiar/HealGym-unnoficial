@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          // Primeiro tenta carregar do localStorage para ter dados imediatamente
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
             try {
@@ -34,12 +33,10 @@ export const AuthProvider = ({ children }) => {
             }
           }
 
-          // Depois verifica com o servidor para garantir que está atualizado
           const response = await apiService.verifyToken();
           if (response.valid) {
             setUser(response.user);
             setIsAuthenticated(true);
-            // Atualiza o localStorage com os dados mais recentes
             localStorage.setItem('user', JSON.stringify(response.user));
             console.log('✅ Dados do usuário atualizados do servidor:', response.user);
           } else {
@@ -63,7 +60,6 @@ export const AuthProvider = ({ children }) => {
       const response = await apiService.login(credentials);
       setUser(response.user);
       setIsAuthenticated(true);
-      // Garantir que os dados são salvos no localStorage
       localStorage.setItem('user', JSON.stringify(response.user));
       return response;
     } catch (error) {
@@ -79,7 +75,6 @@ export const AuthProvider = ({ children }) => {
       const response = await apiService.register(userData);
       setUser(response.user);
       setIsAuthenticated(true);
-      // Garantir que os dados são salvos no localStorage
       localStorage.setItem('user', JSON.stringify(response.user));
       return response;
     } catch (error) {
@@ -93,13 +88,11 @@ export const AuthProvider = ({ children }) => {
     apiService.logout();
     setUser(null);
     setIsAuthenticated(false);
-    // Limpar também do localStorage
     localStorage.removeItem('user');
   };
 
   const updateUser = (userData) => {
     setUser(userData);
-    // Também atualizar no localStorage para sincronizar
     localStorage.setItem('user', JSON.stringify(userData));
   };
 

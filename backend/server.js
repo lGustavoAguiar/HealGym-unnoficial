@@ -13,7 +13,6 @@ const PORT = process.env.PORT || 5000;
 console.log('🚀 HealGym Backend Starting...');
 console.log('🔧 PORT:', PORT);
 
-// MongoDB Connection
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://mongodb:27017/healgym';
@@ -31,10 +30,8 @@ const connectDB = async () => {
   }
 };
 
-// Connect to MongoDB
 connectDB();
 
-// Middleware
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -57,7 +54,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Routes
 app.get('/', (req, res) => {
   console.log('📍 Root endpoint accessed');
   res.json({ 
@@ -75,11 +71,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
-// 404 Handler
 app.use('*', (req, res) => {
   console.log(`❌ 404: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
@@ -89,7 +83,6 @@ app.use('*', (req, res) => {
   });
 });
 
-// Error Handler
 app.use((error, req, res, next) => {
   console.error('❌ Erro no servidor:', error);
   res.status(500).json({

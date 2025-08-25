@@ -5,7 +5,6 @@ import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Rota para pular setup do perfil
 router.post('/profile-setup/skip', authenticate, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -38,7 +37,6 @@ router.post('/profile-setup/skip', authenticate, async (req, res) => {
   }
 });
 
-// Rota para completar setup do perfil
 router.post('/profile-setup', [
   authenticate,
   body('gender')

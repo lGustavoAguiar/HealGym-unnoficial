@@ -5,12 +5,15 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 
-const ProfileSetupPage = () => {
+const EditProfilePage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
-  const { user, updateUser, needsProfileSetup, logout } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   
   const [formData, setFormData] = useState({
+    name: '',
+    newPassword: '',
+    confirmPassword: '',
     gender: '',
     height: '',
     weight: '',
@@ -20,6 +23,27 @@ const ProfileSetupPage = () => {
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  useEffect(() => {
+    console.log('🔍 EditProfile useEffect - User:', user);
+    console.log('🔍 EditProfile useEffect - User profile:', user?.profile);
+    if (user) {
+      console.log('🔍 Preenchendo dados do formulário...');
+      setFormData({
+        name: user.name || '',
+        newPassword: '',
+        confirmPassword: '',
+        gender: user.profile?.gender || '',
+        height: user.profile?.height || '',
+        weight: user.profile?.weight || '',
+        bodyType: user.profile?.bodyType || ''
+      });
+      setIsLoadingUser(false);
+    } else {
+      console.log('⚠️ User não disponível ainda');
+    }
+  }, [user]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -34,6 +58,24 @@ const ProfileSetupPage = () => {
   const validateField = (name, value) => {
     let error = '';
     switch (name) {
+      case 'name':
+        if (!value.trim()) error = 'Nome é obrigatório';
+        else if (value.trim().length < 2) error = 'Nome deve ter pelo menos 2 caracteres';
+        else if (/\d/.test(value)) error = 'O nome não deve conter números';
+        else if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s]*$/.test(value)) error = 'O nome deve conter apenas letras';
+        break;
+      case 'newPassword':
+        if (value && value.length < 6) {
+          error = 'Nova senha deve ter pelo menos 6 caracteres';
+        } else if (value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+          error = 'Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
+        }
+        break;
+      case 'confirmPassword':
+        if (value && value !== formData.newPassword) {
+          error = 'Confirmação de senha não confere';
+        }
+        break;
       case 'gender':
         if (!value) error = 'Gênero é obrigatório';
         break;
@@ -56,6 +98,17 @@ const ProfileSetupPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name === 'name') {
+      const sanitizedValue = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '');
+      setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
+      if (touched[name]) {
+        const newError = validateField(name, sanitizedValue);
+        setErrors(prev => ({ ...prev, [name]: newError }));
+      }
+      return;
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
     
     if (touched[name]) {
@@ -81,6 +134,9 @@ const ProfileSetupPage = () => {
     });
 
     setTouched({
+      name: true,
+      newPassword: true,
+      confirmPassword: true,
       gender: true,
       height: true,
       weight: true,
@@ -96,64 +152,140 @@ const ProfileSetupPage = () => {
     setSubmitMessage('');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const currentToken = localStorage.getItem('token');
-      console.log('🔍 Token atual no localStorage:', currentToken ? 'Presente' : 'Ausente');
-      
-      console.log('🔄 Enviando dados do perfil:', {
+      const profileData = {
+        name: formData.name.trim(),
         gender: formData.gender,
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight),
         bodyType: formData.bodyType
-      });
-      
-      const response = await api.setupProfile({
-        gender: formData.gender,
-        height: parseFloat(formData.height),
-        weight: parseFloat(formData.weight),
-        bodyType: formData.bodyType
-      });
-      
-      console.log('✅ Resposta do perfil:', response);
+      };
+
+      if (formData.newPassword) {
+        profileData.newPassword = formData.newPassword;
+      }
+
+      const response = await api.updateProfile(profileData);
       
       updateUser(response.user);
       
-      setSubmitMessage('Informações salvas com sucesso! Redirecionando...');
+      setSubmitMessage('Perfil atualizado com sucesso! Redirecionando...');
       
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
       
     } catch (error) {
-      console.error('❌ Erro ao salvar informações:', error);
-      setSubmitMessage(error.message || 'Erro ao salvar informações. Tente novamente.');
+      console.error('Erro ao atualizar perfil:', error);
+      setSubmitMessage(error.message || 'Erro ao atualizar perfil. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleLogoClick = () => {
-    logout();
-    navigate('/');
   };
+
+  if (isLoadingUser) {
+    return (
+      <Container className="custom-scroll">
+        <LogoTitle>HealGym</LogoTitle>
+        <FormSection>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--white)' }}>
+            Carregando dados do perfil...
+          </div>
+        </FormSection>
+      </Container>
+    );
+  }
 
   return (
     <Container className="custom-scroll">
-      <LogoTitle onClick={handleLogoClick}>HealGym</LogoTitle>
+      <LogoTitle>HealGym</LogoTitle>
       <FormSection ref={formRef}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <FormTitle>Complete seu Perfil</FormTitle>
+          <FormTitle>Editar Perfil</FormTitle>
           <FormSubtitle>
-            <div>Vamos personalizar sua experiência!</div>
-            <div>Preencha algumas informações sobre você.</div>
+            <div>Atualize suas informações pessoais</div>
+            <div>Mantenha seu perfil sempre atualizado</div>
           </FormSubtitle>
           
           <FormContainer onSubmit={handleSubmit} noValidate>
+            <InputGroup>
+              <Input
+                type="text"
+                name="name"
+                placeholder="Nome completo"
+                value={formData.name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.name && errors.name}
+              />
+              <AnimatePresence>
+                {touched.name && errors.name && (
+                  <ErrorMessage
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {errors.name}
+                  </ErrorMessage>
+                )}
+              </AnimatePresence>
+            </InputGroup>
+
+            <InputGroup>
+              <Input
+                type="password"
+                name="newPassword"
+                placeholder="Nova senha (deixe em branco para não alterar)"
+                value={formData.newPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.newPassword && errors.newPassword}
+              />
+              <AnimatePresence>
+                {touched.newPassword && errors.newPassword && (
+                  <ErrorMessage
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {errors.newPassword}
+                  </ErrorMessage>
+                )}
+              </AnimatePresence>
+            </InputGroup>
+
+            <InputGroup>
+              <Input
+                type="password"
+                name="confirmPassword"
+                placeholder="Confirme a nova senha"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.confirmPassword && errors.confirmPassword}
+              />
+              <AnimatePresence>
+                {touched.confirmPassword && errors.confirmPassword && (
+                  <ErrorMessage
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {errors.confirmPassword}
+                  </ErrorMessage>
+                )}
+              </AnimatePresence>
+            </InputGroup>
+
             <InputGroup>
               <SelectWrapper>
                 <Select
@@ -273,8 +405,17 @@ const ProfileSetupPage = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                {isSubmitting ? 'Salvando...' : 'Continuar'}
+                {isSubmitting ? 'Atualizando...' : 'Salvar Alterações'}
               </SubmitButton>
+              
+              <CancelButton
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Cancelar
+              </CancelButton>
             </ButtonGroup>
 
             <AnimatePresence>
@@ -299,13 +440,13 @@ const ProfileSetupPage = () => {
 
 const Container = styled.div`
   width: 100%;
-  height: 100vh;
+  height: 110vh;
   margin: 0;
-  padding: min(15vh, 120px) 0;
+  padding: 0;
   overflow: hidden;
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   position: relative;
 `;
@@ -324,32 +465,26 @@ const LogoTitle = styled.h1`
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: 0.1vw;
-  cursor: pointer;
-  transition: all 0.4s ease;
+  cursor: default;
   font-family: 'Cinzel', serif;
   z-index: 10;
-  
-  &:hover {
-    transform: scale(1.05);
-    text-shadow: 2px 2px 8px rgba(198, 169, 100, 0.5);
-  }
 `;
 
 const FormSection = styled.section`
-  width: min(90vw, 600px);
-  padding: min(5vh, 40px);
+  width: min(95vw, 800px);
+  max-height: none;
+  padding: min(3vh, 25px);
   background: var(--card-bg);
   border-radius: 2px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(198, 169, 100, 0.1);
   backdrop-filter: blur(10px);
-  margin-top: min(5vh, 40px);
 `;
 
 const FormTitle = styled.h1`
-  font-size: min(2vw, 2.5rem);
+  font-size: min(5vw, 2.2rem);
   color: var(--white);
-  margin-bottom: min(2vh, 15px);
+  margin-bottom: min(1.5vh, 12px);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
   font-weight: 600;
   background: var(--gold-gradient);
@@ -361,17 +496,17 @@ const FormTitle = styled.h1`
 `;
 
 const FormSubtitle = styled.p`
-  font-size: min(2.5vw, 1.2rem);
+  font-size: min(2.2vw, 1.1rem);
   color: var(--text-secondary);
-  margin-bottom: min(6vh, 30px);
+  margin-bottom: min(4vh, 20px);
   text-align: center;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.1vw;
   cursor: default;
-  line-height: 1.6;
+  line-height: 1.4;
   
   div {
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
     
     &:last-child {
       margin-bottom: 0;
@@ -382,7 +517,7 @@ const FormSubtitle = styled.p`
 const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
-  gap: min(3vh, 20px);
+  gap: min(2vh, 15px);
 `;
 
 const InputGroup = styled.div`
@@ -392,22 +527,22 @@ const InputGroup = styled.div`
 const InputRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: min(2vw, 20px);
+  gap: min(2vw, 15px);
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: min(3vh, 20px);
+    gap: min(2vh, 15px);
   }
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: min(2vh, 15px);
+  padding: min(1.5vh, 12px);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
   border-radius: 2px;
   color: var(--white);
-  font-size: min(2vw, 1.2rem);
+  font-size: min(1.8vw, 1.1rem);
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
@@ -438,12 +573,12 @@ const SelectWrapper = styled.div`
 
 const Select = styled.select`
   width: 100%;
-  padding: min(2vh, 15px);
+  padding: min(1.5vh, 12px);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
   border-radius: 2px;
   color: var(--white);
-  font-size: min(2vw, 1.2rem);
+  font-size: min(1.8vw, 1.1rem);
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
@@ -484,14 +619,14 @@ const ErrorMessage = styled(motion.span)`
 const ButtonGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: min(2vh, 15px);
-  margin-top: min(3vh, 20px);
+  gap: min(1.5vh, 12px);
+  margin-top: min(2vh, 15px);
 `;
 
 const SubmitButton = styled(motion.button)`
   font-family: 'Poppins', sans-serif;
-  padding: min(2vh, 15px);
-  font-size: min(2vw, 1.1rem);
+  padding: min(1.5vh, 12px);
+  font-size: min(1.8vw, 1rem);
   background: var(--gold-gradient);
   color: var(--background);
   border-radius: 2px;
@@ -510,6 +645,27 @@ const SubmitButton = styled(motion.button)`
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+  }
+`;
+
+const CancelButton = styled(motion.button)`
+  font-family: 'Poppins', sans-serif;
+  padding: min(1.2vh, 10px);
+  font-size: min(1.6vw, 0.9rem);
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid rgba(198, 169, 100, 0.3);
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1vw;
+  width: 100%;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(198, 169, 100, 0.1);
   }
 `;
 
@@ -534,4 +690,4 @@ const SubmitMessage = styled(motion.div)`
   }
 `;
 
-export default ProfileSetupPage;
+export default EditProfilePage;

@@ -14,12 +14,10 @@ const ProfileSetupGuard = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Se o usuário está na página de setup, deixe-o ficar
   if (location.pathname === '/profile-setup') {
     return children;
   }
 
-  // Se o usuário não completou o setup do perfil, redirecione para a página de setup
   if (needsProfileSetup()) {
     return <Navigate to="/profile-setup" replace />;
   }

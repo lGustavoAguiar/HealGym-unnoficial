@@ -93,6 +93,7 @@ class ApiService {
   }
 
   async updateProfile(profileData) {
+    console.log('🔄 Atualizando perfil...');
     return this.request('/auth/profile', {
       method: 'PUT',
       body: JSON.stringify(profileData),

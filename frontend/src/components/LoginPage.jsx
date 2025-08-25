@@ -99,7 +99,6 @@ const LoginPage = () => {
       setSubmitMessage('Login realizado com sucesso! Redirecionando...');
       
       setTimeout(() => {
-        // Verificar se o usuário precisa completar o perfil
         if (needsProfileSetup()) {
           navigate('/profile-setup');
         } else {
