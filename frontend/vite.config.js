@@ -13,13 +13,16 @@ export default defineConfig({
     strictPort: true,
   },
   server: {
-    port: 5173,
+    port: 3000,
     strictPort: true,
-    host: true,
-    origin: "http://0.0.0.0:5173",
+    host: '0.0.0.0',
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://backend:5000',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {

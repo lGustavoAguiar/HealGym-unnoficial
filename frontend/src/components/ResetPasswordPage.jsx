@@ -317,7 +317,7 @@ const FormSection = styled.div`
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(198, 169, 100, 0.1);
   backdrop-filter: blur(10px);
-  margin-top: min(10vh, 80px);
+  margin-top: min(12vh, 800px);
 `;
 const FormTitle = styled.h2`
   font-size: min(5vw, 2rem);

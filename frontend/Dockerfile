@@ -1,13 +1,10 @@
-FROM node:20-alpine AS build
+FROM node:20-alpine
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install --include=dev
+RUN npm install -g vite
 COPY . .
-RUN node node_modules/vite/bin/vite.js build
 
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+EXPOSE 3000
+CMD ["vite", "--host", "0.0.0.0", "--port", "3000"]

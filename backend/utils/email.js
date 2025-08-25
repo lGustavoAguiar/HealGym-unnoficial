@@ -57,7 +57,7 @@ class EmailService {
       return { success: true, messageId: 'dev-mode-' + Date.now() };
     }
     
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost'}/reset-password/${resetToken}`;
     const mailOptions = {
       from: process.env.EMAIL_FROM,
       to: email,
@@ -84,535 +84,198 @@ class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <title>Recuperação de Senha - HealGym</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            line-height: 1.7;
-            color: #1a202c;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-            margin: 0;
-            padding: 30px 15px;
-            min-height: 100vh;
-          }
-          .email-wrapper {
-            width: 100%;
-            max-width: 680px;
-            margin: 0 auto;
-            background: transparent;
-          }
-          .container {
-            background: #ffffff;
-            border-radius: 28px;
-            overflow: hidden;
-            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.3);
-            position: relative;
-          }
-          .container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-            pointer-events: none;
-            z-index: 1;
-          }
-          .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #667eea 100%);
-            color: white;
-            padding: 60px 50px;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-          }
-          .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 10px,
-              rgba(255,255,255,0.03) 10px,
-              rgba(255,255,255,0.03) 20px
-            );
-            animation: float 20s ease-in-out infinite;
-          }
-          @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
-          }
-          .header-content {
-            position: relative;
-            z-index: 2;
-          }
-          .logo-container {
-            margin-bottom: 20px;
-          }
-          .logo {
-            font-size: 3.5em;
-            font-weight: 800;
-            margin-bottom: 5px;
-            background: linear-gradient(45deg, #ffffff, #e2e8f0, #ffffff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            display: inline-block;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-          }
-          .logo-icon {
-            display: inline-block;
-            width: 60px;
-            height: 60px;
-            margin-right: 15px;
-            background: linear-gradient(135deg, #f093fb, #f5576c);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
-            animation: pulse 2s ease-in-out infinite;
-          }
-          @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-          }
-          .subtitle {
-            font-size: 1.3em;
-            font-weight: 300;
-            opacity: 0.95;
-            margin-bottom: 0;
-            letter-spacing: 1px;
-          }
-          .tagline {
-            font-size: 0.95em;
-            opacity: 0.8;
-            font-weight: 400;
-            margin-top: 10px;
-            font-style: italic;
-          }
-          .content {
-            padding: 60px 50px;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
-            position: relative;
-          }
-          .content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 20px;
-            right: 20px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
-          }
-          .welcome-section {
-            text-align: center;
-            margin-bottom: 50px;
-          }
-          .welcome-title {
-            font-size: 2.5em;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
-          }
-          .lock-icon {
-            display: inline-block;
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 35px;
-            color: white;
-            margin: 0 auto 25px;
-            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.3);
-            animation: lockShake 3s ease-in-out infinite;
-          }
-          @keyframes lockShake {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-5deg); }
-            75% { transform: rotate(5deg); }
-          }
-          .greeting {
-            font-size: 1.4em;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 25px;
-            text-align: center;
-          }
-          .message {
-            font-size: 1.15em;
-            margin-bottom: 30px;
-            line-height: 1.8;
-            color: #4a5568;
-            text-align: center;
-          }
-          .highlight {
-            background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 600;
-          }
-          .button-container {
-            text-align: center;
-            margin: 50px 0;
-          }
-          .reset-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            padding: 22px 45px;
-            border-radius: 60px;
-            font-weight: 600;
-            font-size: 1.2em;
-            text-align: center;
-            transition: all 0.4s ease;
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
-            border: none;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-          }
-          .reset-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.6s;
-          }
-          .reset-button:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 20px 50px rgba(102, 126, 234, 0.5);
-          }
-          .reset-button:hover::before {
-            left: 100%;
-          }
-          .security-section {
-            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
-            border-left: 6px solid #f56565;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 40px 0;
-            position: relative;
-          }
-          .security-section::before {
-            content: '⚠️';
-            position: absolute;
-            top: -10px;
-            left: 20px;
-            background: #f56565;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-          }
-          .security-title {
-            font-weight: 700;
-            color: #c53030;
-            margin-bottom: 15px;
-            margin-left: 20px;
-            font-size: 1.2em;
-          }
-          .security-list {
-            list-style: none;
-            color: #c53030;
-            margin-left: 20px;
-          }
-          .security-list li {
-            margin-bottom: 12px;
-            padding-left: 25px;
-            position: relative;
-            font-weight: 500;
-          }
-          .security-list li::before {
-            content: '🔒';
-            position: absolute;
-            left: 0;
-            top: 2px;
-          }
-          .url-section {
-            background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
-            border: 3px dashed #cbd5e1;
-            border-radius: 18px;
-            padding: 30px;
-            margin: 35px 0;
-            text-align: center;
-          }
-          .url-title {
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 15px;
-            font-size: 1.1em;
-          }
-          .url-box {
-            background: #f7fafc;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 20px;
-            word-break: break-all;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            color: #4a5568;
-            font-weight: 500;
-          }
-          .protection-section {
-            background: linear-gradient(135deg, #f0fff4 0%, #c6f6d5 100%);
-            border-left: 6px solid #48bb78;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 40px 0;
-            position: relative;
-          }
-          .protection-section::before {
-            content: '🛡️';
-            position: absolute;
-            top: -10px;
-            left: 20px;
-            background: #48bb78;
-            color: white;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-          }
-          .protection-title {
-            font-weight: 700;
-            color: #2f855a;
-            margin-bottom: 15px;
-            margin-left: 20px;
-            font-size: 1.2em;
-          }
-          .protection-text {
-            color: #2f855a;
-            line-height: 1.7;
-            margin-left: 20px;
-            font-weight: 500;
-          }
-          .signature {
-            text-align: center;
-            margin-top: 50px;
-            padding: 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            color: white;
-          }
-          .signature-text {
-            font-size: 1.2em;
-            font-weight: 600;
-            margin-bottom: 10px;
-          }
-          .signature-team {
-            font-size: 1.4em;
-            font-weight: 800;
-            background: linear-gradient(45deg, #ffffff, #f7fafc, #ffffff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-          .footer {
-            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-            color: #a0aec0;
-            padding: 50px;
-            text-align: center;
-            position: relative;
-          }
-          .footer-brand {
-            font-size: 1.8em;
-            font-weight: 800;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
-          }
-          .footer-tagline {
-            font-size: 1.1em;
-            font-weight: 500;
-            color: #cbd5e1;
-            margin-bottom: 30px;
-            font-style: italic;
-          }
-          .footer-links {
-            margin-bottom: 25px;
-          }
-          .footer-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-            margin: 0 15px;
-            transition: all 0.3s ease;
-            padding: 5px 10px;
-            border-radius: 5px;
-          }
-          .footer-links a:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-2px);
-          }
-          .footer-divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, #4a5568, transparent);
-            margin: 30px 0;
-          }
-          .footer-copyright {
-            font-size: 0.9em;
-            color: #718096;
-            line-height: 1.6;
-          }
-          .social-section {
-            margin: 30px 0;
-          }
-          .social-icons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-          }
-          .social-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-decoration: none;
-            font-size: 20px;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-          }
-          .social-icon:hover {
-            transform: translateY(-3px) scale(1.1);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-          }
-          @media (max-width: 640px) {
-            body {
-              padding: 15px 10px;
-            }
-            .content, .header {
-              padding: 40px 25px;
-            }
-            .logo {
-              font-size: 2.5em;
-            }
-            .welcome-title {
-              font-size: 2em;
-            }
-            .reset-button {
-              padding: 18px 35px;
-              font-size: 1.1em;
-            }
-            .message {
-              font-size: 1.05em;
-            }
-            .footer {
-              padding: 40px 25px;
-            }
-            .social-icons {
-              flex-wrap: wrap;
-            }
-          }
-        </style>
       </head>
-      <body>
-        <div class="email-wrapper">
-          <div class="container">
-            <div class="header">
-              <div class="header-content">
-                <div class="logo-container">
-                  <div class="logo">HealGym</div>
-                </div>
-                <p class="subtitle">Transformando Vidas, Fortalecendo Sonhos</p>
-                <p class="tagline">Sua jornada de superação começa aqui</p>
-              </div>
-            </div>
-            <div class="content">
-              <div class="welcome-section">
-                <div class="lock-icon">🔐</div>
-                <h1 class="welcome-title">Recuperação de Senha</h1>
-                <div class="greeting">Olá, <span class="highlight">Guerreiro(a)</span>! 💪</div>
-              </div>
-              <div class="message">
-                Recebemos sua solicitação para redefinir a senha da sua conta no <strong class="highlight">HealGym</strong>. 
-                Sabemos que cada detalhe importa na sua jornada de transformação, e a segurança da sua conta é nossa prioridade!
-              </div>
-              <div class="message">
-                Clique no botão abaixo para criar uma nova senha forte e continuar conquistando seus objetivos:
-              </div>
-              <div class="button-container">
-                <a href="${resetUrl}" class="reset-button">✨ Redefinir Minha Senha</a>
-              </div>
-              <div class="security-section">
-                <div class="security-title">Informações de Segurança</div>
-                <ul class="security-list">
-                  <li>Este link é válido por apenas <strong>15 minutos</strong></li>
-                  <li>Pode ser usado apenas <strong>uma única vez</strong></li>
-                  <li>Após o uso, será automaticamente invalidado</li>
-                  <li>Nunca compartilhe este link com terceiros</li>
-                </ul>
-              </div>
-              <div class="url-section">
-                <div class="url-title">🔗 O botão não está funcionando? Use o link abaixo:</div>
-                <div class="url-box">
-                  ${resetUrl}
-                </div>
-              </div>
-              <div class="protection-section">
-                <div class="protection-title">Proteção da Sua Conta</div>
-                <div class="protection-text">
-                  <strong>Não solicitou esta alteração?</strong><br>
-                  Fique tranquilo(a)! Se você não pediu para redefinir sua senha, pode ignorar este email com total segurança. 
-                  Sua conta permanece 100% protegida. Por precaução, considere alterar sua senha se suspeitar de qualquer atividade não autorizada.
-                </div>
-              </div>
-              <div class="signature">
-                <div class="signature-text">Continue forte na sua jornada de transformação! 🚀</div>
-                <div class="signature-team">Equipe HealGym</div>
-              </div>
-            </div>
-            <div class="footer">
-              <div class="footer-brand">HealGym</div>
-              <div class="footer-tagline">"Onde a transformação acontece"</div>              
-              <div class="footer-copyright">
-                <strong>© 2025 HealGym - Todos os direitos reservados</strong><br>
-                Este é um email automático e seguro. Não responda esta mensagem.<br>
-                Você está recebendo este email porque possui uma conta ativa no HealGym.
-              </div>
-            </div>
-          </div>
-        </div>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 75%, #f5576c 100%); min-height: 100vh;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="min-height: 100vh; padding: 40px 0;">
+          <tr>
+            <td align="center">
+              <table width="800" cellpadding="0" cellspacing="0" style="background: rgba(255,255,255,0.95); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.2);">
+                
+                <!-- Header Elaborado -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 30%, #334155 70%, #475569 100%); padding: 60px 80px; text-align: center; position: relative;">
+                    <!-- Background Pattern -->
+                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: radial-gradient(circle at 25% 25%, rgba(102,126,234,0.1) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(240,147,251,0.1) 0%, transparent 50%); opacity: 0.7;"></div>
+                    
+                    <!-- Logo Container -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="position: relative; z-index: 2;">
+                      <tr>
+                        <td align="center">
+                          <!-- Logo Icon -->
+                          <div style="display: inline-block; width: 120px; height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); border-radius: 50%; line-height: 120px; font-size: 60px; color: white; margin-bottom: 25px; box-shadow: 0 15px 40px rgba(102,126,234,0.4), 0 0 0 8px rgba(255,255,255,0.1); border: 3px solid rgba(255,255,255,0.2);">💪</div>
+                          
+                          <!-- Brand Name -->
+                          <h1 style="margin: 0; font-size: 4.5em; font-weight: 900; color: white; letter-spacing: -2px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 15px;">HealGym</h1>
+                          
+                          <!-- Taglines -->
+                          <p style="margin: 0; font-size: 1.8em; color: rgba(255,255,255,0.9); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px;">Transformando Vidas, Fortalecendo Sonhos</p>
+                          <p style="margin: 0; font-size: 1.3em; color: rgba(255,255,255,0.8); font-style: italic; font-weight: 400;">Sua jornada de superação começa aqui ✨</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <!-- Content Principal -->
+                <tr>
+                  <td style="padding: 80px; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);">
+                    
+                    <!-- Welcome Section -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 50px;">
+                      <tr>
+                        <td align="center">
+                          <!-- Lock Icon Grande -->
+                          <div style="display: inline-block; width: 140px; height: 140px; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); border-radius: 50%; line-height: 140px; font-size: 70px; color: white; margin-bottom: 40px; box-shadow: 0 25px 60px rgba(102,126,234,0.4), 0 0 0 12px rgba(102,126,234,0.1), 0 0 0 24px rgba(102,126,234,0.05); border: 4px solid rgba(255,255,255,0.3);">🔐</div>
+                          
+                          <h2 style="margin: 0; font-size: 3.5em; font-weight: 800; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 30px; letter-spacing: -1px;">Recuperação de Senha</h2>
+                          
+                          <div style="font-size: 2em; font-weight: 700; color: #333; margin-bottom: 40px;">
+                            Olá, <span style="background: linear-gradient(135deg, #667eea, #f093fb); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Guerreiro(a)</span>! 💪
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Message Content -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 50px;">
+                      <tr>
+                        <td>
+                          <p style="font-size: 1.4em; line-height: 1.8; color: #334155; text-align: center; margin-bottom: 25px; font-weight: 500; max-width: 650px; margin-left: auto; margin-right: auto;">
+                            Recebemos sua solicitação para redefinir a senha da sua conta no <strong style="color: #667eea;">HealGym</strong>. 
+                            Sabemos que cada detalhe importa na sua jornada de transformação, e a <strong>segurança da sua conta</strong> é nossa prioridade máxima!
+                          </p>
+                          
+                          <p style="font-size: 1.4em; line-height: 1.8; color: #334155; text-align: center; margin-bottom: 40px; font-weight: 500; max-width: 650px; margin-left: auto; margin-right: auto;">
+                            🎯 <strong>Pronto para continuar conquistando seus objetivos?</strong><br>
+                            Clique no botão abaixo para criar uma nova senha forte e voltar aos treinos:
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Call to Action Button -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 60px 0;">
+                      <tr>
+                        <td align="center">
+                          <!-- Decorative Sparkle -->
+                          <div style="font-size: 30px; margin-bottom: 20px; opacity: 0.8;">✨</div>
+                          
+                          <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); color: white; text-decoration: none; padding: 25px 60px; border-radius: 50px; font-weight: 700; font-size: 1.6em; text-align: center; box-shadow: 0 20px 50px rgba(102,126,234,0.4), 0 0 0 0 rgba(102,126,234,0.3); border: none; letter-spacing: 1px; text-transform: uppercase; transition: all 0.3s ease;">
+                            🚀 Redefinir Minha Senha
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Security Warning -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 50px 0;">
+                      <tr>
+                        <td>
+                          <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 8px solid #ef4444; border-radius: 15px; padding: 40px; position: relative; box-shadow: 0 10px 30px rgba(239,68,68,0.1);">
+                            <!-- Warning Icon -->
+                            <div style="position: absolute; top: -15px; left: 30px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; width: 60px; height: 60px; border-radius: 50%; line-height: 60px; text-align: center; font-size: 24px; box-shadow: 0 8px 20px rgba(239,68,68,0.3);">⚠️</div>
+                            
+                            <h3 style="color: #dc2626; margin: 10px 0 25px 40px; font-size: 1.6em; font-weight: 800;">🛡️ Informações de Segurança</h3>
+                            
+                            <div style="margin-left: 40px;">
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🔒 Este link é válido por apenas <strong>15 minutos</strong> por segurança
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🔒 Pode ser usado apenas <strong>uma única vez</strong>
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🔒 Após o uso, será <strong>automaticamente invalidado</strong>
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em;">
+                                🔒 Nunca compartilhe este link com terceiros
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Alternative URL -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 40px 0;">
+                      <tr>
+                        <td>
+                          <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 3px dashed #dee2e6; border-radius: 15px; padding: 35px; text-align: center;">
+                            <p style="margin: 0 0 20px 0; font-weight: 700; color: #495057; font-size: 1.3em;">🔗 O botão não está funcionando? Use o link abaixo:</p>
+                            <div style="background: #ffffff; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; font-family: 'Courier New', monospace; font-size: 1em; color: #6c757d; word-break: break-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                              ${resetUrl}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Protection Notice -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 40px 0;">
+                      <tr>
+                        <td>
+                          <div style="background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%); border-left: 6px solid #17a2b8; border-radius: 15px; padding: 35px; position: relative;">
+                            <!-- Shield Icon -->
+                            <div style="position: absolute; top: -12px; left: 25px; background: #17a2b8; color: white; width: 50px; height: 50px; border-radius: 50%; line-height: 50px; text-align: center; font-size: 20px;">🛡️</div>
+                            
+                            <h3 style="color: #0c5460; margin: 10px 0 20px 35px; font-size: 1.5em; font-weight: 700;">🔒 Proteção da Sua Conta</h3>
+                            
+                            <div style="color: #0c5460; margin-left: 35px; line-height: 1.6; font-size: 1.2em; font-weight: 500;">
+                              <strong style="font-size: 1.1em;">❓ Não solicitou esta alteração?</strong><br><br>
+                              Fique tranquilo(a)! Se você não pediu para redefinir sua senha, pode <strong>ignorar este email</strong> com total segurança. 
+                              Sua conta permanece 100% protegida. Por precaução, considere alterar sua senha se suspeitar de qualquer atividade suspeita.
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <!-- Signature -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 60px 0 20px 0;">
+                      <tr>
+                        <td>
+                          <div style="text-align: center; padding: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 30%, #f093fb 70%, #f5576c 100%); color: white; border-radius: 20px; box-shadow: 0 15px 40px rgba(102,126,234,0.3); position: relative; overflow: hidden;">
+                            <!-- Subtle overlay -->
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); opacity: 0.7;"></div>
+                            
+                            <div style="position: relative; z-index: 2;">
+                              <p style="margin: 0 0 15px 0; font-size: 1.8em; font-weight: 700;">Continue forte na sua jornada de transformação! 🚀💪</p>
+                              <p style="margin: 0; font-size: 2.2em; font-weight: 900; letter-spacing: 1px;">Equipe HealGym</p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%); color: #95a5a6; padding: 60px 80px; text-align: center;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <h3 style="margin: 0 0 20px 0; color: #667eea; font-size: 2.8em; font-weight: 900; letter-spacing: -1px;">HealGym</h3>
+                          <p style="margin: 0 0 25px 0; font-style: italic; font-size: 1.6em; color: #bdc3c7;">💫 "Onde a transformação acontece" 💫</p>
+                          <div style="height: 2px; width: 200px; background: linear-gradient(90deg, transparent, #667eea, #f093fb, transparent); margin: 0 auto 25px auto; border-radius: 1px;"></div>
+                          <p style="margin: 0; font-size: 1.1em; line-height: 1.6; color: #7f8c8d;">
+                            <strong>© 2025 HealGym - Todos os direitos reservados</strong><br>
+                            Este é um email automático e seguro. Não responda esta mensagem.<br>
+                            📧 Você está recebendo este email porque possui uma conta ativa no HealGym.<br>
+                            🌟 Continue sua jornada de transformação conosco!
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;
