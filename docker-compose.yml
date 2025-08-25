@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:7.0-jammy
@@ -26,7 +24,7 @@ services:
       MONGODB_URI: mongodb://admin:password123@mongodb:27017/healgym?authSource=admin
       JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-this-refresh-secret-in-production}
-      FRONTEND_URL: http://localhost
+      FRONTEND_URL: http://localhost,http://localhost:80,http://127.0.0.1,http://127.0.0.1:80
       EMAIL_SERVICE: gmail
       EMAIL_FROM: zgustavoaguiar@gmail.com
       EMAIL_PASSWORD: qdsjjdhoqclqmyoh
@@ -42,14 +40,14 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
-    environment:
-      VITE_API_URL: http://backend:5000/api
     depends_on:
       - backend
     networks:
       - healgym-network
     ports:
       - "80:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   mongodb_data:

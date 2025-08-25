@@ -40,12 +40,10 @@ export const GlobalStyles = createGlobalStyle`
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.8;
-    /* Custom scrollbar styles */
     scrollbar-width: thin;
     scrollbar-color: var(--accent) var(--secondary);
   }
 
-  /* Webkit scrollbar styles for better browser support */
   ::-webkit-scrollbar {
     width: 12px;
     height: 12px;
@@ -77,7 +75,6 @@ export const GlobalStyles = createGlobalStyle`
     background: var(--secondary);
   }
 
-  /* Custom scrollbar for specific containers */
   .custom-scroll {
     overflow-y: auto;
     overflow-x: hidden;

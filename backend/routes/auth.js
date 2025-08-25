@@ -331,12 +331,10 @@ router.post('/reset-password/:token', [
 
     console.log(`🔑 Recebido token para reset: ${token}`);
 
-    // Hash do token recebido para comparar com o armazenado
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     
     console.log(`🔐 Token hasheado: ${hashedToken}`);
 
-    // Buscar usuário com o token específico e que não tenha expirado
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: Date.now() }

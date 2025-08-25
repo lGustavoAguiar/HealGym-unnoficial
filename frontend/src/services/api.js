@@ -1,20 +1,8 @@
-// Configuração da URL da API baseada no ambiente
-let API_BASE_URL;
-
-if (typeof window !== 'undefined' && window.location.hostname === 'healgym-frontend.onrender.com') {
-  // Se estiver rodando no Render (produção), usar URL relativa para aproveitar o proxy
-  API_BASE_URL = '';
-} else if (import.meta.env.VITE_API_URL) {
-  // Se a variável de ambiente estiver definida
-  API_BASE_URL = import.meta.env.VITE_API_URL;
-} else {
-  // Desenvolvimento local
-  API_BASE_URL = 'http://localhost:5000';
-}
+const API_BASE_URL = '/api';
 
 console.log('🔍 API Base URL:', API_BASE_URL);
 console.log('🔍 Current hostname:', typeof window !== 'undefined' ? window.location.hostname : 'SSR');
-console.log('🔍 Environment:', import.meta.env.MODE);
+console.log('🔍 Current port:', typeof window !== 'undefined' ? window.location.port : 'SSR');
 
 class ApiService {
   constructor() {

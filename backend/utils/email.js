@@ -51,7 +51,6 @@ class EmailService {
       await this.initializeTransporter();
     }
     
-    // Se ainda não há transporter (modo desenvolvimento), simula envio
     if (!this.transporter) {
       console.log(`📤 [MODO DEV] Simulando envio de email para: ${email}`);
       console.log(`🔗 [MODO DEV] Link de reset: ${process.env.FRONTEND_URL || 'http://localhost'}/reset-password/${resetToken}`);

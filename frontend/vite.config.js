@@ -19,9 +19,9 @@ export default defineConfig({
     origin: "http://0.0.0.0:5173",
     proxy: {
       '/api': {
-        target: 'https://healgym-backend.onrender.com',
+        target: 'http://localhost:5000',
         changeOrigin: true,
-        secure: true,
+        secure: false,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);

@@ -83,9 +83,8 @@ const ResetPasswordPage = () => {
     setErrors({});
     
     try {
-      // Usar URL relativa em produção para aproveitar o proxy
       const backendUrl = window.location.hostname === 'healgym-frontend.onrender.com' 
-        ? '' // URL relativa - vai usar o proxy do _redirects
+        ? ''
         : 'http://localhost:5000';
       
       console.log('🚀 Direct fetch to:', `${backendUrl}/api/auth/reset-password/${token}`);
