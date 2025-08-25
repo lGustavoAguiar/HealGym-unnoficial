@@ -1,12 +1,26 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import apiService from '../services/api';
+import apiSe  const login = async (credentials) => {
+    try {
+      setLoading(true);
+      const response = await apiService.login(credentials);
+      setUser(response.user);
+      setIsAuthenticated(true);
+      // Garantir que os dados são salvos no localStorage
+      localStorage.setItem('user', JSON.stringify(response.user));
+      return response;
+    } catch (error) {
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };ervices/api';
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
 };
@@ -61,10 +75,20 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await apiService.login(credentials);
+      console.log('✅ Login successful, dados do usuário:', response.user);
+      
+      // Forçar um pequeno delay para garantir que o estado seja atualizado
       setUser(response.user);
       setIsAuthenticated(true);
+      
       // Garantir que os dados são salvos no localStorage
       localStorage.setItem('user', JSON.stringify(response.user));
+      
+      // Força uma re-renderização
+      setTimeout(() => {
+        setUser(response.user);
+      }, 100);
+      
       return response;
     } catch (error) {
       throw error;
@@ -77,6 +101,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await apiService.register(userData);
+      console.log('✅ Register successful, dados do usuário:', response.user);
       setUser(response.user);
       setIsAuthenticated(true);
       // Garantir que os dados são salvos no localStorage
@@ -90,6 +115,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('🚪 Fazendo logout e limpando dados...');
     apiService.logout();
     setUser(null);
     setIsAuthenticated(false);
@@ -98,6 +124,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (userData) => {
+    console.log('🔄 Atualizando usuário no contexto:', userData);
     setUser(userData);
     // Também atualizar no localStorage para sincronizar
     localStorage.setItem('user', JSON.stringify(userData));
@@ -107,17 +134,19 @@ export const AuthProvider = ({ children }) => {
     return user && !user.profileSetupCompleted;
   };
 
+  const value = {
+    user,
+    loading,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    updateUser,
+    needsProfileSetup,
+  };
+
   return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      isAuthenticated,
-      login,
-      register,
-      logout,
-      updateUser,
-      needsProfileSetup
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
