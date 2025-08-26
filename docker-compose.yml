@@ -26,7 +26,7 @@ services:
       FRONTEND_URL: http://localhost:3000
       EMAIL_SERVICE: gmail
       EMAIL_FROM: zgustavoaguiar@gmail.com
-      EMAIL_PASSWORD: qdsjjdhoqclqmyoh
+      EMAIL_PASSWORD: jirdrxbkfgfchumn
     volumes:
       - ./backend:/app
       - /app/node_modules

@@ -5,20 +5,43 @@ class EmailService {
     this.initializeTransporter();
   }
   async initializeTransporter() {
-    if (!process.env.EMAIL_FROM || !process.env.EMAIL_PASSWORD) {
-      console.warn('⚠️ Configuração de email não encontrada. Usando modo de desenvolvimento sem envio real de emails.');
+    // ===== CONFIGURE SUAS CREDENCIAIS AQUI =====
+    const config = {
+      EMAIL_FROM: process.env.EMAIL_FROM || 'zgustavoaguiar@gmail.com',           // ← SEU EMAIL CONFIGURADO
+      EMAIL_PASSWORD: process.env.EMAIL_PASSWORD || 'jirdrxbkfgfchumn',       // ← SUA NOVA SENHA DE APP SEM ESPAÇOS
+      EMAIL_SERVICE: process.env.EMAIL_SERVICE || 'gmail'
+    };
+    
+    console.log('🔧 ===== CONFIGURAÇÃO DE EMAIL =====');
+    console.log('📧 Email remetente:', config.EMAIL_FROM);
+    console.log('🔑 Senha configurada:', config.EMAIL_PASSWORD !== 'SUA_SENHA_APP_GMAIL' ? '[CONFIGURADA]' : '[PADRÃO - PRECISA CONFIGURAR]');
+    console.log('🌐 Serviço:', config.EMAIL_SERVICE);
+    
+    // Verificar se as credenciais foram configuradas
+    if (config.EMAIL_FROM === 'SEU_EMAIL@gmail.com' || config.EMAIL_PASSWORD === 'SUA_SENHA_APP_GMAIL') {
+      console.error('❌ ERRO: Credenciais de email não configuradas!');
+      console.error('🔧 COMO CONFIGURAR:');
+      console.error('1. Abra o arquivo: backend/utils/email.js');
+      console.error('2. Na linha 10, substitua "SEU_EMAIL@gmail.com" pelo seu email real');
+      console.error('3. Na linha 11, substitua "SUA_SENHA_APP_GMAIL" pela sua senha de app do Gmail');
+      console.error('4. Reinicie o servidor');
+      console.error('');
+      console.error('🔑 Como gerar senha de app no Gmail:');
+      console.error('   → https://myaccount.google.com/apppasswords');
+      
+      // Retornar erro ao invés de continuar
       this.transporter = null;
       return;
     }
     
-    const emailService = process.env.EMAIL_SERVICE || 'gmail';
+    const emailService = config.EMAIL_SERVICE;
     console.log(`📧 Configurando ${emailService} para envio de emails...`);
     
     let transportConfig = {
       service: emailService,
       auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.EMAIL_PASSWORD
+        user: config.EMAIL_FROM,
+        pass: config.EMAIL_PASSWORD
       }
     };
     
@@ -28,8 +51,8 @@ class EmailService {
         port: 587,
         secure: false,
         auth: {
-          user: process.env.EMAIL_FROM,
-          pass: process.env.EMAIL_PASSWORD
+          user: config.EMAIL_FROM,
+          pass: config.EMAIL_PASSWORD
         }
       };
     }
@@ -39,10 +62,27 @@ class EmailService {
     try {
       await this.transporter.verify();
       console.log(`✅ Conectado ao ${emailService} com sucesso!`);
-      console.log('📨 Emails serão enviados de:', process.env.EMAIL_FROM);
+      console.log('📨 Emails serão enviados de:', config.EMAIL_FROM);
+      console.log('🔧 ===== CONFIGURAÇÃO CONCLUÍDA =====');
+      this.authError = null;
     } catch (error) {
+      console.error('🚨 ===== ERRO DE AUTENTICAÇÃO GMAIL =====');
       console.error(`❌ Erro na conexão com ${emailService}:`, error.message);
-      console.warn('⚠️ Funcionando em modo de desenvolvimento - emails não serão enviados');
+      console.error('📧 Email configurado:', config.EMAIL_FROM);
+      console.error('🔑 Senha configurada:', config.EMAIL_PASSWORD ? `[${config.EMAIL_PASSWORD.length} caracteres]` : '[AUSENTE]');
+      console.error('');
+      console.error('🔧 POSSÍVEIS SOLUÇÕES:');
+      console.error('1. Verifique se a verificação em 2 etapas está ATIVADA no Gmail');
+      console.error('2. Gere uma NOVA senha de app em: https://myaccount.google.com/apppasswords');
+      console.error('3. Use a senha de app SEM ESPAÇOS (16 caracteres)');
+      console.error('4. Verifique se o email está correto');
+      console.error('');
+      console.error('🔍 SENHA ATUAL (primeiros 4 chars):', config.EMAIL_PASSWORD ? config.EMAIL_PASSWORD.substring(0, 4) + '...' : 'VAZIA');
+      console.error('🚨 ===== FIM DO DIAGNÓSTICO =====');
+      
+      // Salvar o erro de autenticação para usar depois
+      this.authError = error;
+      // Anular o transporter para forçar modo de desenvolvimento
       this.transporter = null;
     }
   }
@@ -51,30 +91,59 @@ class EmailService {
       await this.initializeTransporter();
     }
     
-    if (!this.transporter) {
-      console.log(`📤 [MODO DEV] Simulando envio de email para: ${email}`);
-      console.log(`🔗 [MODO DEV] Link de reset: ${process.env.FRONTEND_URL || 'http://localhost'}/reset-password/${resetToken}`);
-      return { success: true, messageId: 'dev-mode-' + Date.now() };
+    // Se há erro de autenticação, simular envio mas não quebrar
+    if (!this.transporter && this.authError) {
+      console.log('📤 [MODO DEV] Simulando envio devido a erro de autenticação Gmail');
+      console.log(`📧 [MODO DEV] Email de destino: ${email}`);
+      console.log(`🔗 [MODO DEV] Link de reset: http://localhost:3000/reset-password/${resetToken}`);
+      console.log('⚠️ [MODO DEV] Configure as credenciais corretas do Gmail para envio real!');
+      
+      return { 
+        success: true, 
+        messageId: 'dev-mode-auth-error-' + Date.now(),
+        devMode: true,
+        authError: this.authError.message
+      };
     }
     
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost'}/reset-password/${resetToken}`;
+    // Verificar se o transporter foi configurado corretamente
+    if (!this.transporter) {
+      console.error('❌ Transporter não configurado - credenciais de email não foram definidas');
+      throw new Error('Configuração de email necessária. Verifique as credenciais no arquivo backend/utils/email.js');
+    }
+    
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+    const emailFrom = process.env.EMAIL_FROM || 'zgustavoaguiar@gmail.com';
+    
     const mailOptions = {
-      from: process.env.EMAIL_FROM,
+      from: emailFrom,
       to: email,
       subject: '🔐 Recuperação de Senha - HealGym',
       html: this.getPasswordResetTemplate(resetUrl),
       text: `Olá! Você solicitou a recuperação de senha do HealGym. Acesse o link para redefinir sua senha: ${resetUrl} (O link expira em 15 minutos)`
     };
     try {
-      console.log(`📤 Enviando email de recuperação para: ${email}`);
+      console.log(`📤 Tentando enviar email de recuperação para: ${email}`);
+      console.log(`📧 Usando remetente: ${emailFrom}`);
+      console.log(`🔗 Link de reset: ${resetUrl}`);
+      
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email enviado com sucesso!');
+      
+      console.log('✅ EMAIL ENVIADO COM SUCESSO!');
       console.log('📧 Message ID:', info.messageId);
       console.log(`✅ Email de recuperação enviado para: ${email}`);
+      
       return { success: true, messageId: info.messageId };
     } catch (error) {
-      console.error('❌ Erro ao enviar email:', error);
-      throw new Error(`Falha ao enviar email de recuperação: ${error.message}`);
+      console.error('❌ ERRO DETALHADO AO ENVIAR EMAIL:');
+      console.error('🔍 Código do erro:', error.code);
+      console.error('🔍 Mensagem:', error.message);
+      console.error('🔍 Stack:', error.stack);
+      console.error('📧 Email de destino:', email);
+      console.error('📧 Email remetente:', emailFrom);
+      
+      // Relançar o erro com mais detalhes
+      throw new Error(`FALHA NO ENVIO DE EMAIL: ${error.message} (Código: ${error.code || 'N/A'})`);
     }
   }
   getPasswordResetTemplate(resetUrl) {

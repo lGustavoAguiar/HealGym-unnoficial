@@ -344,16 +344,25 @@ router.post('/forgot-password', [
     await user.save({ validateBeforeSave: false });
 
     try {
-
       const EmailService = (await import('../utils/email.js')).default;
-      await EmailService.sendPasswordResetEmail(user.email, resetToken);
+      const result = await EmailService.sendPasswordResetEmail(user.email, resetToken);
       
-      console.log(`✅ Email de recuperação enviado para: ${user.email}`);
-      res.json({
-        message: 'E-mail de recuperação enviado com sucesso!'
-      });
+      if (result.devMode) {
+        console.log(`📤 [MODO DEV] Email simulado para: ${user.email}`);
+        console.log(`⚠️ [MODO DEV] Erro de autenticação: ${result.authError}`);
+        res.json({
+          message: 'E-mail de recuperação enviado com sucesso!',
+          devMode: true,
+          note: 'Modo de desenvolvimento - configure as credenciais do Gmail para envio real'
+        });
+      } else {
+        console.log(`✅ Email de recuperação enviado para: ${user.email}`);
+        res.json({
+          message: 'E-mail de recuperação enviado com sucesso!'
+        });
+      }
     } catch (emailError) {
-
+      // Remover o token se falhou
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
       await user.save({ validateBeforeSave: false });
