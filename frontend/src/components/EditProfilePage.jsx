@@ -17,7 +17,8 @@ const EditProfilePage = () => {
     gender: '',
     height: '',
     weight: '',
-    bodyType: ''
+    bodyType: '',
+    age: ''
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -28,6 +29,21 @@ const EditProfilePage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState('');
   const deleteMessageRef = useRef(null);
+  const submitMessageRef = useRef(null);
+
+  // Função para calcular idade baseada na data de nascimento
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return '';
+    const birth = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    console.log('🔢 Calculando idade:', { dateOfBirth, birth, age });
+    return age.toString();
+  };
 
   useEffect(() => {
     console.log('🔍 EditProfile useEffect - User:', user);
@@ -41,7 +57,8 @@ const EditProfilePage = () => {
         gender: user.profile?.gender || '',
         height: user.profile?.height || '',
         weight: user.profile?.weight || '',
-        bodyType: user.profile?.bodyType || ''
+        bodyType: user.profile?.bodyType || '',
+        age: calculateAge(user.profile?.dateOfBirth)
       });
       setIsLoadingUser(false);
     } else {
@@ -50,9 +67,9 @@ const EditProfilePage = () => {
   }, [user]);
 
   useEffect(() => {
-    // Bloquear scroll inicialmente
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
+    // Permitir scroll sempre
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
     
     return () => {
       document.body.style.overflow = '';
@@ -60,18 +77,18 @@ const EditProfilePage = () => {
     };
   }, []);
 
-  // Effect para controlar o scroll baseado nas mensagens
+  // Effect para scroll automático quando aparecer mensagem de sucesso
   useEffect(() => {
-    if (submitMessage || deleteMessage) {
-      // Permitir scroll quando há mensagens
-      document.body.style.overflow = 'auto';
-      document.documentElement.style.overflow = 'auto';
-    } else if (!showDeleteConfirmation) {
-      // Bloquear scroll quando não há mensagens e modal não está aberto
-      document.body.style.overflow = 'hidden';
-      document.documentElement.style.overflow = 'hidden';
+    if (submitMessage && submitMessageRef.current) {
+      setTimeout(() => {
+        submitMessageRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }, 300);
     }
-  }, [submitMessage, deleteMessage, showDeleteConfirmation]);
+  }, [submitMessage]);
 
   const validateField = (name, value) => {
     let error = '';
@@ -107,6 +124,10 @@ const EditProfilePage = () => {
         break;
       case 'bodyType':
         if (!value) error = 'Biotipo é obrigatório';
+        break;
+      case 'age':
+        if (!value) error = 'Idade é obrigatória';
+        else if (isNaN(value) || value < 13 || value > 120) error = 'Idade deve estar entre 13 e 120 anos';
         break;
       default:
         break;
@@ -158,7 +179,8 @@ const EditProfilePage = () => {
       gender: true,
       height: true,
       weight: true,
-      bodyType: true
+      bodyType: true,
+      age: true
     });
 
     if (Object.keys(newErrors).length > 0) {
@@ -175,14 +197,17 @@ const EditProfilePage = () => {
         gender: formData.gender,
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight),
-        bodyType: formData.bodyType
+        bodyType: formData.bodyType,
+        age: parseInt(formData.age)
       };
 
       if (formData.newPassword) {
         profileData.newPassword = formData.newPassword;
       }
 
+      console.log('🔄 Dados sendo enviados para atualização:', profileData);
       const response = await api.updateProfile(profileData);
+      console.log('✅ Resposta da API:', response);
       
       updateUser(response.user);
       
@@ -261,7 +286,7 @@ const EditProfilePage = () => {
   }
 
   return (
-    <Container className={`custom-scroll ${(submitMessage || deleteMessage) ? 'allow-scroll' : ''}`}>
+    <Container className="custom-scroll">
       <LogoTitle>HealGym</LogoTitle>
       <FormSection ref={formRef}>
         <motion.div
@@ -376,7 +401,7 @@ const EditProfilePage = () => {
               </AnimatePresence>
             </InputGroup>
 
-            <InputRow>
+            <TripleInputRow>
               <InputGroup>
                 <Input
                   type="number"
@@ -429,7 +454,33 @@ const EditProfilePage = () => {
                   )}
                 </AnimatePresence>
               </InputGroup>
-            </InputRow>
+
+              <InputGroup>
+                <Input
+                  type="number"
+                  name="age"
+                  placeholder="Idade (anos)"
+                  value={formData.age}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.age && errors.age}
+                  min="13"
+                  max="120"
+                />
+                <AnimatePresence>
+                  {touched.age && errors.age && (
+                    <ErrorMessage
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {errors.age}
+                    </ErrorMessage>
+                  )}
+                </AnimatePresence>
+              </InputGroup>
+            </TripleInputRow>
 
             <InputGroup>
               <SelectWrapper>
@@ -499,6 +550,7 @@ const EditProfilePage = () => {
             <AnimatePresence>
               {submitMessage && (
                 <SubmitMessage
+                  ref={submitMessageRef}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -594,21 +646,19 @@ const EditProfilePage = () => {
 
 const Container = styled.div`
   width: 100%;
-  height: 100vh;
+  height: auto;
+  min-height: 100vh;
   margin: 0;
-  padding: 0;
-  overflow: hidden;
+  padding: min(2vh, 20px) 0;
+  overflow-y: auto;
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   position: relative;
 
   &.allow-scroll {
-    height: auto;
-    min-height: 100vh;
-    overflow-y: auto;
-    padding: min(3vh, 30px) 0;
+    padding: min(2vh, 20px) 0;
   }
 `;
 
@@ -632,22 +682,32 @@ const LogoTitle = styled.h1`
 `;
 
 const FormSection = styled.section`
-  width: min(95vw, 800px);
-  max-height: none;
-  padding: min(3vh, 25px);
+  width: min(90vw, 700px);
+  max-width: 700px;
+  padding: min(2vh, 20px);
   background: var(--card-bg);
   border-radius: 2px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(198, 169, 100, 0.1);
   backdrop-filter: blur(10px);
-  margin: min(2vh, 20px) auto;
+  margin: min(8vh, 60px) auto min(2vh, 20px) auto;
   position: relative;
+
+  @media (max-height: 800px) {
+    margin: min(4vh, 30px) auto min(2vh, 20px) auto;
+    padding: min(1.5vh, 15px);
+  }
+
+  @media (max-height: 600px) {
+    margin: min(2vh, 15px) auto;
+    padding: min(1vh, 10px);
+  }
 `;
 
 const FormTitle = styled.h1`
-  font-size: min(5vw, 2.2rem);
+  font-size: min(4vw, 1.8rem);
   color: var(--white);
-  margin-bottom: min(1.5vh, 12px);
+  margin-bottom: min(1vh, 8px);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
   font-weight: 600;
   background: var(--gold-gradient);
@@ -656,31 +716,45 @@ const FormTitle = styled.h1`
   text-align: center;
   letter-spacing: 0.2vw;
   cursor: default;
+
+  @media (max-height: 600px) {
+    font-size: min(4vw, 1.5rem);
+    margin-bottom: min(0.5vh, 5px);
+  }
 `;
 
 const FormSubtitle = styled.p`
-  font-size: min(2.2vw, 1.1rem);
+  font-size: min(2vw, 1rem);
   color: var(--text-secondary);
-  margin-bottom: min(4vh, 20px);
+  margin-bottom: min(2vh, 15px);
   text-align: center;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.1vw;
   cursor: default;
-  line-height: 1.4;
+  line-height: 1.3;
   
   div {
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.2rem;
     
     &:last-child {
       margin-bottom: 0;
     }
+  }
+
+  @media (max-height: 600px) {
+    font-size: min(2vw, 0.9rem);
+    margin-bottom: min(1vh, 10px);
   }
 `;
 
 const FormContainer = styled.form`
   display: flex;
   flex-direction: column;
-  gap: min(2vh, 15px);
+  gap: min(1.5vh, 12px);
+
+  @media (max-height: 600px) {
+    gap: min(1vh, 8px);
+  }
 `;
 
 const InputGroup = styled.div`
@@ -695,6 +769,30 @@ const InputRow = styled.div`
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: min(2vh, 15px);
+  }
+`;
+
+const TripleInputRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: min(1.5vw, 12px);
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+    gap: min(2vw, 15px);
+    
+    & > div:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: min(1.5vh, 12px);
+    
+    & > div:last-child {
+      grid-column: auto;
+    }
   }
 `;
 
@@ -782,8 +880,13 @@ const ErrorMessage = styled(motion.span)`
 const ButtonGroup = styled.div`
   display: flex;
   flex-direction: column;
-  gap: min(1.5vh, 12px);
-  margin-top: min(2vh, 15px);
+  gap: min(1vh, 10px);
+  margin-top: min(1.5vh, 12px);
+
+  @media (max-height: 600px) {
+    gap: min(0.8vh, 8px);
+    margin-top: min(1vh, 8px);
+  }
 `;
 
 const SubmitButton = styled(motion.button)`
@@ -854,12 +957,17 @@ const SubmitMessage = styled(motion.div)`
 `;
 
 const DangerZone = styled.div`
-  margin-top: min(4vh, 30px);
-  padding: min(2vh, 20px);
+  margin-top: min(2vh, 20px);
+  padding: min(1.5vh, 15px);
   border: 2px solid rgba(220, 38, 38, 0.3);
   border-radius: 8px;
   background: rgba(220, 38, 38, 0.05);
   text-align: center;
+
+  @media (max-height: 600px) {
+    margin-top: min(1.5vh, 15px);
+    padding: min(1vh, 10px);
+  }
 `;
 
 const DangerTitle = styled.h3`
@@ -871,7 +979,7 @@ const DangerTitle = styled.h3`
 `;
 
 const DangerDescription = styled.p`
-  color: #7f1d1d;
+  color:rgb(218, 34, 34)
   font-size: min(1.6vw, 0.9rem);
   margin-bottom: min(2vh, 15px);
   font-family: 'Cormorant', serif;

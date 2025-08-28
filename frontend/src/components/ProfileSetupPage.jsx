@@ -14,12 +14,14 @@ const ProfileSetupPage = () => {
     gender: '',
     height: '',
     weight: '',
-    bodyType: ''
+    bodyType: '',
+    age: ''
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+  const submitMessageRef = useRef(null);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -30,6 +32,23 @@ const ProfileSetupPage = () => {
       document.documentElement.style.overflow = '';
     };
   }, []);
+
+  // Effect para scroll automático quando aparecer mensagem de sucesso
+  useEffect(() => {
+    if (submitMessage && submitMessageRef.current) {
+      // Permitir scroll temporariamente para mostrar a mensagem
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = 'auto';
+      
+      setTimeout(() => {
+        submitMessageRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }, 300);
+    }
+  }, [submitMessage]);
 
   const validateField = (name, value) => {
     let error = '';
@@ -47,6 +66,10 @@ const ProfileSetupPage = () => {
         break;
       case 'bodyType':
         if (!value) error = 'Biotipo é obrigatório';
+        break;
+      case 'age':
+        if (!value) error = 'Idade é obrigatória';
+        else if (isNaN(value) || value < 13 || value > 120) error = 'Idade deve estar entre 13 e 120 anos';
         break;
       default:
         break;
@@ -84,7 +107,8 @@ const ProfileSetupPage = () => {
       gender: true,
       height: true,
       weight: true,
-      bodyType: true
+      bodyType: true,
+      age: true
     });
 
     if (Object.keys(newErrors).length > 0) {
@@ -105,14 +129,16 @@ const ProfileSetupPage = () => {
         gender: formData.gender,
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight),
-        bodyType: formData.bodyType
+        bodyType: formData.bodyType,
+        age: parseInt(formData.age)
       });
       
       const response = await api.setupProfile({
         gender: formData.gender,
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight),
-        bodyType: formData.bodyType
+        bodyType: formData.bodyType,
+        age: parseInt(formData.age)
       });
       
       console.log('✅ Resposta do perfil:', response);
@@ -182,7 +208,7 @@ const ProfileSetupPage = () => {
               </AnimatePresence>
             </InputGroup>
 
-            <InputRow>
+            <TripleInputRow>
               <InputGroup>
                 <Input
                   type="number"
@@ -235,7 +261,33 @@ const ProfileSetupPage = () => {
                   )}
                 </AnimatePresence>
               </InputGroup>
-            </InputRow>
+
+              <InputGroup>
+                <Input
+                  type="number"
+                  name="age"
+                  placeholder="Idade (anos)"
+                  value={formData.age}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  error={touched.age && errors.age}
+                  min="13"
+                  max="120"
+                />
+                <AnimatePresence>
+                  {touched.age && errors.age && (
+                    <ErrorMessage
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {errors.age}
+                    </ErrorMessage>
+                  )}
+                </AnimatePresence>
+              </InputGroup>
+            </TripleInputRow>
 
             <InputGroup>
               <SelectWrapper>
@@ -280,6 +332,7 @@ const ProfileSetupPage = () => {
             <AnimatePresence>
               {submitMessage && (
                 <SubmitMessage
+                  ref={submitMessageRef}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -397,6 +450,30 @@ const InputRow = styled.div`
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: min(3vh, 20px);
+  }
+`;
+
+const TripleInputRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: min(1.5vw, 15px);
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr 1fr;
+    gap: min(2vw, 20px);
+    
+    & > div:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+    gap: min(2vh, 15px);
+    
+    & > div:last-child {
+      grid-column: auto;
+    }
   }
 `;
 

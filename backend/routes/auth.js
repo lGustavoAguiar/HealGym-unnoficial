@@ -200,6 +200,10 @@ router.put('/profile', authenticate, [
     .optional()
     .isIn(['ectomorfo', 'mesomorfo', 'endomorfo'])
     .withMessage('Biotipo deve ser ectomorfo, mesomorfo ou endomorfo'),
+  body('age')
+    .optional()
+    .isInt({ min: 13, max: 120 })
+    .withMessage('Idade deve estar entre 13 e 120 anos'),
   body('newPassword')
     .optional()
     .isLength({ min: 6 })
@@ -208,13 +212,17 @@ router.put('/profile', authenticate, [
     .withMessage('Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número')
 ], handleValidationErrors, async (req, res) => {
   try {
-    const { name, gender, height, weight, bodyType, newPassword } = req.body;
+    const { name, gender, height, weight, bodyType, age, newPassword } = req.body;
     const userId = req.user._id;
+
+    console.log('🔄 Dados recebidos para atualização de perfil:', {
+      name, gender, height, weight, bodyType, age, newPassword: !!newPassword
+    });
 
     const updateData = {};
     if (name) updateData.name = name;
     
-    if (gender || height || weight || bodyType) {
+    if (gender || height || weight || bodyType || age) {
       updateData.profile = {
         ...req.user.profile,
         ...(gender && { gender }),
@@ -222,6 +230,18 @@ router.put('/profile', authenticate, [
         ...(weight && { weight: parseFloat(weight) }),
         ...(bodyType && { bodyType })
       };
+
+      // Se idade foi fornecida, calcular nova data de nascimento
+      if (age) {
+        console.log('🔢 Processando idade:', age, 'tipo:', typeof age);
+        const currentYear = new Date().getFullYear();
+        const birthYear = currentYear - parseInt(age);
+        const dateOfBirth = new Date(birthYear, 0, 1); // 1º de janeiro do ano calculado
+        console.log('📅 Data de nascimento calculada:', dateOfBirth);
+        updateData.profile.dateOfBirth = dateOfBirth;
+      }
+      
+      console.log('📝 updateData.profile final:', updateData.profile);
     }
 
     const user = await User.findById(userId);
@@ -239,7 +259,7 @@ router.put('/profile', authenticate, [
       user.password = newPassword;
     }
     
-    if (gender || height || weight || bodyType) {
+    if (gender || height || weight || bodyType || age) {
       user.profile = {
         ...user.profile,
         ...(gender && { gender }),
@@ -247,6 +267,18 @@ router.put('/profile', authenticate, [
         ...(weight && { weight: parseFloat(weight) }),
         ...(bodyType && { bodyType })
       };
+
+      // Se idade foi fornecida, calcular nova data de nascimento
+      if (age) {
+        console.log('🔢 Processando idade no user.profile:', age);
+        const currentYear = new Date().getFullYear();
+        const birthYear = currentYear - parseInt(age);
+        const dateOfBirth = new Date(birthYear, 0, 1); // 1º de janeiro do ano calculado
+        console.log('📅 Definindo dateOfBirth no user:', dateOfBirth);
+        user.profile.dateOfBirth = dateOfBirth;
+      }
+      
+      console.log('👤 user.profile final antes do save:', user.profile);
     }
 
     await user.save();

@@ -50,7 +50,10 @@ router.post('/profile-setup', [
     .withMessage('Peso deve estar entre 30 e 300 kg'),
   body('bodyType')
     .isIn(['ectomorfo', 'mesomorfo', 'endomorfo'])
-    .withMessage('Biotipo inválido')
+    .withMessage('Biotipo inválido'),
+  body('age')
+    .isInt({ min: 13, max: 120 })
+    .withMessage('Idade deve estar entre 13 e 120 anos')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -61,8 +64,13 @@ router.post('/profile-setup', [
       });
     }
 
-    const { gender, height, weight, bodyType } = req.body;
+    const { gender, height, weight, bodyType, age } = req.body;
     const userId = req.user._id;
+
+    // Calcular data de nascimento aproximada baseada na idade
+    const currentYear = new Date().getFullYear();
+    const birthYear = currentYear - age;
+    const dateOfBirth = new Date(birthYear, 0, 1); // 1º de janeiro do ano calculado
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -72,6 +80,7 @@ router.post('/profile-setup', [
           'profile.height': height,
           'profile.weight': weight,
           'profile.bodyType': bodyType,
+          'profile.dateOfBirth': dateOfBirth,
           'profileSetupCompleted': true
         }
       },
