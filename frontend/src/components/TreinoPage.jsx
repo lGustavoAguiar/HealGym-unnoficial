@@ -16,6 +16,8 @@ const TreinoPage = () => {
   const [emDescanso, setEmDescanso] = useState(false);
   const [tempoRestante, setTempoRestante] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [treinoJaRealizado, setTreinoJaRealizado] = useState(false);
 
   // Refs para scroll automático
   const cronogramaRef = useRef(null);
@@ -283,8 +285,14 @@ const TreinoPage = () => {
       setIntervalId(null);
     }
 
-    // Mostrar mensagem de sucesso
-    alert('🎉 Parabéns! Treino finalizado com sucesso!');
+    // Mostrar mensagem de sucesso customizada e atualizar estado
+    setShowSuccessMessage(true);
+    setTreinoJaRealizado(true);
+    
+    // Esconder mensagem após 5 segundos
+    setTimeout(() => {
+      setShowSuccessMessage(false);
+    }, 5000);
   };
 
   // Função para obter o dia atual da semana (1 = segunda, 7 = domingo)
@@ -315,6 +323,18 @@ const TreinoPage = () => {
     return cronogramaSemanal.find(dia => dia.dayOfWeek === diaAtual);
   };
 
+  // Função para verificar se o treino de hoje já foi realizado
+  const verificarTreinoRealizado = () => {
+    const today = new Date();
+    const todayString = today.toDateString();
+    
+    const treinosExistentes = JSON.parse(localStorage.getItem('treinosRealizados') || '[]');
+    return treinosExistentes.some(treino => {
+      const treinoDate = new Date(treino.data);
+      return treinoDate.toDateString() === todayString;
+    });
+  };
+
   const formatarTempo = (segundos) => {
     const mins = Math.floor(segundos / 60);
     const secs = segundos % 60;
@@ -328,6 +348,12 @@ const TreinoPage = () => {
       }
     };
   }, [intervalId]);
+
+  // Verificar se o treino já foi realizado hoje ao carregar a página
+  useEffect(() => {
+    const jaRealizado = verificarTreinoRealizado();
+    setTreinoJaRealizado(jaRealizado);
+  }, []);
 
   // Automaticamente selecionar o treino do dia atual quando o tempo for definido
   useEffect(() => {
@@ -435,7 +461,7 @@ const TreinoPage = () => {
               </WeeklySchedule>
             )}
 
-            {treinoDodia && !treinoIniciado && (
+            {treinoDodia && !treinoIniciado && !treinoJaRealizado && (
               <WorkoutPlan ref={planoTreinoRef}>
                 <PlanHeader>
                   <PlanTitle>{diaSelecionado.dia} - {treinoDodia.nome}: {treinoDodia.grupos}</PlanTitle>
@@ -469,6 +495,18 @@ const TreinoPage = () => {
                   Começar Treino
                 </StartWorkoutButton>
               </WorkoutPlan>
+            )}
+
+            {treinoJaRealizado && !isDomingoDescanso && (
+              <CompletedWorkoutMessage>
+                <CompletedWorkoutTitle>✅ Treino de Hoje Concluído!</CompletedWorkoutTitle>
+                <CompletedWorkoutDescription>
+                  Parabéns! Você já realizou seu treino de hoje. Descanse bem e volte amanhã para continuar sua jornada fitness.
+                </CompletedWorkoutDescription>
+                <CompletedWorkoutTip>
+                  💡 <strong>Dica:</strong> Mantenha-se hidratado e faça uma boa alimentação para otimizar sua recuperação.
+                </CompletedWorkoutTip>
+              </CompletedWorkoutMessage>
             )}
 
             {treinoIniciado && treinoDodia && (
@@ -526,6 +564,20 @@ const TreinoPage = () => {
           </WorkoutCard>
         </motion.div>
       </MainContent>
+
+      {/* Mensagem de sucesso customizada */}
+      {showSuccessMessage && (
+        <SuccessMessage
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 50 }}
+          transition={{ duration: 0.5 }}
+        >
+          <SuccessIcon>🎉</SuccessIcon>
+          <SuccessTitle>Parabéns!</SuccessTitle>
+          <SuccessDescription>Treino finalizado com sucesso!</SuccessDescription>
+        </SuccessMessage>
+      )}
     </Container>
   );
 };
@@ -1103,6 +1155,76 @@ const TodayWorkoutBadge = styled.div`
 
 const TodayWorkoutInfo = styled.div`
   text-align: center;
+`;
+
+const CompletedWorkoutMessage = styled.div`
+  text-align: center;
+  padding: 3rem 2rem;
+  background: rgba(76, 175, 80, 0.1);
+  border: 2px solid rgba(76, 175, 80, 0.3);
+  border-radius: 12px;
+  margin-top: 2rem;
+`;
+
+const CompletedWorkoutTitle = styled.h3`
+  color: #4CAF50;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+`;
+
+const CompletedWorkoutDescription = styled.p`
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+`;
+
+const CompletedWorkoutTip = styled.div`
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  
+  strong {
+    color: #4CAF50;
+  }
+`;
+
+const SuccessMessage = styled(motion.div)`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--card-bg);
+  border: 2px solid #4CAF50;
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  z-index: 1000;
+  min-width: 300px;
+`;
+
+const SuccessIcon = styled.div`
+  font-size: 4rem;
+  margin-bottom: 1rem;
+`;
+
+const SuccessTitle = styled.h2`
+  color: #4CAF50;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+`;
+
+const SuccessDescription = styled.p`
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  line-height: 1.6;
 `;
 
 export default TreinoPage;

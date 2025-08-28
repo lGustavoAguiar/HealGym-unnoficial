@@ -262,14 +262,14 @@ const Dashboard = () => {
                   whileTap={{ scale: 0.98 }}
                   onClick={handleTreinoClick}
                 >
-                  🏋️ Treino
+                  Treino
                 </FeatureItem>
                 <FeatureItem
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleDietaClick}
                 >
-                  🥗 Dieta
+                  Dieta
                 </FeatureItem>
               </FeaturesList>
             </WelcomeCard>
@@ -636,9 +636,10 @@ const FeatureItem = styled(motion.div)`
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(198, 169, 100, 0.2);
   border-radius: 8px;
-  padding: 1rem;
+  padding: 1.5rem;
   color: var(--white);
-  font-size: 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
   transition: all 0.3s ease;
   cursor: pointer;
   display: flex;
