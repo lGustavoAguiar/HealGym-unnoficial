@@ -267,6 +267,12 @@ const DietaPage = () => {
 
     // Usando apenas a Taxa Metabólica Basal (TMB) como gasto energético
     const gastoEnergetico = Math.round(tmb);
+    
+    console.log('📊 TMB e Gasto Energético:', {
+      tmb: Math.round(tmb),
+      gastoEnergetico,
+      objetivo
+    });
 
     // Ajuste calórico baseado no objetivo
     let caloriasMeta;
@@ -274,14 +280,14 @@ const DietaPage = () => {
     
     switch (objetivo) {
       case 'emagrecimento':
-        // Déficit de 20-25% para emagrecimento saudável
-        deficitSuperavit = Math.round(gastoEnergetico * 0.25);
-        caloriasMeta = gastoEnergetico - deficitSuperavit;
+        // Para emagrecimento: meta calórica = TMB (Taxa Metabólica Basal)
+        caloriasMeta = Math.round(tmb);
+        deficitSuperavit = gastoEnergetico - caloriasMeta;
         break;
       case 'ganho_peso':
-        // Superávit de 15% para ganho de peso
-        deficitSuperavit = Math.round(gastoEnergetico * 0.15);
-        caloriasMeta = gastoEnergetico + deficitSuperavit;
+        // Para ganho de peso: TMB + 200 calorias
+        caloriasMeta = Math.round(tmb) + 200;
+        deficitSuperavit = caloriasMeta - gastoEnergetico;
         break;
       case 'manutencao':
       default:
@@ -289,6 +295,13 @@ const DietaPage = () => {
         deficitSuperavit = 0;
         break;
     }
+
+    console.log('🎯 Metas Calóricas Finais:', {
+      objetivo,
+      tmb: Math.round(tmb),
+      caloriasMeta,
+      diferenca: caloriasMeta - Math.round(tmb)
+    });
 
     // Distribuição de macronutrientes baseada no objetivo
     let proteinasGramas, gordurasGramas, carboidratosGramas;
@@ -302,7 +315,19 @@ const DietaPage = () => {
       const caloriasProteina = proteinasGramas * 4;
       const caloriasGordura = gordurasGramas * 9;
       const caloriasRestantes = caloriasMeta - caloriasProteina - caloriasGordura;
-      carboidratosGramas = Math.max(50, Math.round(caloriasRestantes / 4)); // Mínimo 50g carbo
+      carboidratosGramas = Math.max(0, Math.round(caloriasRestantes / 4)); // Carboidrato preenche calorias restantes, mínimo 0g
+      
+      // Debug para emagrecimento
+      console.log('🔥 EMAGRECIMENTO - Debug:', {
+        peso,
+        caloriasMeta,
+        proteinasGramas,
+        gordurasGramas,
+        caloriasProteina,
+        caloriasGordura,
+        caloriasRestantes,
+        carboidratosGramas
+      });
       
       // Recalcular calorias totais baseado nos macros
       const caloriasRecalculadas = (proteinasGramas * 4) + (gordurasGramas * 9) + (carboidratosGramas * 4);
@@ -318,7 +343,19 @@ const DietaPage = () => {
       const caloriasProteina = proteinasGramas * 4;
       const caloriasGordura = gordurasGramas * 9;
       const caloriasRestantes = caloriasMeta - caloriasProteina - caloriasGordura;
-      carboidratosGramas = Math.round(caloriasRestantes / 4);
+      carboidratosGramas = Math.max(0, Math.round(caloriasRestantes / 4)); // Carboidrato preenche calorias restantes
+      
+      // Debug para ganho de peso
+      console.log('💪 GANHO DE PESO - Debug:', {
+        peso,
+        caloriasMeta,
+        proteinasGramas,
+        gordurasGramas,
+        caloriasProteina,
+        caloriasGordura,
+        caloriasRestantes,
+        carboidratosGramas
+      });
       
     } else {
       // Manutenção: distribuição balanceada
@@ -328,7 +365,19 @@ const DietaPage = () => {
       const caloriasProteina = proteinasGramas * 4;
       const caloriasGordura = gordurasGramas * 9;
       const caloriasRestantes = caloriasMeta - caloriasProteina - caloriasGordura;
-      carboidratosGramas = Math.round(caloriasRestantes / 4);
+      carboidratosGramas = Math.max(0, Math.round(caloriasRestantes / 4)); // Carboidrato preenche calorias restantes
+      
+      // Debug para manutenção
+      console.log('⚖️ MANUTENÇÃO - Debug:', {
+        peso,
+        caloriasMeta,
+        proteinasGramas,
+        gordurasGramas,
+        caloriasProteina,
+        caloriasGordura,
+        caloriasRestantes,
+        carboidratosGramas
+      });
     }
 
     // Necessidades de micronutrientes (baseado nas DRIs brasileiras)
