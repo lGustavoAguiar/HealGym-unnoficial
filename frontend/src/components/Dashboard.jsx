@@ -8,10 +8,6 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  console.log('🏠 Dashboard - User:', user);
-  console.log('🏠 Dashboard - User profile:', user?.profile);
-
-  // Função para calcular idade baseada na data de nascimento
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return null;
     const birth = new Date(dateOfBirth);
@@ -24,7 +20,6 @@ const Dashboard = () => {
     return age;
   };
 
-  // Função para calcular TMB (Taxa Metabólica Basal) - Equação de Mifflin-St Jeor
   const calculateTMB = (weight, height, age, gender) => {
     if (!weight || !height || !age || !gender) return null;
     
@@ -35,14 +30,12 @@ const Dashboard = () => {
     }
   };
 
-  // Função para calcular IMC
   const calculateIMC = (weight, height) => {
     if (!weight || !height) return null;
     const heightInMeters = height / 100;
     return (weight / (heightInMeters * heightInMeters)).toFixed(1);
   };
 
-  // Função para classificar IMC
   const getIMCClassification = (imc) => {
     if (!imc) return null;
     const imcValue = parseFloat(imc);
@@ -54,7 +47,6 @@ const Dashboard = () => {
     return { text: 'Obesidade grau III', color: '#991b1b' };
   };
 
-  // Função para calcular peso ideal (Fórmula de Broca ajustada)
   const calculateIdealWeight = (height, gender) => {
     if (!height || !gender) return null;
     const baseWeight = height - 100;
@@ -71,11 +63,16 @@ const Dashboard = () => {
   };
 
   const handleProfileEdit = () => {
-    console.log('🔧 Navegando para edit-profile, user atual:', user);
     navigate('/edit-profile');
   };
 
-  // Calcular métricas do usuário
+  const handleTreinoClick = () => {
+    navigate('/treino');
+  };
+
+  const handleDietaClick = () => {
+    navigate('/dieta');
+  };
   const age = calculateAge(user?.profile?.dateOfBirth);
   const tmb = calculateTMB(user?.profile?.weight, user?.profile?.height, age, user?.profile?.gender);
   const imc = calculateIMC(user?.profile?.weight, user?.profile?.height);
@@ -212,8 +209,20 @@ const Dashboard = () => {
                 Seu aplicativo completo para treino e dieta personalizada.
               </WelcomeDescription>
               <FeaturesList>
-                <FeatureItem>🏋️ Treino</FeatureItem>
-                <FeatureItem>🥗 Dieta</FeatureItem>
+                <FeatureItem
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleTreinoClick}
+                >
+                  🏋️ Treino
+                </FeatureItem>
+                <FeatureItem
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDietaClick}
+                >
+                  🥗 Dieta
+                </FeatureItem>
               </FeaturesList>
             </WelcomeCard>
           </motion.div>
@@ -504,6 +513,8 @@ const WelcomeTitle = styled.h1`
   background: var(--gold-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  cursor: default;
+  text-align: center;
 `;
 
 const WelcomeDescription = styled.p`
@@ -511,6 +522,8 @@ const WelcomeDescription = styled.p`
   font-size: 1.2rem;
   line-height: 1.6;
   margin-bottom: 2rem;
+  cursor: default;
+  text-align: center;
 `;
 
 const FeaturesList = styled.div`
@@ -519,7 +532,7 @@ const FeaturesList = styled.div`
   gap: 1rem;
 `;
 
-const FeatureItem = styled.div`
+const FeatureItem = styled(motion.div)`
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(198, 169, 100, 0.2);
   border-radius: 8px;
@@ -527,10 +540,17 @@ const FeatureItem = styled.div`
   color: var(--white);
   font-size: 1rem;
   transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 
   &:hover {
     background: rgba(255, 255, 255, 0.08);
     transform: translateY(-2px);
+    border-color: var(--accent);
+    box-shadow: 0 4px 15px rgba(198, 169, 100, 0.3);
   }
 `;
 

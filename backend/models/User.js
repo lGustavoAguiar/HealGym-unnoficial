@@ -94,13 +94,10 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   
-  console.log('🔐 Hasheando senha para usuário:', this.email);
   try {
     this.password = await bcrypt.hash(this.password, 12);
-    console.log('✅ Senha hasheada com sucesso');
     next();
   } catch (error) {
-    console.error('❌ Erro ao hashear senha:', error);
     next(error);
   }
 });
@@ -140,7 +137,7 @@ userSchema.methods.createAccountDeletionToken = function() {
     .update(deletionToken)
     .digest('hex');
   
-  this.accountDeletionExpires = Date.now() + 30 * 60 * 1000; // 30 minutos
+  this.accountDeletionExpires = Date.now() + 30 * 60 * 1000;
   
   return deletionToken;
 };

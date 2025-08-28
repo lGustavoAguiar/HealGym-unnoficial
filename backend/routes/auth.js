@@ -215,9 +215,7 @@ router.put('/profile', authenticate, [
     const { name, gender, height, weight, bodyType, age, newPassword } = req.body;
     const userId = req.user._id;
 
-    console.log('🔄 Dados recebidos para atualização de perfil:', {
-      name, gender, height, weight, bodyType, age, newPassword: !!newPassword
-    });
+
 
     const updateData = {};
     if (name) updateData.name = name;
@@ -231,21 +229,15 @@ router.put('/profile', authenticate, [
         ...(bodyType && { bodyType })
       };
 
-      // Se idade foi fornecida, calcular nova data de nascimento
       if (age) {
-        console.log('🔢 Processando idade:', age, 'tipo:', typeof age);
         const currentYear = new Date().getFullYear();
         const birthYear = currentYear - parseInt(age);
-        const dateOfBirth = new Date(birthYear, 0, 1); // 1º de janeiro do ano calculado
-        console.log('📅 Data de nascimento calculada:', dateOfBirth);
+        const dateOfBirth = new Date(birthYear, 0, 1);
         updateData.profile.dateOfBirth = dateOfBirth;
       }
-      
-      console.log('📝 updateData.profile final:', updateData.profile);
     }
 
     const user = await User.findById(userId);
-    console.log('🔍 Usuário encontrado para atualização:', user ? user.email : 'NENHUM');
     
     if (!user) {
       return res.status(404).json({
@@ -255,7 +247,6 @@ router.put('/profile', authenticate, [
     
     if (name) user.name = name;
     if (newPassword) {
-      console.log('🔐 Alterando senha do usuário:', user.email);
       user.password = newPassword;
     }
     
@@ -268,34 +259,21 @@ router.put('/profile', authenticate, [
         ...(bodyType && { bodyType })
       };
 
-      // Se idade foi fornecida, calcular nova data de nascimento
       if (age) {
-        console.log('🔢 Processando idade no user.profile:', age);
         const currentYear = new Date().getFullYear();
         const birthYear = currentYear - parseInt(age);
-        const dateOfBirth = new Date(birthYear, 0, 1); // 1º de janeiro do ano calculado
-        console.log('📅 Definindo dateOfBirth no user:', dateOfBirth);
+        const dateOfBirth = new Date(birthYear, 0, 1);
         user.profile.dateOfBirth = dateOfBirth;
       }
-      
-      console.log('👤 user.profile final antes do save:', user.profile);
     }
 
     await user.save();
-
-    console.log('✅ Perfil atualizado com sucesso para:', user.email);
-    
-    if (newPassword) {
-      const testPassword = await user.comparePassword(newPassword);
-      console.log('🧪 Teste imediato da nova senha:', testPassword ? 'PASSOU' : 'FALHOU');
-    }
 
     res.json({
       message: 'Perfil atualizado com sucesso',
       user
     });
   } catch (error) {
-    console.error('Erro ao atualizar perfil:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

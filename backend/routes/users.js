@@ -67,10 +67,9 @@ router.post('/profile-setup', [
     const { gender, height, weight, bodyType, age } = req.body;
     const userId = req.user._id;
 
-    // Calcular data de nascimento aproximada baseada na idade
     const currentYear = new Date().getFullYear();
     const birthYear = currentYear - age;
-    const dateOfBirth = new Date(birthYear, 0, 1); // 1º de janeiro do ano calculado
+    const dateOfBirth = new Date(birthYear, 0, 1);
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -98,7 +97,6 @@ router.post('/profile-setup', [
       user
     });
   } catch (error) {
-    console.error('Erro ao atualizar perfil:', error);
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

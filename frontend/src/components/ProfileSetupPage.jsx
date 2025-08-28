@@ -33,10 +33,8 @@ const ProfileSetupPage = () => {
     };
   }, []);
 
-  // Effect para scroll automático quando aparecer mensagem de sucesso
   useEffect(() => {
     if (submitMessage && submitMessageRef.current) {
-      // Permitir scroll temporariamente para mostrar a mensagem
       document.body.style.overflow = 'auto';
       document.documentElement.style.overflow = 'auto';
       
@@ -122,17 +120,6 @@ const ProfileSetupPage = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const currentToken = localStorage.getItem('token');
-      console.log('🔍 Token atual no localStorage:', currentToken ? 'Presente' : 'Ausente');
-      
-      console.log('🔄 Enviando dados do perfil:', {
-        gender: formData.gender,
-        height: parseFloat(formData.height),
-        weight: parseFloat(formData.weight),
-        bodyType: formData.bodyType,
-        age: parseInt(formData.age)
-      });
-      
       const response = await api.setupProfile({
         gender: formData.gender,
         height: parseFloat(formData.height),
@@ -140,8 +127,6 @@ const ProfileSetupPage = () => {
         bodyType: formData.bodyType,
         age: parseInt(formData.age)
       });
-      
-      console.log('✅ Resposta do perfil:', response);
       
       updateUser(response.user);
       
@@ -152,7 +137,6 @@ const ProfileSetupPage = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('❌ Erro ao salvar informações:', error);
       setSubmitMessage(error.message || 'Erro ao salvar informações. Tente novamente.');
     } finally {
       setIsSubmitting(false);

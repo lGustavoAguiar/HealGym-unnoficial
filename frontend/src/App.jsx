@@ -10,6 +10,8 @@ import ConfirmDeletePage from './components/ConfirmDeletePage'
 import ProfileSetupPage from './components/ProfileSetupPage'
 import EditProfilePage from './components/EditProfilePage'
 import Dashboard from './components/Dashboard'
+import TreinoPage from './components/TreinoPage'
+import DietaPage from './components/DietaPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import ProfileSetupGuard from './components/ProfileSetupGuard'
 
@@ -49,6 +51,26 @@ function App() {
               <ProtectedRoute>
                 <ProfileSetupGuard>
                   <Dashboard />
+                </ProfileSetupGuard>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/treino" 
+            element={
+              <ProtectedRoute>
+                <ProfileSetupGuard>
+                  <TreinoPage />
+                </ProfileSetupGuard>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dieta" 
+            element={
+              <ProtectedRoute>
+                <ProfileSetupGuard>
+                  <DietaPage />
                 </ProfileSetupGuard>
               </ProtectedRoute>
             } 

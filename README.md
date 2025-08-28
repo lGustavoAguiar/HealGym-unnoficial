@@ -28,3 +28,5 @@ No great results without both proper training and proper diet. HealGym integrate
 
 ![HealGym Logo](/frontend/public/Img1.png)
 ![HealGym Logo](/frontend/public/Img2.png)
+![HealGym Logo](/frontend/public/Img3.png)
+

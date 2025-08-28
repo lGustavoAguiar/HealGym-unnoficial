@@ -31,7 +31,6 @@ const EditProfilePage = () => {
   const deleteMessageRef = useRef(null);
   const submitMessageRef = useRef(null);
 
-  // Função para calcular idade baseada na data de nascimento
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return '';
     const birth = new Date(dateOfBirth);
@@ -41,15 +40,11 @@ const EditProfilePage = () => {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-    console.log('🔢 Calculando idade:', { dateOfBirth, birth, age });
     return age.toString();
   };
 
   useEffect(() => {
-    console.log('🔍 EditProfile useEffect - User:', user);
-    console.log('🔍 EditProfile useEffect - User profile:', user?.profile);
     if (user) {
-      console.log('🔍 Preenchendo dados do formulário...');
       setFormData({
         name: user.name || '',
         newPassword: '',
@@ -61,13 +56,10 @@ const EditProfilePage = () => {
         age: calculateAge(user.profile?.dateOfBirth)
       });
       setIsLoadingUser(false);
-    } else {
-      console.log('⚠️ User não disponível ainda');
     }
   }, [user]);
 
   useEffect(() => {
-    // Permitir scroll sempre
     document.body.style.overflow = 'auto';
     document.documentElement.style.overflow = 'auto';
     
@@ -76,8 +68,6 @@ const EditProfilePage = () => {
       document.documentElement.style.overflow = '';
     };
   }, []);
-
-  // Effect para scroll automático quando aparecer mensagem de sucesso
   useEffect(() => {
     if (submitMessage && submitMessageRef.current) {
       setTimeout(() => {
@@ -205,9 +195,7 @@ const EditProfilePage = () => {
         profileData.newPassword = formData.newPassword;
       }
 
-      console.log('🔄 Dados sendo enviados para atualização:', profileData);
       const response = await api.updateProfile(profileData);
-      console.log('✅ Resposta da API:', response);
       
       updateUser(response.user);
       
@@ -218,7 +206,6 @@ const EditProfilePage = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
       setSubmitMessage(error.message || 'Erro ao atualizar perfil. Tente novamente.');
     } finally {
       setIsSubmitting(false);
@@ -254,10 +241,8 @@ const EditProfilePage = () => {
       }, 300);
       
     } catch (error) {
-      console.error('Erro ao solicitar exclusão:', error);
       setDeleteMessage(error.message || 'Erro ao solicitar exclusão. Tente novamente.');
       
-      // Scroll automático para mostrar a mensagem de erro também
       setTimeout(() => {
         if (deleteMessageRef.current) {
           deleteMessageRef.current.scrollIntoView({ 
