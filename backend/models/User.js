@@ -47,6 +47,14 @@ const userSchema = new mongoose.Schema({
     type: Date,
     select: false
   },
+  accountDeletionToken: {
+    type: String,
+    select: false
+  },
+  accountDeletionExpires: {
+    type: Date,
+    select: false
+  },
   profile: {
     avatar: String,
     phone: String,
@@ -122,6 +130,29 @@ userSchema.methods.validatePasswordResetToken = function(token) {
     
   return this.passwordResetToken === hashedToken && 
          this.passwordResetExpires > Date.now();
+};
+
+userSchema.methods.createAccountDeletionToken = function() {
+  const deletionToken = crypto.randomBytes(32).toString('hex');
+  
+  this.accountDeletionToken = crypto
+    .createHash('sha256')
+    .update(deletionToken)
+    .digest('hex');
+  
+  this.accountDeletionExpires = Date.now() + 30 * 60 * 1000; // 30 minutos
+  
+  return deletionToken;
+};
+
+userSchema.methods.validateAccountDeletionToken = function(token) {
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+    
+  return this.accountDeletionToken === hashedToken && 
+         this.accountDeletionExpires > Date.now();
 };
 
 userSchema.methods.toJSON = function() {

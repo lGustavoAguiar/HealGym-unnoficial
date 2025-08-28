@@ -130,6 +130,22 @@ class ApiService {
     });
   }
 
+  async requestAccountDeletion() {
+    console.log('🗑️ Solicitando exclusão de conta...');
+    return this.request('/auth/request-account-deletion', {
+      method: 'POST',
+    });
+  }
+
+  async confirmAccountDeletion(token) {
+    console.log('🗑️ Confirmando exclusão de conta com token:', token);
+    console.log('🗑️ Will make request to:', `${this.baseURL}/auth/confirm-account-deletion/${token}`);
+    
+    return this.request(`/auth/confirm-account-deletion/${token}`, {
+      method: 'POST',
+    });
+  }
+
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

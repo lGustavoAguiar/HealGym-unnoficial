@@ -6,6 +6,7 @@ import RegisterPage from './components/RegisterPage'
 import LoginPage from './components/LoginPage'
 import ForgotPasswordPage from './components/ForgotPasswordPage'
 import ResetPasswordPage from './components/ResetPasswordPage'
+import ConfirmDeletePage from './components/ConfirmDeletePage'
 import ProfileSetupPage from './components/ProfileSetupPage'
 import EditProfilePage from './components/EditProfilePage'
 import Dashboard from './components/Dashboard'
@@ -23,6 +24,7 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route path="/confirm-delete/:token" element={<ConfirmDeletePage />} />
           <Route 
             path="/profile-setup" 
             element={

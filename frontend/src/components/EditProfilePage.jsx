@@ -24,6 +24,10 @@ const EditProfilePage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState('');
+  const deleteMessageRef = useRef(null);
 
   useEffect(() => {
     console.log('🔍 EditProfile useEffect - User:', user);
@@ -46,6 +50,7 @@ const EditProfilePage = () => {
   }, [user]);
 
   useEffect(() => {
+    // Bloquear scroll inicialmente
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
     
@@ -54,6 +59,19 @@ const EditProfilePage = () => {
       document.documentElement.style.overflow = '';
     };
   }, []);
+
+  // Effect para controlar o scroll baseado nas mensagens
+  useEffect(() => {
+    if (submitMessage || deleteMessage) {
+      // Permitir scroll quando há mensagens
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = 'auto';
+    } else if (!showDeleteConfirmation) {
+      // Bloquear scroll quando não há mensagens e modal não está aberto
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
+  }, [submitMessage, deleteMessage, showDeleteConfirmation]);
 
   const validateField = (name, value) => {
     let error = '';
@@ -185,6 +203,50 @@ const EditProfilePage = () => {
   const handleLogoClick = () => {
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    setDeleteMessage('');
+
+    try {
+      const response = await api.requestAccountDeletion();
+      
+      setDeleteMessage(response.message || 'E-mail de confirmação enviado! Verifique sua caixa de entrada.');
+      setShowDeleteConfirmation(false);
+      
+      if (response.devMode) {
+        setDeleteMessage(response.message + ' (Modo desenvolvimento)');
+      }
+      
+      // Scroll automático para mostrar a mensagem
+      setTimeout(() => {
+        if (deleteMessageRef.current) {
+          deleteMessageRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 300);
+      
+    } catch (error) {
+      console.error('Erro ao solicitar exclusão:', error);
+      setDeleteMessage(error.message || 'Erro ao solicitar exclusão. Tente novamente.');
+      
+      // Scroll automático para mostrar a mensagem de erro também
+      setTimeout(() => {
+        if (deleteMessageRef.current) {
+          deleteMessageRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }
+      }, 300);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoadingUser) {
     return (
       <Container className="custom-scroll">
@@ -199,7 +261,7 @@ const EditProfilePage = () => {
   }
 
   return (
-    <Container className="custom-scroll">
+    <Container className={`custom-scroll ${(submitMessage || deleteMessage) ? 'allow-scroll' : ''}`}>
       <LogoTitle>HealGym</LogoTitle>
       <FormSection ref={formRef}>
         <motion.div
@@ -418,6 +480,22 @@ const EditProfilePage = () => {
               </CancelButton>
             </ButtonGroup>
 
+            <DangerZone>
+              <DangerTitle>🚨 Zona de Perigo</DangerTitle>
+              <DangerDescription>
+                Esta ação é permanente e não pode ser desfeita. Todos os seus dados serão perdidos.
+              </DangerDescription>
+              <DeleteButton
+                type="button"
+                onClick={() => setShowDeleteConfirmation(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={isDeleting}
+              >
+                🗑️ Excluir Conta Permanentemente
+              </DeleteButton>
+            </DangerZone>
+
             <AnimatePresence>
               {submitMessage && (
                 <SubmitMessage
@@ -431,16 +509,92 @@ const EditProfilePage = () => {
                 </SubmitMessage>
               )}
             </AnimatePresence>
+
+            <AnimatePresence>
+              {deleteMessage && (
+                <SubmitMessage
+                  ref={deleteMessageRef}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className={deleteMessage.includes('enviado') || deleteMessage.includes('sucesso') ? 'success' : 'error'}
+                >
+                  {deleteMessage}
+                </SubmitMessage>
+              )}
+            </AnimatePresence>
           </FormContainer>
         </motion.div>
       </FormSection>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <AnimatePresence>
+        {showDeleteConfirmation && (
+          <ModalOverlay
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={() => setShowDeleteConfirmation(false)}
+          >
+            <ModalContent
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ModalHeader>
+                <ModalTitle>⚠️ Confirmar Exclusão de Conta</ModalTitle>
+              </ModalHeader>
+              
+              <ModalBody>
+                <WarningText>
+                  <strong>Esta ação é IRREVERSÍVEL!</strong>
+                </WarningText>
+                <WarningText>
+                  Ao confirmar, você:
+                </WarningText>
+                <WarningList>
+                  <li>🗑️ Perderá todos os seus dados permanentemente</li>
+                  <li>🗑️ Não poderá recuperar sua conta</li>
+                  <li>🗑️ Precisará criar uma nova conta para usar o HealGym novamente</li>
+                  <li>📧 Receberá um email de confirmação final</li>
+                </WarningList>
+                <ConfirmText>
+                  Tem certeza absoluta que deseja excluir sua conta?
+                </ConfirmText>
+              </ModalBody>
+              
+              <ModalFooter>
+                <ModalCancelButton
+                  onClick={() => setShowDeleteConfirmation(false)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Cancelar
+                </ModalCancelButton>
+                <ModalDeleteButton
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {isDeleting ? 'Enviando...' : '🗑️ Sim, Excluir Minha Conta'}
+                </ModalDeleteButton>
+              </ModalFooter>
+            </ModalContent>
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
     </Container>
   );
 };
 
 const Container = styled.div`
   width: 100%;
-  height: 110vh;
+  height: 100vh;
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -449,6 +603,13 @@ const Container = styled.div`
   align-items: center;
   justify-content: center;
   position: relative;
+
+  &.allow-scroll {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    padding: min(3vh, 30px) 0;
+  }
 `;
 
 const LogoTitle = styled.h1`
@@ -479,6 +640,8 @@ const FormSection = styled.section`
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(198, 169, 100, 0.1);
   backdrop-filter: blur(10px);
+  margin: min(2vh, 20px) auto;
+  position: relative;
 `;
 
 const FormTitle = styled.h1`
@@ -687,6 +850,183 @@ const SubmitMessage = styled(motion.div)`
     background-color: rgba(255, 107, 107, 0.1);
     color: #ff6b6b;
     border: 1px solid rgba(255, 107, 107, 0.3);
+  }
+`;
+
+const DangerZone = styled.div`
+  margin-top: min(4vh, 30px);
+  padding: min(2vh, 20px);
+  border: 2px solid rgba(220, 38, 38, 0.3);
+  border-radius: 8px;
+  background: rgba(220, 38, 38, 0.05);
+  text-align: center;
+`;
+
+const DangerTitle = styled.h3`
+  color: #dc2626;
+  font-size: min(2vw, 1.2rem);
+  font-weight: 700;
+  margin-bottom: min(1vh, 10px);
+  font-family: 'Poppins', sans-serif;
+`;
+
+const DangerDescription = styled.p`
+  color: #7f1d1d;
+  font-size: min(1.6vw, 0.9rem);
+  margin-bottom: min(2vh, 15px);
+  font-family: 'Cormorant', serif;
+  font-style: italic;
+`;
+
+const DeleteButton = styled(motion.button)`
+  font-family: 'Poppins', sans-serif;
+  padding: min(1.2vh, 10px) min(2vw, 20px);
+  font-size: min(1.6vw, 0.9rem);
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1vw;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+`;
+
+const ModalOverlay = styled(motion.div)`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(8px);
+`;
+
+const ModalContent = styled(motion.div)`
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+`;
+
+const ModalHeader = styled.div`
+  padding: 24px 24px 16px 24px;
+  border-bottom: 1px solid rgba(220, 38, 38, 0.2);
+`;
+
+const ModalTitle = styled.h2`
+  color: var(--white);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+`;
+
+const ModalBody = styled.div`
+  padding: 24px;
+`;
+
+const WarningText = styled.p`
+  color: var(--white);
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+  font-family: 'Cormorant', serif;
+`;
+
+const WarningList = styled.ul`
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 20px 0;
+  padding-left: 20px;
+  
+  li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+  }
+`;
+
+const ConfirmText = styled.p`
+  color: var(--white);
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 20px;
+  font-family: 'Cormorant', serif;
+`;
+
+const ModalFooter = styled.div`
+  padding: 16px 24px 24px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(220, 38, 38, 0.3);
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 12px 12px;
+`;
+
+const ModalCancelButton = styled(motion.button)`
+  font-family: 'Poppins', sans-serif;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid rgba(198, 169, 100, 0.3);
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: rgba(198, 169, 100, 0.1);
+  }
+`;
+
+const ModalDeleteButton = styled(motion.button)`
+  font-family: 'Poppins', sans-serif;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 `;
 

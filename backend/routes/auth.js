@@ -437,6 +437,104 @@ router.post('/reset-password/:token', [
   }
 });
 
+router.post('/request-account-deletion', authenticate, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    console.log(`🗑️ Solicitação de exclusão de conta para usuário: ${req.user.email}`);
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: 'Usuário não encontrado'
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(400).json({
+        error: 'Conta já está desativada'
+      });
+    }
+
+    // Criar token de exclusão
+    const deletionToken = user.createAccountDeletionToken();
+    await user.save({ validateBeforeSave: false });
+
+    try {
+      const EmailService = (await import('../utils/email.js')).default;
+      const result = await EmailService.sendAccountDeletionEmail(user.email, deletionToken);
+      
+      if (result.devMode) {
+        console.log(`📤 [MODO DEV] Email de confirmação simulado para: ${user.email}`);
+        console.log(`⚠️ [MODO DEV] Erro de autenticação: ${result.authError}`);
+        res.json({
+          message: 'E-mail de confirmação de exclusão enviado com sucesso!',
+          devMode: true,
+          note: 'Modo de desenvolvimento - configure as credenciais do Gmail para envio real'
+        });
+      } else {
+        console.log(`✅ Email de confirmação de exclusão enviado para: ${user.email}`);
+        res.json({
+          message: 'E-mail de confirmação de exclusão enviado com sucesso! Verifique sua caixa de entrada.'
+        });
+      }
+    } catch (emailError) {
+      // Remover o token se falhou
+      user.accountDeletionToken = undefined;
+      user.accountDeletionExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+
+      console.error('Erro ao enviar email de confirmação de exclusão:', emailError);
+      res.status(500).json({
+        error: 'Erro ao enviar e-mail de confirmação. Tente novamente.'
+      });
+    }
+  } catch (error) {
+    console.error('Erro na solicitação de exclusão de conta:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
+router.post('/confirm-account-deletion/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    console.log(`🗑️ Confirmação de exclusão recebida com token: ${token}`);
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    const user = await User.findOne({
+      accountDeletionToken: hashedToken,
+      accountDeletionExpires: { $gt: Date.now() }
+    }).select('+accountDeletionToken +accountDeletionExpires');
+
+    if (!user) {
+      console.log(`❌ Token de exclusão inválido ou expirado: ${token.substring(0, 10)}...`);
+      return res.status(400).json({
+        error: 'Token de confirmação inválido ou expirado'
+      });
+    }
+
+    console.log(`✅ Token válido para exclusão do usuário: ${user.email}`);
+
+    // Excluir o usuário permanentemente
+    await User.findByIdAndDelete(user._id);
+
+    console.log(`✅ Conta excluída permanentemente: ${user.email}`);
+
+    res.json({
+      message: 'Conta excluída com sucesso. Sentiremos sua falta!'
+    });
+  } catch (error) {
+    console.error('Erro ao confirmar exclusão de conta:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor'
+    });
+  }
+});
+
 router.get('/debug-user/:email', authenticate, async (req, res) => {
   try {
     const { email } = req.params;

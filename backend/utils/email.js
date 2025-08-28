@@ -146,6 +146,68 @@ class EmailService {
       throw new Error(`FALHA NO ENVIO DE EMAIL: ${error.message} (Código: ${error.code || 'N/A'})`);
     }
   }
+  async sendAccountDeletionEmail(email, deletionToken) {
+    if (!this.transporter) {
+      await this.initializeTransporter();
+    }
+    
+    // Se há erro de autenticação, simular envio mas não quebrar
+    if (!this.transporter && this.authError) {
+      console.log('📤 [MODO DEV] Simulando envio de confirmação de exclusão devido a erro de autenticação Gmail');
+      console.log(`📧 [MODO DEV] Email de destino: ${email}`);
+      console.log(`🔗 [MODO DEV] Link de confirmação: http://localhost:3000/confirm-delete/${deletionToken}`);
+      console.log('⚠️ [MODO DEV] Configure as credenciais corretas do Gmail para envio real!');
+      
+      return { 
+        success: true, 
+        messageId: 'dev-mode-auth-error-' + Date.now(),
+        devMode: true,
+        authError: this.authError.message
+      };
+    }
+    
+    // Verificar se o transporter foi configurado corretamente
+    if (!this.transporter) {
+      console.error('❌ Transporter não configurado - credenciais de email não foram definidas');
+      throw new Error('Configuração de email necessária. Verifique as credenciais no arquivo backend/utils/email.js');
+    }
+    
+    const confirmationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-delete/${deletionToken}`;
+    const emailFrom = process.env.EMAIL_FROM || 'zgustavoaguiar@gmail.com';
+    
+    const mailOptions = {
+      from: emailFrom,
+      to: email,
+      subject: '⚠️ Confirmação de Exclusão de Conta - HealGym',
+      html: this.getAccountDeletionTemplate(confirmationUrl),
+      text: `Olá! Você solicitou a exclusão da sua conta no HealGym. Para confirmar, acesse o link: ${confirmationUrl} (O link expira em 30 minutos). Se não foi você, ignore este email.`
+    };
+
+    try {
+      console.log(`📤 Tentando enviar email de confirmação de exclusão para: ${email}`);
+      console.log(`📧 Usando remetente: ${emailFrom}`);
+      console.log(`🔗 Link de confirmação: ${confirmationUrl}`);
+      
+      const info = await this.transporter.sendMail(mailOptions);
+      
+      console.log('✅ EMAIL DE CONFIRMAÇÃO DE EXCLUSÃO ENVIADO COM SUCESSO!');
+      console.log('📧 Message ID:', info.messageId);
+      console.log(`✅ Email de confirmação enviado para: ${email}`);
+      
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('❌ ERRO DETALHADO AO ENVIAR EMAIL DE CONFIRMAÇÃO:');
+      console.error('🔍 Código do erro:', error.code);
+      console.error('🔍 Mensagem:', error.message);
+      console.error('🔍 Stack:', error.stack);
+      console.error('📧 Email de destino:', email);
+      console.error('📧 Email remetente:', emailFrom);
+      
+      // Relançar o erro com mais detalhes
+      throw new Error(`FALHA NO ENVIO DE EMAIL: ${error.message} (Código: ${error.code || 'N/A'})`);
+    }
+  }
+
   getPasswordResetTemplate(resetUrl) {
     return `
       <!DOCTYPE html>
@@ -314,6 +376,216 @@ class EmailService {
                             Este é um email automático e seguro. Não responda esta mensagem.<br>
                             📧 Você está recebendo este email porque possui uma conta ativa no HealGym.<br>
                             🌟 Continue sua jornada de transformação conosco!
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+  }
+
+  getAccountDeletionTemplate(confirmationUrl) {
+    return `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Confirmação de Exclusão de Conta - HealGym</title>
+      </head>
+      <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 75%, #f5576c 100%); min-height: 100vh;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="min-height: 100vh; padding: 40px 0;">
+          <tr>
+            <td align="center">
+              <table width="800" cellpadding="0" cellspacing="0" style="background: rgba(255,255,255,0.95); border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.2);">
+                
+                <tr>
+                  <td style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 30%, #7f1d1d 70%, #450a0a 100%); padding: 60px 80px; text-align: center; position: relative;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: radial-gradient(circle at 25% 25%, rgba(239,68,68,0.1) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(220,38,38,0.1) 0%, transparent 50%); opacity: 0.7;"></div>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="position: relative; z-index: 2;">
+                      <tr>
+                        <td align="center">
+                          <div style="display: inline-block; width: 120px; height: 120px; background: linear-gradient(135deg, #dc2626 0%, #991b1b 50%, #7f1d1d 100%); border-radius: 50%; line-height: 120px; font-size: 60px; color: white; margin-bottom: 25px; box-shadow: 0 15px 40px rgba(220,38,38,0.4), 0 0 0 8px rgba(255,255,255,0.1); border: 3px solid rgba(255,255,255,0.2);">⚠️</div>
+                          
+                          <h1 style="margin: 0; font-size: 4.5em; font-weight: 900; color: white; letter-spacing: -2px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 15px;">HealGym</h1>
+                          
+                          <p style="margin: 0; font-size: 1.8em; color: rgba(255,255,255,0.9); font-weight: 500; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px;">Confirmação de Exclusão</p>
+                          <p style="margin: 0; font-size: 1.3em; color: rgba(255,255,255,0.8); font-style: italic; font-weight: 400;">Ação irreversível - pense bem! 🚨</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td style="padding: 80px; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);">
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 50px;">
+                      <tr>
+                        <td align="center">
+                          <div style="display: inline-block; width: 140px; height: 140px; background: linear-gradient(135deg, #dc2626 0%, #991b1b 30%, #7f1d1d 70%, #450a0a 100%); border-radius: 50%; line-height: 140px; font-size: 70px; color: white; margin-bottom: 40px; box-shadow: 0 25px 60px rgba(220,38,38,0.4), 0 0 0 12px rgba(220,38,38,0.1), 0 0 0 24px rgba(220,38,38,0.05); border: 4px solid rgba(255,255,255,0.3);">🗑️</div>
+                          
+                          <h2 style="margin: 0; font-size: 3.5em; font-weight: 800; background: linear-gradient(135deg, #dc2626 0%, #991b1b 30%, #7f1d1d 70%, #450a0a 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 30px; letter-spacing: -1px;">Exclusão de Conta</h2>
+                          
+                          <div style="font-size: 2em; font-weight: 700; color: #333; margin-bottom: 40px;">
+                            Olá, <span style="background: linear-gradient(135deg, #dc2626, #7f1d1d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Guerreiro(a)</span>! 😔
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 50px;">
+                      <tr>
+                        <td>
+                          <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 8px solid #dc2626; border-radius: 15px; padding: 40px; position: relative; box-shadow: 0 10px 30px rgba(220,38,38,0.1);">
+                            <div style="position: absolute; top: -15px; left: 30px; background: linear-gradient(135deg, #dc2626, #991b1b); color: white; width: 60px; height: 60px; border-radius: 50%; line-height: 60px; text-align: center; font-size: 24px; box-shadow: 0 8px 20px rgba(220,38,38,0.3);">⚠️</div>
+                            
+                            <h3 style="color: #dc2626; margin: 10px 0 25px 40px; font-size: 1.8em; font-weight: 800;">🚨 ATENÇÃO - AÇÃO IRREVERSÍVEL</h3>
+                            
+                            <div style="margin-left: 40px;">
+                              <p style="color: #dc2626; font-weight: 600; font-size: 1.3em; margin-bottom: 20px; line-height: 1.6;">
+                                Recebemos uma solicitação para <strong>EXCLUIR PERMANENTEMENTE</strong> sua conta no HealGym. 
+                                Esta ação é <strong>IRREVERSÍVEL</strong> e resultará na perda completa de:
+                              </p>
+                              
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🗑️ Todos os seus dados pessoais e de perfil
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🗑️ Histórico completo de treinos e progressos
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🗑️ Configurações e preferências personalizadas
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em;">
+                                🗑️ Acesso permanente à plataforma HealGym
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 60px 0;">
+                      <tr>
+                        <td align="center">
+                          <div style="font-size: 30px; margin-bottom: 20px; opacity: 0.8;">💔</div>
+                          
+                          <p style="font-size: 1.4em; line-height: 1.8; color: #334155; text-align: center; margin-bottom: 25px; font-weight: 500; max-width: 650px; margin-left: auto; margin-right: auto;">
+                            <strong style="color: #dc2626;">Tem certeza absoluta?</strong> Esta decisão não pode ser desfeita. 
+                            Se você está passando por alguma dificuldade, nossa equipe está aqui para ajudar. 
+                            Considere pausar sua conta temporariamente ao invés de excluí-la permanentemente.
+                          </p>
+                          
+                          <p style="font-size: 1.2em; line-height: 1.6; color: #64748b; text-align: center; margin-bottom: 40px; font-style: italic;">
+                            Se realmente deseja prosseguir, clique no botão abaixo:
+                          </p>
+                          
+                          <a href="${confirmationUrl}" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #991b1b 30%, #7f1d1d 70%, #450a0a 100%); color: white; text-decoration: none; padding: 25px 60px; border-radius: 50px; font-weight: 700; font-size: 1.6em; text-align: center; box-shadow: 0 20px 50px rgba(220,38,38,0.4), 0 0 0 0 rgba(220,38,38,0.3); border: none; letter-spacing: 1px; text-transform: uppercase; transition: all 0.3s ease;">
+                            🗑️ CONFIRMAR EXCLUSÃO
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 50px 0;">
+                      <tr>
+                        <td>
+                          <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 8px solid #dc2626; border-radius: 15px; padding: 40px; position: relative; box-shadow: 0 10px 30px rgba(220,38,38,0.1);">
+                            <div style="position: absolute; top: -15px; left: 30px; background: linear-gradient(135deg, #dc2626, #991b1b); color: white; width: 60px; height: 60px; border-radius: 50%; line-height: 60px; text-align: center; font-size: 24px; box-shadow: 0 8px 20px rgba(220,38,38,0.3);">⏰</div>
+                            
+                            <h3 style="color: #dc2626; margin: 10px 0 25px 40px; font-size: 1.6em; font-weight: 800;">🛡️ Informações de Segurança</h3>
+                            
+                            <div style="margin-left: 40px;">
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🔒 Este link é válido por apenas <strong>30 minutos</strong>
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🔒 Pode ser usado apenas <strong>uma única vez</strong>
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em; margin-bottom: 15px;">
+                                🔒 Após o uso, sua conta será <strong>permanentemente excluída</strong>
+                              </div>
+                              <div style="color: #dc2626; font-weight: 600; font-size: 1.2em;">
+                                🔒 Nunca compartilhe este link com terceiros
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 40px 0;">
+                      <tr>
+                        <td>
+                          <div style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border: 3px dashed #dee2e6; border-radius: 15px; padding: 35px; text-align: center;">
+                            <p style="margin: 0 0 20px 0; font-weight: 700; color: #495057; font-size: 1.3em;">🔗 O botão não está funcionando? Use o link abaixo:</p>
+                            <div style="background: #ffffff; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; font-family: 'Courier New', monospace; font-size: 1em; color: #6c757d; word-break: break-all; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                              ${confirmationUrl}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 40px 0;">
+                      <tr>
+                        <td>
+                          <div style="background: linear-gradient(135d, #d1ecf1 0%, #bee5eb 100%); border-left: 6px solid #17a2b8; border-radius: 15px; padding: 35px; position: relative;">
+                            <div style="position: absolute; top: -12px; left: 25px; background: #17a2b8; color: white; width: 50px; height: 50px; border-radius: 50%; line-height: 50px; text-align: center; font-size: 20px;">🤔</div>
+                            
+                            <h3 style="color: #0c5460; margin: 10px 0 20px 35px; font-size: 1.5em; font-weight: 700;">💭 Mudou de Ideia?</h3>
+                            
+                            <div style="color: #0c5460; margin-left: 35px; line-height: 1.6; font-size: 1.2em; font-weight: 500;">
+                              <strong style="font-size: 1.1em;">❓ Não quer mais excluir sua conta?</strong><br><br>
+                              Ótimo! Se você não solicitou esta exclusão ou mudou de ideia, pode <strong>ignorar este email</strong> com total segurança. 
+                              Sua conta permanecerá ativa e todos os seus dados estarão protegidos. Estamos sempre aqui para sua jornada de transformação! 💪
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 60px 0 20px 0;">
+                      <tr>
+                        <td>
+                          <div style="text-align: center; padding: 50px; background: linear-gradient(135deg, #dc2626 0%, #991b1b 30%, #7f1d1d 70%, #450a0a 100%); color: white; border-radius: 20px; box-shadow: 0 15px 40px rgba(220,38,38,0.3); position: relative; overflow: hidden;">
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%); opacity: 0.7;"></div>
+                            
+                            <div style="position: relative; z-index: 2;">
+                              <p style="margin: 0 0 15px 0; font-size: 1.8em; font-weight: 700;">Esperamos que reconsidere sua decisão 💔</p>
+                              <p style="margin: 0; font-size: 2.2em; font-weight: 900; letter-spacing: 1px;">Equipe HealGym</p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%); color: #95a5a6; padding: 60px 80px; text-align: center;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <h3 style="margin: 0 0 20px 0; color: #dc2626; font-size: 2.8em; font-weight: 900; letter-spacing: -1px;">HealGym</h3>
+                          <p style="margin: 0 0 25px 0; font-style: italic; font-size: 1.6em; color: #bdc3c7;">💔 "Sentiremos sua falta" 💔</p>
+                          <div style="height: 2px; width: 200px; background: linear-gradient(90deg, transparent, #dc2626, #991b1b, transparent); margin: 0 auto 25px auto; border-radius: 1px;"></div>
+                          <p style="margin: 0; font-size: 1.1em; line-height: 1.6; color: #7f8c8d;">
+                            <strong>© 2025 HealGym - Todos os direitos reservados</strong><br>
+                            Este é um email automático e seguro. Não responda esta mensagem.<br>
+                            📧 Você está recebendo este email porque solicitou a exclusão da sua conta.<br>
+                            💔 Esperamos te ver novamente em breve!
                           </p>
                         </td>
                       </tr>
