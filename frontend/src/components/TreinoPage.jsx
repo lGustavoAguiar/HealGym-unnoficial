@@ -261,6 +261,19 @@ const TreinoPage = () => {
   };
 
   const finalizarTreino = () => {
+    // Salvar treino realizado no localStorage
+    const treinoRealizado = {
+      data: new Date().toISOString(),
+      dia: getDiaAtual(),
+      treino: diaSelecionado?.treino,
+      duracao: parseInt(tempoDisponivel)
+    };
+
+    const treinosExistentes = JSON.parse(localStorage.getItem('treinosRealizados') || '[]');
+    treinosExistentes.push(treinoRealizado);
+    localStorage.setItem('treinosRealizados', JSON.stringify(treinosExistentes));
+
+    // Reset do estado
     setTreinoIniciado(false);
     setExercicioAtual({ segmento: 0, exercicio: 0, serie: 1 });
     setEmDescanso(false);
@@ -269,6 +282,37 @@ const TreinoPage = () => {
       clearInterval(intervalId);
       setIntervalId(null);
     }
+
+    // Mostrar mensagem de sucesso
+    alert('🎉 Parabéns! Treino finalizado com sucesso!');
+  };
+
+  // Função para obter o dia atual da semana (1 = segunda, 7 = domingo)
+  const getDiaAtual = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    return dayOfWeek === 0 ? 7 : dayOfWeek; // Converte domingo (0) para 7
+  };
+
+  // Função para obter o treino do dia atual
+  const getTreinoDoDia = () => {
+    const diaAtual = getDiaAtual();
+    
+    // Domingo é dia de descanso
+    if (diaAtual === 7) {
+      return null;
+    }
+
+    const cronogramaSemanal = [
+      { dia: 'Segunda-feira', treino: 'treinoA', abrev: 'SEG', dayOfWeek: 1 },
+      { dia: 'Terça-feira', treino: 'treinoB', abrev: 'TER', dayOfWeek: 2 },
+      { dia: 'Quarta-feira', treino: 'treinoC', abrev: 'QUA', dayOfWeek: 3 },
+      { dia: 'Quinta-feira', treino: 'treinoA', abrev: 'QUI', dayOfWeek: 4 },
+      { dia: 'Sexta-feira', treino: 'treinoB', abrev: 'SEX', dayOfWeek: 5 },
+      { dia: 'Sábado', treino: 'treinoC', abrev: 'SAB', dayOfWeek: 6 }
+    ];
+
+    return cronogramaSemanal.find(dia => dia.dayOfWeek === diaAtual);
   };
 
   const formatarTempo = (segundos) => {
@@ -285,7 +329,19 @@ const TreinoPage = () => {
     };
   }, [intervalId]);
 
+  // Automaticamente selecionar o treino do dia atual quando o tempo for definido
+  useEffect(() => {
+    if (tempoDisponivel && !erroTempo && parseInt(tempoDisponivel) >= 30 && parseInt(tempoDisponivel) <= 90) {
+      const treinoDoDia = getTreinoDoDia();
+      if (treinoDoDia) {
+        setDiaSelecionado(treinoDoDia);
+      }
+    }
+  }, [tempoDisponivel, erroTempo]);
+
   const treinoDodia = diaSelecionado ? gerarTreinoCompleto(parseInt(tempoDisponivel), diaSelecionado.treino) : null;
+  const diaAtual = getDiaAtual();
+  const isDomingoDescanso = diaAtual === 7;
 
   return (
     <Container className="custom-scroll">
@@ -347,23 +403,35 @@ const TreinoPage = () => {
 
             {tempoDisponivel && !erroTempo && parseInt(tempoDisponivel) >= 30 && parseInt(tempoDisponivel) <= 90 && (
               <WeeklySchedule ref={cronogramaRef}>
-                <ScheduleTitle>Cronograma Semanal de Treinos</ScheduleTitle>
-                <ScheduleGrid>
-                  {cronogramaSemanal.map((diaInfo, index) => (
-                    <DayCard
-                      key={index}
-                      onClick={() => handleDiaClick(diaInfo)}
-                      isSelected={diaSelecionado?.dia === diaInfo.dia}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <DayName>{diaInfo.abrev}</DayName>
-                      <TrainingType>{treinosSplit[diaInfo.treino].nome}</TrainingType>
-                      <MuscleGroups>{treinosSplit[diaInfo.treino].grupos}</MuscleGroups>
-                    </DayCard>
-                  ))}
-                </ScheduleGrid>
-                <ScheduleHint>Clique em um dia para ver o treino detalhado</ScheduleHint>
+                {isDomingoDescanso ? (
+                  <RestDayMessage>
+                    <RestDayTitle>🌅 Domingo - Dia de Descanso</RestDayTitle>
+                    <RestDayDescription>
+                      Hoje é seu dia de recuperação! Aproveite para relaxar, fazer alongamentos leves ou uma caminhada.
+                      Volte amanhã para continuar seu treino.
+                    </RestDayDescription>
+                    <RestDayTip>
+                      💡 <strong>Dica:</strong> O descanso é fundamental para o crescimento muscular e recuperação.
+                    </RestDayTip>
+                  </RestDayMessage>
+                ) : (
+                  <>
+                    <ScheduleTitle>Treino de Hoje</ScheduleTitle>
+                    {diaSelecionado && (
+                      <TodayWorkoutCard>
+                        <TodayWorkoutHeader>
+                          <TodayWorkoutDay>{diaSelecionado.dia}</TodayWorkoutDay>
+                          <TodayWorkoutBadge>HOJE</TodayWorkoutBadge>
+                        </TodayWorkoutHeader>
+                        <TodayWorkoutInfo>
+                          <TrainingType>{treinosSplit[diaSelecionado.treino].nome}</TrainingType>
+                          <MuscleGroups>{treinosSplit[diaSelecionado.treino].grupos}</MuscleGroups>
+                        </TodayWorkoutInfo>
+                      </TodayWorkoutCard>
+                    )}
+                    <ScheduleHint>Este é o seu treino programado para hoje</ScheduleHint>
+                  </>
+                )}
               </WeeklySchedule>
             )}
 
@@ -960,6 +1028,81 @@ const StopWorkoutButton = styled(motion.button)`
   &:hover {
     box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
   }
+`;
+
+const RestDayMessage = styled.div`
+  text-align: center;
+  padding: 3rem 2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(198, 169, 100, 0.1);
+  border-radius: 12px;
+`;
+
+const RestDayTitle = styled.h3`
+  color: var(--white);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+`;
+
+const RestDayDescription = styled.p`
+  color: var(--text-secondary);
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+`;
+
+const RestDayTip = styled.div`
+  background: rgba(198, 169, 100, 0.1);
+  border: 1px solid rgba(198, 169, 100, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  
+  strong {
+    color: var(--accent);
+  }
+`;
+
+const TodayWorkoutCard = styled.div`
+  background: rgba(198, 169, 100, 0.1);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  position: relative;
+`;
+
+const TodayWorkoutHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+`;
+
+const TodayWorkoutDay = styled.h4`
+  color: var(--white);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+`;
+
+const TodayWorkoutBadge = styled.div`
+  background: var(--accent);
+  color: var(--background);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+`;
+
+const TodayWorkoutInfo = styled.div`
+  text-align: center;
 `;
 
 export default TreinoPage;

@@ -2,11 +2,13 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { FiLogOut, FiUser, FiActivity, FiHeart, FiTrendingUp, FiTarget } from 'react-icons/fi';
+import { useState, useEffect } from 'react';
+import { FiLogOut, FiUser, FiActivity, FiHeart, FiTrendingUp, FiTarget, FiCheck } from 'react-icons/fi';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [treinosRealizados, setTreinosRealizados] = useState([]);
 
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return null;
@@ -55,6 +57,44 @@ const Dashboard = () => {
       Math.round(baseWeight * 0.85);
   };
 
+  // Dados do cronograma semanal
+  const cronogramaSemanal = [
+    { dia: 'Segunda', treino: 'Treino A', grupos: 'Peito e Tríceps', dayOfWeek: 1 },
+    { dia: 'Terça', treino: 'Treino B', grupos: 'Costas e Bíceps', dayOfWeek: 2 },
+    { dia: 'Quarta', treino: 'Treino C', grupos: 'Pernas e Ombros', dayOfWeek: 3 },
+    { dia: 'Quinta', treino: 'Treino A', grupos: 'Peito e Tríceps', dayOfWeek: 4 },
+    { dia: 'Sexta', treino: 'Treino B', grupos: 'Costas e Bíceps', dayOfWeek: 5 },
+    { dia: 'Sábado', treino: 'Treino C', grupos: 'Pernas e Ombros', dayOfWeek: 6 }
+  ];
+
+  // Carregar treinos realizados do localStorage
+  useEffect(() => {
+    const savedWorkouts = localStorage.getItem('treinosRealizados');
+    if (savedWorkouts) {
+      setTreinosRealizados(JSON.parse(savedWorkouts));
+    }
+  }, []);
+
+  // Função para verificar se um treino foi realizado
+  const isTreinoRealizado = (dayOfWeek) => {
+    const today = new Date();
+    const currentWeekStart = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Segunda-feira da semana atual
+    const targetDate = new Date(currentWeekStart);
+    targetDate.setDate(currentWeekStart.getDate() + (dayOfWeek - 1));
+    
+    return treinosRealizados.some(treino => {
+      const treinoDate = new Date(treino.data);
+      return treinoDate.toDateString() === targetDate.toDateString();
+    });
+  };
+
+  // Função para obter o dia atual da semana (1 = segunda, 7 = domingo)
+  const getDiaAtual = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    return dayOfWeek === 0 ? 7 : dayOfWeek; // Converte domingo (0) para 7
+  };
+
 
 
   const handleLogout = () => {
@@ -67,6 +107,14 @@ const Dashboard = () => {
   };
 
   const handleTreinoClick = () => {
+    const diaAtual = getDiaAtual();
+    
+    // Verificar se hoje é domingo (dia de descanso)
+    if (diaAtual === 7) {
+      alert('Domingo é dia de descanso! Volte amanhã para treinar.');
+      return;
+    }
+    
     navigate('/treino');
   };
 
@@ -225,6 +273,58 @@ const Dashboard = () => {
                 </FeatureItem>
               </FeaturesList>
             </WelcomeCard>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.6 }}
+            >
+              <WeeklyCalendar>
+                <CalendarTitle>Cronograma Semanal</CalendarTitle>
+                <CalendarGrid>
+                  {cronogramaSemanal.map((diaInfo, index) => {
+                    const isToday = getDiaAtual() === diaInfo.dayOfWeek;
+                    const isCompleted = isTreinoRealizado(diaInfo.dayOfWeek);
+                    
+                    return (
+                      <CalendarDay
+                        key={index}
+                        isToday={isToday}
+                        isCompleted={isCompleted}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <DayHeader>
+                          <DayName>{diaInfo.dia}</DayName>
+                          {isCompleted && (
+                            <CompletedIcon>
+                              <FiCheck />
+                            </CompletedIcon>
+                          )}
+                        </DayHeader>
+                        <WorkoutInfo>
+                          <WorkoutName>{diaInfo.treino}</WorkoutName>
+                          <MuscleGroup>{diaInfo.grupos}</MuscleGroup>
+                        </WorkoutInfo>
+                        {isToday && <TodayIndicator>HOJE</TodayIndicator>}
+                      </CalendarDay>
+                    );
+                  })}
+                  
+                  {/* Domingo - Dia de descanso */}
+                  <CalendarDay isRest={true}>
+                    <DayHeader>
+                      <DayName>Domingo</DayName>
+                    </DayHeader>
+                    <WorkoutInfo>
+                      <WorkoutName>Descanso</WorkoutName>
+                      <MuscleGroup>Recuperação</MuscleGroup>
+                    </WorkoutInfo>
+                    {getDiaAtual() === 7 && <TodayIndicator>HOJE</TodayIndicator>}
+                  </CalendarDay>
+                </CalendarGrid>
+              </WeeklyCalendar>
+            </motion.div>
           </motion.div>
         </MainArea>
       </MainContent>
@@ -552,6 +652,132 @@ const FeatureItem = styled(motion.div)`
     border-color: var(--accent);
     box-shadow: 0 4px 15px rgba(198, 169, 100, 0.3);
   }
+`;
+
+const WeeklyCalendar = styled.div`
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(198, 169, 100, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  margin-top: 1.5rem;
+`;
+
+const CalendarTitle = styled.h2`
+  color: var(--white);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+`;
+
+const CalendarGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+`;
+
+const CalendarDay = styled(motion.div)`
+  background: ${props => {
+    if (props.isRest) return 'rgba(100, 100, 100, 0.1)';
+    if (props.isCompleted) return 'rgba(76, 175, 80, 0.1)';
+    if (props.isToday) return 'rgba(198, 169, 100, 0.15)';
+    return 'rgba(255, 255, 255, 0.05)';
+  }};
+  border: 1px solid ${props => {
+    if (props.isRest) return 'rgba(100, 100, 100, 0.3)';
+    if (props.isCompleted) return 'rgba(76, 175, 80, 0.4)';
+    if (props.isToday) return 'var(--accent)';
+    return 'rgba(198, 169, 100, 0.2)';
+  }};
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+  cursor: default;
+  transition: all 0.3s ease;
+  position: relative;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(198, 169, 100, 0.2);
+  }
+`;
+
+const DayHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+`;
+
+const DayName = styled.div`
+  color: var(--white);
+  font-size: 0.9rem;
+  font-weight: 600;
+`;
+
+const CompletedIcon = styled.div`
+  background: #4CAF50;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    color: white;
+    font-size: 0.8rem;
+  }
+`;
+
+const WorkoutInfo = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+`;
+
+const WorkoutName = styled.div`
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+`;
+
+const MuscleGroup = styled.div`
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  line-height: 1.2;
+`;
+
+const TodayIndicator = styled.div`
+  background: var(--accent);
+  color: var(--background);
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  letter-spacing: 0.5px;
 `;
 
 export default Dashboard;
