@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { FiArrowLeft, FiActivity, FiClock } from 'react-icons/fi';
 
@@ -17,6 +17,10 @@ const TreinoPage = () => {
   const [tempoRestante, setTempoRestante] = useState(0);
   const [intervalId, setIntervalId] = useState(null);
 
+  // Refs para scroll automático
+  const cronogramaRef = useRef(null);
+  const planoTreinoRef = useRef(null);
+
   const handleBackToDashboard = () => {
     navigate('/dashboard');
   };
@@ -29,6 +33,16 @@ const TreinoPage = () => {
       setErroTempo('O tempo deve estar entre 30 e 90 minutos');
     } else {
       setErroTempo('');
+      
+      // Scroll suave para o cronograma quando tempo válido é inserido
+      if (tempo && parseInt(tempo) >= 30 && parseInt(tempo) <= 90) {
+        setTimeout(() => {
+          cronogramaRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }, 300); // Pequeno delay para permitir que o cronograma apareça
+      }
     }
   };
 
@@ -181,6 +195,14 @@ const TreinoPage = () => {
 
   const handleDiaClick = (diaInfo) => {
     setDiaSelecionado(diaInfo);
+    
+    // Scroll suave para o final da página quando um dia é selecionado
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 300); // Pequeno delay para permitir que o plano apareça
   };
 
   const iniciarTreino = () => {
@@ -324,7 +346,7 @@ const TreinoPage = () => {
             </TimeSection>
 
             {tempoDisponivel && !erroTempo && parseInt(tempoDisponivel) >= 30 && parseInt(tempoDisponivel) <= 90 && (
-              <WeeklySchedule>
+              <WeeklySchedule ref={cronogramaRef}>
                 <ScheduleTitle>Cronograma Semanal de Treinos</ScheduleTitle>
                 <ScheduleGrid>
                   {cronogramaSemanal.map((diaInfo, index) => (
@@ -346,7 +368,7 @@ const TreinoPage = () => {
             )}
 
             {treinoDodia && !treinoIniciado && (
-              <WorkoutPlan>
+              <WorkoutPlan ref={planoTreinoRef}>
                 <PlanHeader>
                   <PlanTitle>{diaSelecionado.dia} - {treinoDodia.nome}: {treinoDodia.grupos}</PlanTitle>
                   <PlanTime>{treinoDodia.tempo} minutos</PlanTime>
