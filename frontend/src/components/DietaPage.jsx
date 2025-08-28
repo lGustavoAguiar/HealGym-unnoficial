@@ -162,52 +162,7 @@ const DietaPage = () => {
               </MacrosGrid>
             </MacrosSection>
 
-            <TipsSection>
-              <TipsTitle>💡 Dicas Personalizadas</TipsTitle>
-              <TipsList>
-                {dietPlan.dicas.map((dica, index) => (
-                  <TipItem key={index}>• {dica}</TipItem>
-                ))}
-              </TipsList>
-            </TipsSection>
 
-            <MealPlan>
-              <MealTitle>Exemplo de Cardápio Diário</MealTitle>
-              <MealGrid>
-                <MealItem>
-                  <MealName>Café da Manhã</MealName>
-                  <MealDescription>Aveia com frutas e proteína</MealDescription>
-                </MealItem>
-                <MealItem>
-                  <MealName>Lanche da Manhã</MealName>
-                  <MealDescription>Iogurte com oleaginosas</MealDescription>
-                </MealItem>
-                <MealItem>
-                  <MealName>Almoço</MealName>
-                  <MealDescription>Proteína + carboidrato + vegetais</MealDescription>
-                </MealItem>
-                <MealItem>
-                  <MealName>Lanche da Tarde</MealName>
-                  <MealDescription>Fruta com pasta de amendoim</MealDescription>
-                </MealItem>
-                <MealItem>
-                  <MealName>Jantar</MealName>
-                  <MealDescription>Proteína magra + salada</MealDescription>
-                </MealItem>
-                <MealItem>
-                  <MealName>Ceia</MealName>
-                  <MealDescription>Caseína ou iogurte</MealDescription>
-                </MealItem>
-              </MealGrid>
-            </MealPlan>
-
-            <ComingSoon>
-              <ComingSoonTitle>🚀 Em Breve</ComingSoonTitle>
-              <ComingSoonText>
-                Funcionalidades avançadas como receitas detalhadas, lista de compras, 
-                acompanhamento de calorias e muito mais!
-              </ComingSoonText>
-            </ComingSoon>
           </DietCard>
         </motion.div>
       </MainContent>
@@ -305,6 +260,7 @@ const DietCard = styled.div`
 const DietHeader = styled.div`
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   margin-bottom: 2rem;
 `;
@@ -328,6 +284,7 @@ const DietTitle = styled.h2`
   color: var(--white);
   font-size: 1.8rem;
   font-weight: 600;
+  text-align: center;
   cursor: default;
 `;
 
@@ -340,12 +297,15 @@ const DietInfo = styled.div`
 
 const InfoItem = styled.div`
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 1rem;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(198, 169, 100, 0.2);
   border-radius: 8px;
   padding: 1.5rem;
+  text-align: center;
 `;
 
 const InfoIcon = styled.div`
@@ -365,7 +325,9 @@ const InfoIcon = styled.div`
 `;
 
 const InfoContent = styled.div`
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 `;
 
 const InfoLabel = styled.div`
@@ -373,12 +335,14 @@ const InfoLabel = styled.div`
   font-size: 0.9rem;
   margin-bottom: 0.25rem;
   font-weight: 500;
+  text-align: center;
 `;
 
 const InfoValue = styled.div`
   color: var(--white);
   font-size: 1.1rem;
   font-weight: 600;
+  text-align: center;
 `;
 
 const MacrosSection = styled.div`
@@ -412,98 +376,14 @@ const MacroLabel = styled.div`
   color: var(--text-secondary);
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
+  text-align: center;
 `;
 
 const MacroValue = styled.div`
   color: var(--accent);
   font-size: 1.5rem;
   font-weight: 700;
-`;
-
-const TipsSection = styled.div`
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: rgba(198, 169, 100, 0.05);
-  border: 1px solid rgba(198, 169, 100, 0.2);
-  border-radius: 8px;
-`;
-
-const TipsTitle = styled.h3`
-  color: var(--white);
-  font-size: 1.3rem;
-  margin-bottom: 1rem;
-  cursor: default;
-`;
-
-const TipsList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-`;
-
-const TipItem = styled.div`
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  line-height: 1.4;
-`;
-
-const MealPlan = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const MealTitle = styled.h3`
-  color: var(--white);
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
   text-align: center;
-  cursor: default;
-`;
-
-const MealGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-`;
-
-const MealItem = styled.div`
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(198, 169, 100, 0.1);
-  border-radius: 8px;
-  padding: 1rem;
-  cursor: default;
-`;
-
-const MealName = styled.div`
-  color: var(--accent);
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-`;
-
-const MealDescription = styled.div`
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.4;
-`;
-
-const ComingSoon = styled.div`
-  background: rgba(198, 169, 100, 0.1);
-  border: 1px solid rgba(198, 169, 100, 0.3);
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
-`;
-
-const ComingSoonTitle = styled.h3`
-  color: var(--accent);
-  font-size: 1.3rem;
-  margin-bottom: 1rem;
-  cursor: default;
-`;
-
-const ComingSoonText = styled.p`
-  color: var(--text-secondary);
-  line-height: 1.6;
-  cursor: default;
 `;
 
 export default DietaPage;
