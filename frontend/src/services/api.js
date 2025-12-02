@@ -100,6 +100,50 @@ class ApiService {
     });
   }
 
+  // Nutrition API methods
+  async getFoods() {
+    console.log('🍎 Buscando lista de alimentos...');
+    return this.request('/nutrition/foods');
+  }
+
+  async getFoodDetails(foodId) {
+    console.log(`🔍 Buscando detalhes do alimento: ${foodId}`);
+    return this.request(`/nutrition/food/${foodId}`);
+  }
+
+  async searchFoods(query, pageSize = 10) {
+    console.log(`🔎 Buscando alimentos: ${query}`);
+    return this.request('/nutrition/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, pageSize }),
+    });
+  }
+
+  async generateDiet(dietData) {
+    console.log('🍽️ Gerando dieta personalizada...');
+    return this.request('/nutrition/generate-diet', {
+      method: 'POST',
+      body: JSON.stringify(dietData),
+    });
+  }
+
+  async getMyDiets() {
+    console.log('📋 Buscando histórico de dietas...');
+    return this.request('/nutrition/my-diets');
+  }
+
+  async getDiet(dietId) {
+    console.log(`📖 Buscando dieta: ${dietId}`);
+    return this.request(`/nutrition/diet/${dietId}`);
+  }
+
+  async deleteDiet(dietId) {
+    console.log(`🗑️ Excluindo dieta: ${dietId}`);
+    return this.request(`/nutrition/diet/${dietId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async changePassword(passwordData) {
     return this.request('/auth/change-password', {
       method: 'POST',
