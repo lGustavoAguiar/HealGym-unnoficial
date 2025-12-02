@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import nutritionRoutes from './routes/nutrition.js';
+import workoutRoutes from './routes/workouts.js';
 
 dotenv.config();
 
@@ -75,6 +76,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/nutrition', nutritionRoutes);
+app.use('/api/workouts', workoutRoutes);
 
 app.use('*', (req, res) => {
   console.log(`❌ 404: ${req.method} ${req.originalUrl}`);

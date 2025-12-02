@@ -1,373 +1,145 @@
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FiArrowLeft, FiActivity, FiClock } from 'react-icons/fi';
+import { FiArrowLeft, FiActivity, FiClock, FiTrash2, FiCheck, FiZap } from 'react-icons/fi';
+import api from '../services/api';
+import LoadingSpinner from './LoadingSpinner';
 
 const TreinoPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [tempoDisponivel, setTempoDisponivel] = useState('');
-  const [erroTempo, setErroTempo] = useState('');
-  const [diaSelecionado, setDiaSelecionado] = useState(null);
-  const [treinoIniciado, setTreinoIniciado] = useState(false);
-  const [exercicioAtual, setExercicioAtual] = useState({ segmento: 0, exercicio: 0, serie: 1 });
-  const [emDescanso, setEmDescanso] = useState(false);
-  const [tempoRestante, setTempoRestante] = useState(0);
-  const [intervalId, setIntervalId] = useState(null);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [treinoJaRealizado, setTreinoJaRealizado] = useState(false);
-
-  // Refs para scroll automático
-  const cronogramaRef = useRef(null);
-  const planoTreinoRef = useRef(null);
-
-  const handleBackToDashboard = () => {
-    navigate('/dashboard');
-  };
-
-  const handleTempoChange = (e) => {
-    const tempo = e.target.value;
-    setTempoDisponivel(tempo);
+  
+  console.log('TreinoPage renderizando...', { user });
+  
+  // Função para detectar o grupamento muscular do dia
+  const getGrupamentoDoDia = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
     
-    if (tempo && (parseInt(tempo) < 30 || parseInt(tempo) > 90)) {
-      setErroTempo('O tempo deve estar entre 30 e 90 minutos');
-    } else {
-      setErroTempo('');
-      
-      // Scroll suave para o cronograma quando tempo válido é inserido
-      if (tempo && parseInt(tempo) >= 30 && parseInt(tempo) <= 90) {
-        setTimeout(() => {
-          cronogramaRef.current?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start'
-          });
-        }, 300); // Pequeno delay para permitir que o cronograma apareça
-      }
-    }
+    const cronograma = {
+      1: 'PEITO_TRICEPS',  // Segunda
+      2: 'COSTAS_BICEPS',  // Terça
+      3: 'PERNAS_OMBROS',  // Quarta
+      4: 'PEITO_TRICEPS',  // Quinta
+      5: 'COSTAS_BICEPS',  // Sexta
+      6: 'PERNAS_OMBROS'   // Sábado
+    };
+    
+    return cronograma[dayOfWeek] || 'PEITO_TRICEPS'; // Default para segunda se for domingo
   };
 
-  const treinosSplit = {
-    treinoA: {
-      nome: 'Treino A',
-      grupos: 'Peito e Tríceps',
-      segmentos: [
-        {
-          nome: 'Peitoral Superior',
-          exercicios: ['Supino Inclinado', 'Crucifixo Inclinado', 'Flexão Inclinada']
-        },
-        {
-          nome: 'Peitoral Médio',
-          exercicios: ['Supino Reto', 'Crucifixo Reto', 'Flexão']
-        },
-        {
-          nome: 'Peitoral Inferior',
-          exercicios: ['Supino Declinado', 'Mergulho', 'Crucifixo Declinado']
-        },
-        {
-          nome: 'Tríceps Cabeça Longa',
-          exercicios: ['Tríceps Francês', 'Mergulho', 'Extensão Atrás da Cabeça']
-        },
-        {
-          nome: 'Tríceps Cabeça Lateral',
-          exercicios: ['Tríceps Pulley', 'Tríceps Corda', 'Kickback']
-        },
-        {
-          nome: 'Tríceps Cabeça Medial',
-          exercicios: ['Tríceps Pegada Fechada', 'Flexão Diamante', 'Extensão Unilateral']
-        }
-      ]
-    },
-    treinoB: {
-      nome: 'Treino B',
-      grupos: 'Costas e Bíceps',
-      segmentos: [
-        {
-          nome: 'Latíssimo do Dorso',
-          exercicios: ['Puxada Frontal', 'Puxada Atrás', 'Pull-over']
-        },
-        {
-          nome: 'Trapézio',
-          exercicios: ['Remada Alta', 'Encolhimento', 'Face Pull']
-        },
-        {
-          nome: 'Romboides',
-          exercicios: ['Remada Curvada', 'Remada Cavalinho', 'Remada Unilateral']
-        },
-        {
-          nome: 'Bíceps Longo',
-          exercicios: ['Rosca Direta', 'Rosca Martelo', 'Rosca Concentrada']
-        },
-        {
-          nome: 'Bíceps Curto',
-          exercicios: ['Rosca Scott', 'Rosca Inclinada', 'Rosca 21']
-        },
-        {
-          nome: 'Braquial',
-          exercicios: ['Rosca Inversa', 'Rosca Martelo Cruzada', 'Flexão Isométrica']
-        }
-      ]
-    },
-    treinoC: {
-      nome: 'Treino C',
-      grupos: 'Pernas e Ombros',
-      segmentos: [
-        {
-          nome: 'Quadríceps',
-          exercicios: ['Agachamento', 'Leg Press', 'Cadeira Extensora']
-        },
-        {
-          nome: 'Isquiotibiais',
-          exercicios: ['Stiff', 'Cadeira Flexora', 'Afundo Reverso']
-        },
-        {
-          nome: 'Glúteos',
-          exercicios: ['Hip Thrust', 'Agachamento Búlgaro', 'Elevação Pélvica']
-        },
-        {
-          nome: 'Panturrilha',
-          exercicios: ['Panturrilha em Pé', 'Panturrilha Sentado', 'Panturrilha no Leg']
-        },
-        {
-          nome: 'Deltóide Anterior',
-          exercicios: ['Desenvolvimento Frontal', 'Elevação Frontal', 'Arnolds']
-        },
-        {
-          nome: 'Deltóide Lateral',
-          exercicios: ['Elevação Lateral', 'Desenvolvimento Militar', 'Elevação Lateral Inclinada']
-        },
-        {
-          nome: 'Deltóide Posterior',
-          exercicios: ['Crucifixo Inverso', 'Face Pull', 'Elevação Posterior']
-        }
-      ]
-    }
-  };
+  const [tempoDisponivel, setTempoDisponivel] = useState('');
+  const [grupamento] = useState(getGrupamentoDoDia()); // Definido automaticamente
+  const [loading, setLoading] = useState(false);
+  const [treinoGerado, setTreinoGerado] = useState(null);
+  const [historico, setHistorico] = useState([]);
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
 
-  const cronogramaSemanal = [
-    { dia: 'Segunda-feira', treino: 'treinoA', abrev: 'SEG' },
-    { dia: 'Terça-feira', treino: 'treinoB', abrev: 'TER' },
-    { dia: 'Quarta-feira', treino: 'treinoC', abrev: 'QUA' },
-    { dia: 'Quinta-feira', treino: 'treinoA', abrev: 'QUI' },
-    { dia: 'Sexta-feira', treino: 'treinoB', abrev: 'SEX' },
-    { dia: 'Sábado', treino: 'treinoC', abrev: 'SAB' }
+  const grupamentos = [
+    { value: 'PEITO', label: 'Peito Completo', icon: '💪', color: '#ff6b6b' },
+    { value: 'COSTAS', label: 'Costas Completas', icon: '🔥', color: '#4ecdc4' },
+    { value: 'OMBROS', label: 'Ombros 3D', icon: '⚡', color: '#ffd93d' },
+    { value: 'TRICEPS', label: 'Tríceps Completo', icon: '💥', color: '#a8e6cf' },
+    { value: 'BICEPS', label: 'Bíceps e Antebraços', icon: '🎯', color: '#c7ceea' },
+    { value: 'PERNAS', label: 'Pernas Completas', icon: '🦵', color: '#ff8787' },
+    { value: 'PEITO_TRICEPS', label: 'Peito + Tríceps', icon: '🔥💪', color: '#95e1d3' },
+    { value: 'COSTAS_BICEPS', label: 'Costas + Bíceps', icon: '💪🎯', color: '#f38181' },
+    { value: 'PERNAS_OMBROS', label: 'Pernas + Ombros', icon: '🦵⚡', color: '#aa96da' }
   ];
 
-  const gerarTreinoCompleto = (tempo, tipoTreino) => {
-    if (!tempo || tempo < 30 || tempo > 90 || !tipoTreino) return null;
-
-    const treinoSelecionado = treinosSplit[tipoTreino];
-    let exerciciosPorSegmento, series, repeticoes, descanso;
-
-    if (tempo <= 45) {
-      exerciciosPorSegmento = 1;
-      series = 3;
-      repeticoes = '10-12';
-      descanso = '45-60s';
-    } else if (tempo <= 60) {
-      exerciciosPorSegmento = 1;
-      series = 4;
-      repeticoes = '8-12';
-      descanso = '60-90s';
-    } else {
-      exerciciosPorSegmento = 2;
-      series = 4;
-      repeticoes = '8-15';
-      descanso = '60-90s';
-    }
-
-    const treinoGerado = {
-      nome: treinoSelecionado.nome,
-      grupos: treinoSelecionado.grupos,
-      tempo: tempo,
-      segmentos: treinoSelecionado.segmentos.map(segmento => ({
-        nome: segmento.nome,
-        exercicios: segmento.exercicios.slice(0, exerciciosPorSegmento).map(exercicio => ({
-          nome: exercicio,
-          series: series,
-          repeticoes: repeticoes,
-          descanso: descanso
-        }))
-      }))
-    };
-
-    return treinoGerado;
-  };
-
-  const handleDiaClick = (diaInfo) => {
-    setDiaSelecionado(diaInfo);
-    
-    // Scroll suave para o final da página quando um dia é selecionado
-    setTimeout(() => {
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: 'smooth'
-      });
-    }, 300); // Pequeno delay para permitir que o plano apareça
-  };
-
-  const iniciarTreino = () => {
-    setTreinoIniciado(true);
-    setExercicioAtual({ segmento: 0, exercicio: 0, serie: 1 });
-  };
-
-  const finalizarSerie = () => {
-    const treino = gerarTreinoCompleto(parseInt(tempoDisponivel), diaSelecionado.treino);
-    const exercicioInfo = treino.segmentos[exercicioAtual.segmento].exercicios[exercicioAtual.exercicio];
-    
-    // Se ainda não é a última série, inicia o descanso
-    if (exercicioAtual.serie < exercicioInfo.series) {
-      iniciarDescanso();
-    } else {
-      // Se é a última série, vai para o próximo exercício
-      proximoExercicio();
-    }
-  };
-
-  const iniciarDescanso = () => {
-    const treino = gerarTreinoCompleto(parseInt(tempoDisponivel), diaSelecionado.treino);
-    const exercicioInfo = treino.segmentos[exercicioAtual.segmento].exercicios[exercicioAtual.exercicio];
-    const tempoDescanso = parseInt(exercicioInfo.descanso.split('-')[0]);
-    
-    setEmDescanso(true);
-    setTempoRestante(tempoDescanso);
-    
-    // Incrementa a série imediatamente ao iniciar o descanso
-    setExercicioAtual(prev => ({ ...prev, serie: prev.serie + 1 }));
-    
-    const id = setInterval(() => {
-      setTempoRestante(prev => {
-        if (prev <= 1) {
-          clearInterval(id);
-          setEmDescanso(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    
-    setIntervalId(id);
-  };
-
-  const proximoExercicio = () => {
-    const treino = gerarTreinoCompleto(parseInt(tempoDisponivel), diaSelecionado.treino);
-    
-    if (exercicioAtual.exercicio + 1 < treino.segmentos[exercicioAtual.segmento].exercicios.length) {
-      setExercicioAtual(prev => ({ segmento: prev.segmento, exercicio: prev.exercicio + 1, serie: 1 }));
-    } else if (exercicioAtual.segmento + 1 < treino.segmentos.length) {
-      setExercicioAtual(prev => ({ segmento: prev.segmento + 1, exercicio: 0, serie: 1 }));
-    } else {
-      finalizarTreino();
-    }
-  };
-
-  const finalizarTreino = () => {
-    // Salvar treino realizado no localStorage
-    const treinoRealizado = {
-      data: new Date().toISOString(),
-      dia: getDiaAtual(),
-      treino: diaSelecionado?.treino,
-      duracao: parseInt(tempoDisponivel)
-    };
-
-    const treinosExistentes = JSON.parse(localStorage.getItem('treinosRealizados') || '[]');
-    treinosExistentes.push(treinoRealizado);
-    localStorage.setItem('treinosRealizados', JSON.stringify(treinosExistentes));
-
-    // Reset do estado
-    setTreinoIniciado(false);
-    setExercicioAtual({ segmento: 0, exercicio: 0, serie: 1 });
-    setEmDescanso(false);
-    setTempoRestante(0);
-    if (intervalId) {
-      clearInterval(intervalId);
-      setIntervalId(null);
-    }
-
-    // Mostrar mensagem de sucesso customizada e atualizar estado
-    setShowSuccessMessage(true);
-    setTreinoJaRealizado(true);
-    
-    // Esconder mensagem após 5 segundos
-    setTimeout(() => {
-      setShowSuccessMessage(false);
-    }, 5000);
-  };
-
-  // Função para obter o dia atual da semana (1 = segunda, 7 = domingo)
-  const getDiaAtual = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    return dayOfWeek === 0 ? 7 : dayOfWeek; // Converte domingo (0) para 7
-  };
-
-  // Função para obter o treino do dia atual
-  const getTreinoDoDia = () => {
-    const diaAtual = getDiaAtual();
-    
-    // Domingo é dia de descanso
-    if (diaAtual === 7) {
-      return null;
-    }
-
-    const cronogramaSemanal = [
-      { dia: 'Segunda-feira', treino: 'treinoA', abrev: 'SEG', dayOfWeek: 1 },
-      { dia: 'Terça-feira', treino: 'treinoB', abrev: 'TER', dayOfWeek: 2 },
-      { dia: 'Quarta-feira', treino: 'treinoC', abrev: 'QUA', dayOfWeek: 3 },
-      { dia: 'Quinta-feira', treino: 'treinoA', abrev: 'QUI', dayOfWeek: 4 },
-      { dia: 'Sexta-feira', treino: 'treinoB', abrev: 'SEX', dayOfWeek: 5 },
-      { dia: 'Sábado', treino: 'treinoC', abrev: 'SAB', dayOfWeek: 6 }
-    ];
-
-    return cronogramaSemanal.find(dia => dia.dayOfWeek === diaAtual);
-  };
-
-  // Função para verificar se o treino de hoje já foi realizado
-  const verificarTreinoRealizado = () => {
-    const today = new Date();
-    const todayString = today.toDateString();
-    
-    const treinosExistentes = JSON.parse(localStorage.getItem('treinosRealizados') || '[]');
-    return treinosExistentes.some(treino => {
-      const treinoDate = new Date(treino.data);
-      return treinoDate.toDateString() === todayString;
-    });
-  };
-
-  const formatarTempo = (segundos) => {
-    const mins = Math.floor(segundos / 60);
-    const secs = segundos % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   useEffect(() => {
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [intervalId]);
-
-  // Verificar se o treino já foi realizado hoje ao carregar a página
-  useEffect(() => {
-    const jaRealizado = verificarTreinoRealizado();
-    setTreinoJaRealizado(jaRealizado);
+    carregarHistorico();
   }, []);
 
-  // Automaticamente selecionar o treino do dia atual quando o tempo for definido
-  useEffect(() => {
-    if (tempoDisponivel && !erroTempo && parseInt(tempoDisponivel) >= 30 && parseInt(tempoDisponivel) <= 90) {
-      const treinoDoDia = getTreinoDoDia();
-      if (treinoDoDia) {
-        setDiaSelecionado(treinoDoDia);
+  const carregarHistorico = async () => {
+    setLoadingHistorico(true);
+    try {
+      const response = await api.getMyWorkouts();
+      if (response.success) {
+        setHistorico(response.data);
       }
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    } finally {
+      setLoadingHistorico(false);
     }
-  }, [tempoDisponivel, erroTempo]);
+  };
 
-  const treinoDodia = diaSelecionado ? gerarTreinoCompleto(parseInt(tempoDisponivel), diaSelecionado.treino) : null;
-  const diaAtual = getDiaAtual();
-  const isDomingoDescanso = diaAtual === 7;
+  const handleGerarTreino = async () => {
+    if (!tempoDisponivel || tempoDisponivel < 30 || tempoDisponivel > 90) {
+      alert('Por favor, insira um tempo válido entre 30 e 90 minutos');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.generateWorkout({
+        grupamento,
+        tempoDisponivel: parseInt(tempoDisponivel)
+      });
+
+      if (response.success) {
+        setTreinoGerado(response.data);
+        carregarHistorico();
+      }
+    } catch (error) {
+      console.error('Erro ao gerar treino:', error);
+      alert('Erro ao gerar treino. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarcarRealizado = async (id) => {
+    try {
+      const response = await api.completeWorkout(id);
+      if (response.success) {
+        carregarHistorico();
+        if (treinoGerado && treinoGerado._id === id) {
+          setTreinoGerado(response.data);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao marcar treino:', error);
+    }
+  };
+
+  const handleDeletarTreino = async (id) => {
+    if (!window.confirm('Deseja realmente deletar este treino?')) return;
+
+    try {
+      const response = await api.deleteWorkout(id);
+      if (response.success) {
+        carregarHistorico();
+        if (treinoGerado && treinoGerado._id === id) {
+          setTreinoGerado(null);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao deletar treino:', error);
+    }
+  };
+
+  const handleLimparHistorico = async () => {
+    if (!window.confirm('Deseja realmente limpar todo o histórico de treinos?')) return;
+
+    try {
+      const response = await api.clearWorkoutHistory();
+      if (response.success) {
+        setHistorico([]);
+        setTreinoGerado(null);
+      }
+    } catch (error) {
+      console.error('Erro ao limpar histórico:', error);
+    }
+  };
+
+  const handleVisualizarTreino = (treino) => {
+    setTreinoGerado(treino);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <Container className="custom-scroll">
@@ -377,16 +149,12 @@ const TreinoPage = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <BackButton
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleBackToDashboard}
-          >
-            <FiArrowLeft />
-            Voltar
-          </BackButton>
           <Logo>HealGym</Logo>
         </motion.div>
+        <BackButton onClick={() => navigate('/dashboard')}>
+          <FiArrowLeft />
+          Voltar ao Dashboard
+        </BackButton>
       </Header>
 
       <MainContent>
@@ -394,193 +162,229 @@ const TreinoPage = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
+          style={{ width: '100%' }}
         >
-          <PageTitle>Seu Plano de Treino</PageTitle>
+          <PageTitle>Sistema de Treinos</PageTitle>
           <PageSubtitle>
-            Treinamento personalizado baseado no seu perfil e objetivos
+            Gere treinos personalizados baseados no tempo disponível e grupo muscular
           </PageSubtitle>
 
-          <WorkoutCard>
-            <WorkoutHeader>
-              <WorkoutIcon>
-                <FiActivity />
-              </WorkoutIcon>
-              <WorkoutTitle>Treino Personalizado</WorkoutTitle>
-            </WorkoutHeader>
+          <ContentContainer>
+            <GerarTreinoSection
+              as={motion.div}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <SectionTitle>
+                <FiZap />
+                Gerar Novo Treino
+              </SectionTitle>
 
-            <TimeSection>
-              <TimeIcon>
+          <FormContainer>
+            <TreinoDoDiaCard>
+              <TreinoDoDiaLabel>Treino do Dia</TreinoDoDiaLabel>
+              <TreinoDoDiaGrupo>
+                <GrupamentoIconLarge>
+                  {grupamentos.find(g => g.value === grupamento)?.icon}
+                </GrupamentoIconLarge>
+                <TreinoDoDiaNome>
+                  {grupamentos.find(g => g.value === grupamento)?.label}
+                </TreinoDoDiaNome>
+              </TreinoDoDiaGrupo>
+            </TreinoDoDiaCard>
+
+            <InputGroup>
+              <Label>
                 <FiClock />
-              </TimeIcon>
-              <TimeContent>
-                <TimeLabel>Quanto tempo você tem disponível para treinar?</TimeLabel>
-                <TimeInput
-                  type="number"
-                  value={tempoDisponivel}
-                  onChange={handleTempoChange}
-                  placeholder="Digite em minutos"
-                  min="30"
-                  max="90"
-                />
-                <TimeHint>Entre 30 minutos e 90 minutos (1h30)</TimeHint>
-                {erroTempo && <ErrorMessage>{erroTempo}</ErrorMessage>}
-              </TimeContent>
-            </TimeSection>
+                Tempo Disponível (minutos)
+              </Label>
+              <Input
+                type="number"
+                min="30"
+                max="90"
+                value={tempoDisponivel}
+                onChange={(e) => setTempoDisponivel(e.target.value)}
+                placeholder="Entre 30 e 90 minutos"
+              />
+              <InputHint>30 min = treino rápido | 45-60 min = ideal | 75-90 min = avançado</InputHint>
+            </InputGroup>
 
-            {tempoDisponivel && !erroTempo && parseInt(tempoDisponivel) >= 30 && parseInt(tempoDisponivel) <= 90 && (
-              <WeeklySchedule ref={cronogramaRef}>
-                {isDomingoDescanso ? (
-                  <RestDayMessage>
-                    <RestDayTitle>🌅 Domingo - Dia de Descanso</RestDayTitle>
-                    <RestDayDescription>
-                      Hoje é seu dia de recuperação! Aproveite para relaxar, fazer alongamentos leves ou uma caminhada.
-                      Volte amanhã para continuar seu treino.
-                    </RestDayDescription>
-                    <RestDayTip>
-                      💡 <strong>Dica:</strong> O descanso é fundamental para o crescimento muscular e recuperação.
-                    </RestDayTip>
-                  </RestDayMessage>
-                ) : (
-                  <>
-                    <ScheduleTitle>Treino de Hoje</ScheduleTitle>
-                    {diaSelecionado && (
-                      <TodayWorkoutCard>
-                        <TodayWorkoutHeader>
-                          <TodayWorkoutDay>{diaSelecionado.dia}</TodayWorkoutDay>
-                          <TodayWorkoutBadge>HOJE</TodayWorkoutBadge>
-                        </TodayWorkoutHeader>
-                        <TodayWorkoutInfo>
-                          <TrainingType>{treinosSplit[diaSelecionado.treino].nome}</TrainingType>
-                          <MuscleGroups>{treinosSplit[diaSelecionado.treino].grupos}</MuscleGroups>
-                        </TodayWorkoutInfo>
-                      </TodayWorkoutCard>
-                    )}
-                    <ScheduleHint>Este é o seu treino programado para hoje</ScheduleHint>
-                  </>
+            <GerarButton
+              onClick={handleGerarTreino}
+              disabled={loading || !tempoDisponivel}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {loading ? 'Gerando...' : 'Gerar Treino Perfeito'}
+            </GerarButton>
+          </FormContainer>
+        </GerarTreinoSection>
+
+        <AnimatePresence mode="wait">
+          {treinoGerado && (
+            <TreinoDisplay
+              as={motion.div}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5 }}
+            >
+              <TreinoHeader>
+                <TreinoTitulo>{treinoGerado.titulo}</TreinoTitulo>
+                <TreinoMetaInfo>
+                  <MetaTag>
+                    <FiClock />
+                    {treinoGerado.tempoDisponivel} min
+                  </MetaTag>
+                  <MetaTag>
+                    <FiActivity />
+                    {treinoGerado.exercicios.length} exercícios
+                  </MetaTag>
+                </TreinoMetaInfo>
+                <TreinoObjetivo>{treinoGerado.objetivo}</TreinoObjetivo>
+                
+                <ActionButtons>
+                  {!treinoGerado.realizado && (
+                    <ActionButton
+                      color="#4ecdc4"
+                      onClick={() => handleMarcarRealizado(treinoGerado._id)}
+                    >
+                      <FiCheck />
+                      Marcar como Realizado
+                    </ActionButton>
+                  )}
+                  <ActionButton
+                    color="#ff6b6b"
+                    onClick={() => handleDeletarTreino(treinoGerado._id)}
+                  >
+                    <FiTrash2 />
+                    Deletar
+                  </ActionButton>
+                </ActionButtons>
+
+                {treinoGerado.realizado && (
+                  <RealizadoBadge>
+                    <FiCheck />
+                    Treino Realizado em {new Date(treinoGerado.dataRealizacao).toLocaleDateString('pt-BR')}
+                  </RealizadoBadge>
                 )}
-              </WeeklySchedule>
+              </TreinoHeader>
+
+              <ExerciciosList>
+                {treinoGerado.exercicios.map((exercicio, index) => (
+                  <ExercicioCard key={index}>
+                    <ExercicioNumero>{index + 1}</ExercicioNumero>
+                    <ExercicioInfo>
+                      <ExercicioNome>{exercicio.nome}</ExercicioNome>
+                      <PorcaoMuscular>{exercicio.porcaoMuscular}</PorcaoMuscular>
+                      <ExercicioDetalhes>
+                        <Detalhe>
+                          <strong>Séries:</strong> {exercicio.series}
+                        </Detalhe>
+                        <Detalhe>
+                          <strong>Repetições:</strong> {exercicio.repeticoes}
+                        </Detalhe>
+                        <Detalhe>
+                          <strong>Descanso:</strong> {exercicio.descanso}
+                        </Detalhe>
+                      </ExercicioDetalhes>
+                      <Tecnica>
+                        <strong>Técnica:</strong> {exercicio.tecnica}
+                      </Tecnica>
+                      <Equipamentos>
+                        <strong>Equipamento:</strong> {exercicio.equipamento.join(', ')}
+                      </Equipamentos>
+                    </ExercicioInfo>
+                  </ExercicioCard>
+                ))}
+              </ExerciciosList>
+
+              <ResumoSection>
+                <ResumoTitulo>Resumo de Cobertura Muscular</ResumoTitulo>
+                <ResumoTexto>{treinoGerado.resumo}</ResumoTexto>
+              </ResumoSection>
+            </TreinoDisplay>
+          )}
+        </AnimatePresence>
+
+        <HistoricoSection
+          as={motion.div}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <HistoricoHeader>
+            <SectionTitle>
+              <FiActivity />
+              Histórico de Treinos
+            </SectionTitle>
+            {historico.length > 0 && (
+              <LimparButton onClick={handleLimparHistorico}>
+                <FiTrash2 />
+                Limpar Histórico
+              </LimparButton>
             )}
+          </HistoricoHeader>
 
-            {treinoDodia && !treinoIniciado && !treinoJaRealizado && (
-              <WorkoutPlan ref={planoTreinoRef}>
-                <PlanHeader>
-                  <PlanTitle>{diaSelecionado.dia} - {treinoDodia.nome}: {treinoDodia.grupos}</PlanTitle>
-                  <PlanTime>{treinoDodia.tempo} minutos</PlanTime>
-                </PlanHeader>
-
-                <SegmentsList>
-                  {treinoDodia.segmentos.map((segmento, index) => (
-                    <SegmentCard key={index}>
-                      <SegmentTitle>{segmento.nome}</SegmentTitle>
-                      <ExercisesList>
-                        {segmento.exercicios.map((exercicio, exIndex) => (
-                          <ExerciseItem key={exIndex}>
-                            <ExerciseName>{exercicio.nome}</ExerciseName>
-                            <ExerciseDetails>
-                              {exercicio.series} séries × {exercicio.repeticoes} rep
-                              <ExerciseRest>Descanso: {exercicio.descanso}</ExerciseRest>
-                            </ExerciseDetails>
-                          </ExerciseItem>
-                        ))}
-                      </ExercisesList>
-                    </SegmentCard>
-                  ))}
-                </SegmentsList>
-
-                <StartWorkoutButton
+          {loadingHistorico ? (
+            <LoadingContainer>
+              <LoadingSpinner />
+            </LoadingContainer>
+          ) : historico.length === 0 ? (
+            <EmptyState>
+              <FiActivity size={48} />
+              <EmptyText>Nenhum treino gerado ainda</EmptyText>
+              <EmptySubtext>Gere seu primeiro treino acima!</EmptySubtext>
+            </EmptyState>
+          ) : (
+            <HistoricoGrid>
+              {historico.map((treino) => (
+                <HistoricoCard
+                  key={treino._id}
+                  onClick={() => handleVisualizarTreino(treino)}
+                  realizado={treino.realizado}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={iniciarTreino}
                 >
-                  Começar Treino
-                </StartWorkoutButton>
-              </WorkoutPlan>
-            )}
-
-            {treinoJaRealizado && !isDomingoDescanso && (
-              <CompletedWorkoutMessage>
-                <CompletedWorkoutTitle>✅ Treino de Hoje Concluído!</CompletedWorkoutTitle>
-                <CompletedWorkoutDescription>
-                  Parabéns! Você já realizou seu treino de hoje. Descanse bem e volte amanhã para continuar sua jornada fitness.
-                </CompletedWorkoutDescription>
-                <CompletedWorkoutTip>
-                  💡 <strong>Dica:</strong> Mantenha-se hidratado e faça uma boa alimentação para otimizar sua recuperação.
-                </CompletedWorkoutTip>
-              </CompletedWorkoutMessage>
-            )}
-
-            {treinoIniciado && treinoDodia && (
-              <WorkoutExecution>
-                <ExecutionHeader>
-                  <ExecutionTitle>
-                    {treinoDodia.segmentos[exercicioAtual.segmento].nome}
-                  </ExecutionTitle>
-                  <ExecutionProgress>
-                    {emDescanso 
-                      ? `Série ${exercicioAtual.serie - 1} concluída - Próxima: ${exercicioAtual.serie} de ${treinoDodia.segmentos[exercicioAtual.segmento].exercicios[exercicioAtual.exercicio].series}`
-                      : `Série ${exercicioAtual.serie} de ${treinoDodia.segmentos[exercicioAtual.segmento].exercicios[exercicioAtual.exercicio].series}`
-                    }
-                  </ExecutionProgress>
-                </ExecutionHeader>
-
-                <CurrentExercise>
-                  <ExerciseName>
-                    {treinoDodia.segmentos[exercicioAtual.segmento].exercicios[exercicioAtual.exercicio].nome}
-                  </ExerciseName>
-                  <ExerciseInfo>
-                    {treinoDodia.segmentos[exercicioAtual.segmento].exercicios[exercicioAtual.exercicio].repeticoes} repetições
-                  </ExerciseInfo>
-                </CurrentExercise>
-
-                {emDescanso ? (
-                  <RestTimer>
-                    <RestTitle>Descanso</RestTitle>
-                    <Timer>{formatarTempo(tempoRestante)}</Timer>
-                    <RestMessage>Prepare-se para a próxima série!</RestMessage>
-                  </RestTimer>
-                ) : (
-                  <ExerciseControls>
-                    <FinishSetButton
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={finalizarSerie}
-                    >
-                      Finalizar Série
-                    </FinishSetButton>
-                  </ExerciseControls>
-                )}
-
-                <WorkoutActions>
-                  <StopWorkoutButton
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={finalizarTreino}
-                  >
-                    Parar Treino
-                  </StopWorkoutButton>
-                </WorkoutActions>
-              </WorkoutExecution>
-            )}
-          </WorkoutCard>
+                  {treino.realizado && (
+                    <RealizadoIcon>
+                      <FiCheck />
+                    </RealizadoIcon>
+                  )}
+                  <HistoricoTitulo>{treino.titulo}</HistoricoTitulo>
+                  <HistoricoInfo>
+                    <HistoricoDetalhe>
+                      <FiClock />
+                      {treino.tempoDisponivel} min
+                    </HistoricoDetalhe>
+                    <HistoricoDetalhe>
+                      <FiActivity />
+                      {treino.exercicios.length} exercícios
+                    </HistoricoDetalhe>
+                  </HistoricoInfo>
+                  <HistoricoData>
+                    {new Date(treino.createdAt).toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </HistoricoData>
+                </HistoricoCard>
+              ))}
+            </HistoricoGrid>
+          )}
+        </HistoricoSection>
+      </ContentContainer>
         </motion.div>
       </MainContent>
-
-      {/* Mensagem de sucesso customizada */}
-      {showSuccessMessage && (
-        <SuccessMessage
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 50 }}
-          transition={{ duration: 0.5 }}
-        >
-          <SuccessIcon>🎉</SuccessIcon>
-          <SuccessTitle>Parabéns!</SuccessTitle>
-          <SuccessDescription>Treino finalizado com sucesso!</SuccessDescription>
-        </SuccessMessage>
-      )}
     </Container>
   );
 };
+
+// ==================== STYLED COMPONENTS ====================
 
 const Container = styled.div`
   min-height: 100vh;
@@ -593,13 +397,18 @@ const Container = styled.div`
 const Header = styled.header`
   padding: 1.5rem 2rem;
   border-bottom: 1px solid rgba(198, 169, 100, 0.2);
-  
-  > div {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    width: 100%;
-  }
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const Logo = styled.h1`
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  cursor: default;
 `;
 
 const BackButton = styled(motion.button)`
@@ -625,18 +434,9 @@ const BackButton = styled(motion.button)`
   }
 `;
 
-const Logo = styled.h1`
-  font-family: 'Cinzel', serif;
-  font-size: 2rem;
-  background: var(--gold-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  cursor: default;
-`;
-
 const MainContent = styled.div`
   padding: 2rem;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 `;
 
@@ -660,7 +460,13 @@ const PageSubtitle = styled.p`
   cursor: default;
 `;
 
-const WorkoutCard = styled.div`
+const ContentContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+`;
+
+const GerarTreinoSection = styled.div`
   background: var(--card-bg);
   border-radius: 12px;
   padding: 2rem;
@@ -669,74 +475,46 @@ const WorkoutCard = styled.div`
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 `;
 
-const WorkoutHeader = styled.div`
+const SectionTitle = styled.h2`
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-`;
-
-const WorkoutIcon = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--gold-gradient);
-  border-radius: 12px;
-  width: 50px;
-  height: 50px;
-
-  svg {
-    color: var(--background);
-    font-size: 1.5rem;
-  }
-`;
-
-const WorkoutTitle = styled.h2`
+  gap: 0.75rem;
   color: var(--white);
   font-size: 1.8rem;
-  font-weight: 600;
-  cursor: default;
-`;
-
-const TimeSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(198, 169, 100, 0.2);
-  border-radius: 8px;
-  padding: 2rem;
-`;
-
-const TimeIcon = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent);
-  border-radius: 12px;
-  width: 50px;
-  height: 50px;
-  flex-shrink: 0;
+  margin-bottom: 2rem;
+  font-weight: 700;
 
   svg {
-    color: var(--background);
-    font-size: 1.5rem;
+    color: var(--accent);
   }
 `;
 
-const TimeContent = styled.div`
-  flex: 1;
+const FormContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 `;
 
-const TimeLabel = styled.label`
+const InputGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+`;
+
+const Label = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   color: var(--white);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  margin-bottom: 1rem;
-  display: block;
+
+  svg {
+    color: var(--accent);
+  }
 `;
 
-const TimeInput = styled.input`
+const Input = styled.input`
   width: 100%;
   padding: 1rem;
   background: rgba(255, 255, 255, 0.05);
@@ -768,463 +546,449 @@ const TimeInput = styled.input`
   }
 `;
 
-const TimeHint = styled.div`
+const InputHint = styled.p`
   color: var(--text-secondary);
   font-size: 0.9rem;
-  margin-top: 0.5rem;
   font-style: italic;
 `;
 
-const ErrorMessage = styled.div`
-  color: #ff6b6b;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.2);
-  border-radius: 4px;
-  font-weight: 500;
-`;
-
-const WeeklySchedule = styled.div`
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(198, 169, 100, 0.2);
-`;
-
-const ScheduleTitle = styled.h3`
-  color: var(--white);
-  font-size: 1.8rem;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 2rem;
-  background: var(--gold-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-`;
-
-const ScheduleGrid = styled.div`
+const GrupamentoGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1rem;
-  margin-bottom: 1rem;
 `;
 
-const DayCard = styled(motion.div)`
-  background: ${props => props.isSelected ? 'rgba(198, 169, 100, 0.1)' : 'rgba(255, 255, 255, 0.03)'};
-  border: 1px solid ${props => props.isSelected ? 'var(--accent)' : 'rgba(198, 169, 100, 0.1)'};
-  border-radius: 12px;
+const GrupamentoCard = styled.div`
+  background: ${props => props.selected ? props.color : 'white'};
+  border: 3px solid ${props => props.selected ? props.color : '#e0e0e0'};
+  border-radius: 15px;
   padding: 1.5rem;
-  text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
+  text-align: center;
+  color: ${props => props.selected ? 'white' : '#333'};
 
   &:hover {
-    background: rgba(198, 169, 100, 0.08);
-    border-color: var(--accent);
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    border-color: ${props => props.color};
   }
 `;
 
-const DayName = styled.div`
-  color: var(--accent);
-  font-size: 1.1rem;
-  font-weight: 700;
+const GrupamentoIcon = styled.div`
+  font-size: 2.5rem;
   margin-bottom: 0.5rem;
 `;
 
-const TrainingType = styled.div`
-  color: var(--white);
-  font-size: 1rem;
+const GrupamentoLabel = styled.div`
   font-weight: 600;
-  margin-bottom: 0.25rem;
-`;
-
-const MuscleGroups = styled.div`
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.3;
-`;
-
-const ScheduleHint = styled.div`
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  text-align: center;
-  font-style: italic;
-  margin-top: 1rem;
-`;
-
-const WorkoutPlan = styled.div`
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid rgba(198, 169, 100, 0.2);
-`;
-
-const PlanHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-`;
-
-const PlanTitle = styled.h3`
-  color: var(--white);
-  font-size: 1.8rem;
-  font-weight: 700;
-  background: var(--gold-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-`;
-
-const PlanTime = styled.div`
-  color: var(--accent);
-  font-size: 1.2rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  &:before {
-    content: '⏱️';
-  }
-`;
-
-const SegmentsList = styled.div`
-  display: grid;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
-`;
-
-const SegmentCard = styled.div`
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(198, 169, 100, 0.1);
-  border-radius: 12px;
-  padding: 1.5rem;
-`;
-
-const SegmentTitle = styled.h4`
-  color: var(--accent);
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-
-  &:before {
-    content: '💪';
-  }
-`;
-
-const ExercisesList = styled.div`
-  display: grid;
-  gap: 1rem;
-`;
-
-const ExerciseItem = styled.div`
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(198, 169, 100, 0.05);
-  border-radius: 8px;
-  padding: 1rem;
-`;
-
-const ExerciseName = styled.div`
-  color: var(--white);
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-`;
-
-const ExerciseDetails = styled.div`
-  color: var(--text-secondary);
   font-size: 0.95rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
 `;
 
-const ExerciseRest = styled.span`
-  color: var(--accent);
-  font-size: 0.9rem;
-  font-weight: 500;
-`;
-
-const StartWorkoutButton = styled(motion.button)`
-  width: 100%;
-  padding: 1rem 2rem;
-  background: var(--gold-gradient);
-  border: none;
-  border-radius: 8px;
-  color: var(--background);
-  font-size: 1rem;
-  font-weight: 600;
-  font-family: 'Cormorant', serif;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    box-shadow: 0 5px 15px rgba(198, 169, 100, 0.3);
-  }
-`;
-
-const WorkoutExecution = styled.div`
-  margin-top: 2rem;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(198, 169, 100, 0.2);
-  border-radius: 12px;
-  text-align: center;
-`;
-
-const ExecutionHeader = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const ExecutionTitle = styled.h3`
-  color: var(--white);
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  background: var(--gold-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-`;
-
-const ExecutionProgress = styled.div`
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  font-weight: 500;
-`;
-
-const CurrentExercise = styled.div`
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(198, 169, 100, 0.1);
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-`;
-
-const ExerciseInfo = styled.div`
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  margin-top: 0.5rem;
-`;
-
-const RestTimer = styled.div`
-  background: rgba(198, 169, 100, 0.1);
-  border: 1px solid rgba(198, 169, 100, 0.3);
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-`;
-
-const RestTitle = styled.h4`
-  color: var(--accent);
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-`;
-
-const Timer = styled.div`
-  color: var(--white);
-  font-size: 3rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  font-family: 'Courier New', monospace;
-`;
-
-const RestMessage = styled.div`
-  color: var(--text-secondary);
-  font-size: 1rem;
-  font-style: italic;
-`;
-
-const ExerciseControls = styled.div`
-  margin-bottom: 2rem;
-`;
-
-const FinishSetButton = styled(motion.button)`
-  background: linear-gradient(135deg, #4CAF50, #45a049);
-  border: none;
-  border-radius: 12px;
-  color: white;
-  font-size: 1.2rem;
-  font-weight: 600;
-  font-family: 'Cormorant', serif;
-  padding: 1.5rem 3rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
-  }
-`;
-
-const WorkoutActions = styled.div`
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-`;
-
-const StopWorkoutButton = styled(motion.button)`
-  background: linear-gradient(135deg, #f44336, #d32f2f);
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-size: 1rem;
-  font-weight: 600;
-  font-family: 'Cormorant', serif;
-  padding: 1rem 2rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3);
-  }
-`;
-
-const RestDayMessage = styled.div`
-  text-align: center;
-  padding: 3rem 2rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(198, 169, 100, 0.1);
-  border-radius: 12px;
-`;
-
-const RestDayTitle = styled.h3`
-  color: var(--white);
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-  background: var(--gold-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-`;
-
-const RestDayDescription = styled.p`
-  color: var(--text-secondary);
-  font-size: 1.2rem;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-`;
-
-const RestDayTip = styled.div`
-  background: rgba(198, 169, 100, 0.1);
-  border: 1px solid rgba(198, 169, 100, 0.2);
-  border-radius: 8px;
-  padding: 1rem;
-  color: var(--text-secondary);
-  font-size: 1rem;
-  
-  strong {
-    color: var(--accent);
-  }
-`;
-
-const TodayWorkoutCard = styled.div`
+const TreinoDoDiaCard = styled.div`
   background: rgba(198, 169, 100, 0.1);
   border: 2px solid var(--accent);
   border-radius: 12px;
   padding: 1.5rem;
-  margin-bottom: 1rem;
-  position: relative;
+  margin-bottom: 2rem;
+  text-align: center;
 `;
 
-const TodayWorkoutHeader = styled.div`
+const TreinoDoDiaLabel = styled.div`
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1rem;
+`;
+
+const TreinoDoDiaGrupo = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  justify-content: center;
+  gap: 1rem;
 `;
 
-const TodayWorkoutDay = styled.h4`
+const GrupamentoIconLarge = styled.div`
+  font-size: 3rem;
+`;
+
+const TreinoDoDiaNome = styled.h3`
   color: var(--white);
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: 700;
   margin: 0;
 `;
 
-const TodayWorkoutBadge = styled.div`
-  background: var(--accent);
+const GerarButton = styled(motion.button)`
+  background: var(--gold-gradient);
   color: var(--background);
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  letter-spacing: 0.5px;
-`;
-
-const TodayWorkoutInfo = styled.div`
-  text-align: center;
-`;
-
-const CompletedWorkoutMessage = styled.div`
-  text-align: center;
-  padding: 3rem 2rem;
-  background: rgba(76, 175, 80, 0.1);
-  border: 2px solid rgba(76, 175, 80, 0.3);
-  border-radius: 12px;
-  margin-top: 2rem;
-`;
-
-const CompletedWorkoutTitle = styled.h3`
-  color: #4CAF50;
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 1.5rem;
-`;
-
-const CompletedWorkoutDescription = styled.p`
-  color: var(--text-secondary);
-  font-size: 1.2rem;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-`;
-
-const CompletedWorkoutTip = styled.div`
-  background: rgba(76, 175, 80, 0.1);
-  border: 1px solid rgba(76, 175, 80, 0.2);
+  border: none;
+  padding: 1rem 2rem;
   border-radius: 8px;
-  padding: 1rem;
-  color: var(--text-secondary);
-  font-size: 1rem;
-  
-  strong {
-    color: #4CAF50;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  font-family: 'Cormorant', serif;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 5px 15px rgba(198, 169, 100, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 `;
 
-const SuccessMessage = styled(motion.div)`
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+const TreinoDisplay = styled.div`
   background: var(--card-bg);
-  border: 2px solid #4CAF50;
-  border-radius: 16px;
-  padding: 3rem 2rem;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(20px);
-  z-index: 1000;
-  min-width: 300px;
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid rgba(198, 169, 100, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 `;
 
-const SuccessIcon = styled.div`
-  font-size: 4rem;
+const TreinoHeader = styled.div`
+  border-bottom: 3px solid #f0f0f0;
+  padding-bottom: 2rem;
+  margin-bottom: 2rem;
+`;
+
+const TreinoTitulo = styled.h2`
+  color: var(--white);
+  font-size: 2.2rem;
+  margin-bottom: 1rem;
+  font-weight: 800;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+`;
+
+const TreinoMetaInfo = styled.div`
+  display: flex;
+  gap: 1rem;
   margin-bottom: 1rem;
 `;
 
-const SuccessTitle = styled.h2`
-  color: #4CAF50;
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-`;
-
-const SuccessDescription = styled.p`
+const MetaTag = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(198, 169, 100, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
   color: var(--text-secondary);
-  font-size: 1.2rem;
+
+  svg {
+    color: var(--accent);
+  }
+`;
+
+const TreinoObjetivo = styled.p`
+  color: var(--text-secondary);
+  font-size: 1.1rem;
   line-height: 1.6;
+  margin-bottom: 1.5rem;
+`;
+
+const ActionButtons = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+`;
+
+const ActionButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: ${props => props.color};
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+`;
+
+const RealizadoBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #4ecdc4;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  margin-top: 1rem;
+  width: fit-content;
+
+  svg {
+    font-size: 1.2rem;
+  }
+`;
+
+const ExerciciosList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+`;
+
+const ExercicioCard = styled.div`
+  display: flex;
+  gap: 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(198, 169, 100, 0.1);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(5px);
+  }
+`;
+
+const ExercicioNumero = styled.div`
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  flex-shrink: 0;
+`;
+
+const ExercicioInfo = styled.div`
+  flex: 1;
+`;
+
+const ExercicioNome = styled.h3`
+  color: var(--white);
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+`;
+
+const PorcaoMuscular = styled.div`
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  text-transform: capitalize;
+`;
+
+const ExercicioDetalhes = styled.div`
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+`;
+
+const Detalhe = styled.div`
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+
+  strong {
+    color: var(--white);
+    margin-right: 0.25rem;
+  }
+`;
+
+const Tecnica = styled.div`
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(198, 169, 100, 0.1);
+  border-radius: 8px;
+
+  strong {
+    color: var(--white);
+    margin-right: 0.5rem;
+  }
+`;
+
+const Equipamentos = styled.div`
+  color: #999;
+  font-size: 0.9rem;
+  font-style: italic;
+
+  strong {
+    color: #666;
+    margin-right: 0.25rem;
+  }
+`;
+
+const ResumoSection = styled.div`
+  background: rgba(198, 169, 100, 0.1);
+  border: 1px solid rgba(198, 169, 100, 0.2);
+  border-radius: 8px;
+  padding: 2rem;
+  margin-top: 2rem;
+`;
+
+const ResumoTitulo = styled.h3`
+  color: var(--accent);
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+`;
+
+const ResumoTexto = styled.p`
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.8;
+  white-space: pre-line;
+`;
+
+const HistoricoSection = styled.div`
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 2rem;
+  border: 1px solid rgba(198, 169, 100, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+`;
+
+const HistoricoHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+`;
+
+const LimparButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: #ff5252;
+    transform: translateY(-2px);
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 3rem;
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-secondary);
+
+  svg {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+`;
+
+const EmptyText = styled.p`
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+`;
+
+const EmptySubtext = styled.p`
+  font-size: 1rem;
+  color: #bbb;
+`;
+
+const HistoricoGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+`;
+
+const HistoricoCard = styled(motion.div)`
+  background: ${props => props.realizado ? '#e8f8f5' : '#f9f9f9'};
+  border: 2px solid ${props => props.realizado ? '#4ecdc4' : '#e0e0e0'};
+  border-radius: 15px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+
+  &:hover {
+    border-color: #667eea;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const RealizadoIcon = styled.div`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #4ecdc4;
+  color: white;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+`;
+
+const HistoricoTitulo = styled.h4`
+  color: var(--white);
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+`;
+
+const HistoricoInfo = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+`;
+
+const HistoricoDetalhe = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+
+  svg {
+    color: #667eea;
+  }
+`;
+
+const HistoricoData = styled.div`
+  color: #999;
+  font-size: 0.85rem;
+  font-style: italic;
 `;
 
 export default TreinoPage;

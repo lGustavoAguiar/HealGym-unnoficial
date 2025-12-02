@@ -246,6 +246,47 @@ class ApiService {
   async healthCheck() {
     return this.request('/health');
   }
+
+  // ==================== WORKOUT ENDPOINTS ====================
+  
+  async generateWorkout(workoutData) {
+    console.log('🏋️ Gerando treino...');
+    return this.request('/workouts/generate', {
+      method: 'POST',
+      body: JSON.stringify(workoutData),
+    });
+  }
+
+  async getMyWorkouts() {
+    console.log('📋 Buscando histórico de treinos...');
+    return this.request('/workouts/my-workouts');
+  }
+
+  async getWorkoutById(id) {
+    console.log(`🔍 Buscando treino ${id}...`);
+    return this.request(`/workouts/${id}`);
+  }
+
+  async completeWorkout(id) {
+    console.log(`✅ Marcando treino ${id} como realizado...`);
+    return this.request(`/workouts/${id}/complete`, {
+      method: 'PATCH',
+    });
+  }
+
+  async deleteWorkout(id) {
+    console.log(`🗑️ Deletando treino ${id}...`);
+    return this.request(`/workouts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async clearWorkoutHistory() {
+    console.log('🗑️ Limpando histórico de treinos...');
+    return this.request('/workouts', {
+      method: 'DELETE',
+    });
+  }
 }
 
 export default new ApiService();
