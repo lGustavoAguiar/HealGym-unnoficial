@@ -76,8 +76,38 @@ const ForgotPasswordPage = () => {
     setErrors({});
 
     try {
+      await api.forgotPassword(formData.email);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error('❌ Forgot password error:', error);
+      const errorMessage = error.message || 'Erro ao enviar email de recuperação';
+      setErrors({ general: errorMessage });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleSubmitOLD = async (e) => {
+    e.preventDefault();
+    const newErrors = {};
+    Object.keys(formData).forEach(key => {
+      const error = validateField(key, formData[key]);
+      if (error) newErrors[key] = error;
+    });
+
+    setTouched({ email: true });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrors({});
+
+    try {
       const backendUrl = window.location.hostname === 'healgym-frontend.onrender.com' 
-        ? ''
+        ? 'https://healgym-backend.onrender.com'
         : 'http://localhost:5000';
       
       console.log('🚀 Direct fetch to:', `${backendUrl}/api/auth/forgot-password`);
@@ -89,22 +119,6 @@ const ForgotPasswordPage = () => {
         },
         body: JSON.stringify({ email: formData.email }),
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao enviar email de recuperação');
-      }
-      
-      setIsSubmitted(true);
-    } catch (error) {
-      console.error('❌ Forgot password error:', error);
-      const errorMessage = error.message || 'Erro ao enviar email de recuperação';
-      setErrors({ general: errorMessage });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
   
   return (
     <Container>
