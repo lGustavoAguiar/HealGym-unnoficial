@@ -1,6 +1,10 @@
-const API_BASE_URL = '/api';
+// Use variável de ambiente em produção ou proxy local em desenvolvimento
+const API_BASE_URL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
 
 console.log('🔍 API Base URL:', API_BASE_URL);
+console.log('🔍 VITE_API_URL:', import.meta.env.VITE_API_URL);
 console.log('🔍 Current hostname:', typeof window !== 'undefined' ? window.location.hostname : 'SSR');
 console.log('🔍 Current port:', typeof window !== 'undefined' ? window.location.port : 'SSR');
 

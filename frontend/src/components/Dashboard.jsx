@@ -1,14 +1,18 @@
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FiLogOut, FiUser, FiActivity, FiHeart, FiTrendingUp, FiTarget, FiCheck } from 'react-icons/fi';
+import { FiLogOut, FiUser, FiActivity, FiHeart, FiTrendingUp, FiTarget, FiCheck, FiX, FiClock } from 'react-icons/fi';
+import api from '../services/api';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [treinosRealizados, setTreinosRealizados] = useState([]);
+  const [modalHistorico, setModalHistorico] = useState(false);
+  const [treinosDoDia, setTreinosDoDia] = useState([]);
+  const [diaSelecionado, setDiaSelecionado] = useState(null);
 
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return null;
@@ -67,15 +71,37 @@ const Dashboard = () => {
     { dia: 'Sábado', treino: 'Treino C', grupos: 'Pernas e Ombros', dayOfWeek: 6 }
   ];
 
-  // Carregar treinos realizados do localStorage
+  // Carregar treinos realizados da API
   useEffect(() => {
-    const savedWorkouts = localStorage.getItem('treinosRealizados');
-    if (savedWorkouts) {
-      setTreinosRealizados(JSON.parse(savedWorkouts));
-    }
+    carregarTreinosRealizados();
   }, []);
 
-  // Função para verificar se um treino foi realizado
+  // Fechar modal com tecla ESC
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && modalHistorico) {
+        setModalHistorico(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [modalHistorico]);
+
+  const carregarTreinosRealizados = async () => {
+    try {
+      const response = await api.getMyWorkouts();
+      if (response.success) {
+        // Filtrar apenas treinos realizados
+        const realizados = response.data.filter(treino => treino.realizado);
+        setTreinosRealizados(realizados);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar treinos:', error);
+    }
+  };
+
+  // Função para verificar se um treino foi realizado em um dia específico
   const isTreinoRealizado = (dayOfWeek) => {
     const today = new Date();
     const currentWeekStart = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Segunda-feira da semana atual
@@ -83,9 +109,28 @@ const Dashboard = () => {
     targetDate.setDate(currentWeekStart.getDate() + (dayOfWeek - 1));
     
     return treinosRealizados.some(treino => {
-      const treinoDate = new Date(treino.data);
+      const treinoDate = new Date(treino.dataRealizacao || treino.createdAt);
       return treinoDate.toDateString() === targetDate.toDateString();
     });
+  };
+
+  // Função para abrir modal com histórico do dia
+  const handleDiaClick = (dayOfWeek, diaNome) => {
+    const today = new Date();
+    const currentWeekStart = new Date(today.setDate(today.getDate() - today.getDay() + 1));
+    const targetDate = new Date(currentWeekStart);
+    targetDate.setDate(currentWeekStart.getDate() + (dayOfWeek - 1));
+    
+    const treinosDesseDia = treinosRealizados.filter(treino => {
+      const treinoDate = new Date(treino.dataRealizacao || treino.createdAt);
+      return treinoDate.toDateString() === targetDate.toDateString();
+    });
+
+    if (treinosDesseDia.length > 0) {
+      setTreinosDoDia(treinosDesseDia);
+      setDiaSelecionado(diaNome);
+      setModalHistorico(true);
+    }
   };
 
   // Função para obter o dia atual da semana (1 = segunda, 7 = domingo)
@@ -128,6 +173,62 @@ const Dashboard = () => {
   const idealWeight = calculateIdealWeight(user?.profile?.height, user?.profile?.gender);
 
   return (
+    <>
+      {/* Modal de Histórico do Dia */}
+      <AnimatePresence>
+        {modalHistorico && (
+          <ModalOverlay
+            as={motion.div}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setModalHistorico(false)}
+          >
+            <ModalContainer
+              as={motion.div}
+              initial={{ opacity: 0, scale: 0.9, y: -50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -50 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ModalHeader>
+                <ModalTitulo>Treinos de {diaSelecionado}</ModalTitulo>
+                <CloseButton onClick={() => setModalHistorico(false)}>
+                  <FiX />
+                </CloseButton>
+              </ModalHeader>
+              <ModalBody>
+                {treinosDoDia.map((treino, index) => (
+                  <TreinoCard key={treino._id || index}>
+                    <TreinoCardHeader>
+                      <TreinoCardTitulo>{treino.titulo}</TreinoCardTitulo>
+                      <TreinoCardData>
+                        {new Date(treino.dataRealizacao).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TreinoCardData>
+                    </TreinoCardHeader>
+                    <TreinoCardInfo>
+                      <TreinoCardDetalhe>
+                        <FiClock />
+                        {treino.tempoDisponivel} min
+                      </TreinoCardDetalhe>
+                      <TreinoCardDetalhe>
+                        <FiActivity />
+                        {treino.exercicios.length} exercícios
+                      </TreinoCardDetalhe>
+                    </TreinoCardInfo>
+                    <TreinoCardObjetivo>{treino.objetivo}</TreinoCardObjetivo>
+                  </TreinoCard>
+                ))}
+              </ModalBody>
+            </ModalContainer>
+          </ModalOverlay>
+        )}
+      </AnimatePresence>
+
     <Container className="custom-scroll">
       <Header>
         <motion.div
@@ -291,6 +392,8 @@ const Dashboard = () => {
                         key={index}
                         isToday={isToday}
                         isCompleted={isCompleted}
+                        isClickable={isCompleted}
+                        onClick={() => isCompleted && handleDiaClick(diaInfo.dayOfWeek, diaInfo.dia)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -307,6 +410,7 @@ const Dashboard = () => {
                           <MuscleGroup>{diaInfo.grupos}</MuscleGroup>
                         </WorkoutInfo>
                         {isToday && <TodayIndicator>HOJE</TodayIndicator>}
+                        {isCompleted && <ClickHint>Clique para ver</ClickHint>}
                       </CalendarDay>
                     );
                   })}
@@ -329,6 +433,7 @@ const Dashboard = () => {
         </MainArea>
       </MainContent>
     </Container>
+    </>
   );
 };
 
@@ -693,30 +798,32 @@ const CalendarGrid = styled.div`
 const CalendarDay = styled(motion.div)`
   background: ${props => {
     if (props.isRest) return 'rgba(100, 100, 100, 0.1)';
-    if (props.isCompleted) return 'rgba(76, 175, 80, 0.1)';
+    if (props.isCompleted) return 'rgba(76, 175, 80, 0.15)';
     if (props.isToday) return 'rgba(198, 169, 100, 0.15)';
     return 'rgba(255, 255, 255, 0.05)';
   }};
   border: 1px solid ${props => {
     if (props.isRest) return 'rgba(100, 100, 100, 0.3)';
-    if (props.isCompleted) return 'rgba(76, 175, 80, 0.4)';
+    if (props.isCompleted) return 'rgba(76, 175, 80, 0.6)';
     if (props.isToday) return 'var(--accent)';
     return 'rgba(198, 169, 100, 0.2)';
   }};
   border-radius: 8px;
   padding: 0.75rem;
   text-align: center;
-  cursor: default;
+  cursor: ${props => props.isClickable ? 'pointer' : 'default'};
   transition: all 0.3s ease;
   position: relative;
-  min-height: 80px;
+  min-height: 100px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(198, 169, 100, 0.2);
+    box-shadow: 0 4px 15px ${props => 
+      props.isCompleted ? 'rgba(76, 175, 80, 0.4)' : 'rgba(198, 169, 100, 0.2)'
+    };
   }
 `;
 
@@ -779,6 +886,186 @@ const TodayIndicator = styled.div`
   top: 0.25rem;
   right: 0.25rem;
   letter-spacing: 0.5px;
+`;
+
+const ClickHint = styled.div`
+  color: #4CAF50;
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  opacity: 0.8;
+  cursor: pointer;
+`;
+
+// ==================== MODAL COMPONENTS ====================
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+  cursor: default;
+`;
+
+const ModalContainer = styled.div`
+  background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(10, 10, 10, 0.98) 100%);
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  max-width: 700px;
+  width: 100%;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(198, 169, 100, 0.3);
+  cursor: default;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.div`
+  background: rgba(198, 169, 100, 0.1);
+  border-bottom: 1px solid var(--accent);
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: default;
+`;
+
+const ModalTitulo = styled.h2`
+  color: var(--white);
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  cursor: default;
+`;
+
+const CloseButton = styled.button`
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+
+  svg {
+    font-size: 1.5rem;
+  }
+
+  &:hover {
+    background: rgba(198, 169, 100, 0.2);
+    transform: rotate(90deg);
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 2rem;
+  overflow-y: auto;
+  flex: 1;
+  cursor: default;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 4px;
+  }
+`;
+
+const TreinoCard = styled.div`
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(198, 169, 100, 0.2);
+  border-left: 4px solid #4CAF50;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  cursor: default;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(5px);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const TreinoCardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  cursor: default;
+`;
+
+const TreinoCardTitulo = styled.h3`
+  color: var(--white);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  flex: 1;
+  cursor: default;
+`;
+
+const TreinoCardData = styled.div`
+  color: #4CAF50;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: rgba(76, 175, 80, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  cursor: default;
+`;
+
+const TreinoCardInfo = styled.div`
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  cursor: default;
+`;
+
+const TreinoCardDetalhe = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: default;
+
+  svg {
+    color: var(--accent);
+  }
+`;
+
+const TreinoCardObjetivo = styled.p`
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+  cursor: default;
 `;
 
 export default Dashboard;

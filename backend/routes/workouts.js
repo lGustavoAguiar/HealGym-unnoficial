@@ -286,7 +286,7 @@ function gerarResumo(grupamento, exercicios) {
     resumo += `✓ ${porcao}: ${exerciciosDaPorcao.map(e => e.nome).join(', ')}\n`;
   });
 
-  resumo += `\nTodas as subdivisões anatômicas do grupamento ${grupamento} foram trabalhadas de forma completa e equilibrada.`;
+  resumo += `\nTodas as subdivisões anatômicas do grupamento ${grupamento.replace(/_/g, ' ')} foram trabalhadas de forma completa e equilibrada.`;
   
   return resumo;
 }
