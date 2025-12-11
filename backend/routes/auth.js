@@ -354,7 +354,7 @@ router.post('/forgot-password', [
     await user.save({ validateBeforeSave: false });
 
     try {
-      const EmailService = (await import('../utils/email.js')).default;
+      const EmailService = (await import('../utils/emailSendGrid.js')).default;
       const result = await EmailService.sendPasswordResetEmail(user.email, resetToken);
       
       if (result.devMode) {
@@ -471,7 +471,7 @@ router.post('/request-account-deletion', authenticate, async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     try {
-      const EmailService = (await import('../utils/email.js')).default;
+      const EmailService = (await import('../utils/emailSendGrid.js')).default;
       const result = await EmailService.sendAccountDeletionEmail(user.email, deletionToken);
       
       if (result.devMode) {
