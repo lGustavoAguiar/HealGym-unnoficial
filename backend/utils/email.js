@@ -127,7 +127,15 @@ class EmailService {
       console.log(`📧 Usando remetente: ${emailFrom}`);
       console.log(`🔗 Link de reset: ${resetUrl}`);
       
-      const info = await this.transporter.sendMail(mailOptions);
+      // Adicionar timeout de 10 segundos
+      const sendMailWithTimeout = Promise.race([
+        this.transporter.sendMail(mailOptions),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Email timeout após 10 segundos')), 10000)
+        )
+      ]);
+      
+      const info = await sendMailWithTimeout;
       
       console.log('✅ EMAIL ENVIADO COM SUCESSO!');
       console.log('📧 Message ID:', info.messageId);
