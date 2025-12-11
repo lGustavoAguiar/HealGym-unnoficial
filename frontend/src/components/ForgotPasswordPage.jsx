@@ -87,39 +87,6 @@ const ForgotPasswordPage = () => {
     }
   };
   
-  const handleSubmitOLD = async (e) => {
-    e.preventDefault();
-    const newErrors = {};
-    Object.keys(formData).forEach(key => {
-      const error = validateField(key, formData[key]);
-      if (error) newErrors[key] = error;
-    });
-
-    setTouched({ email: true });
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrors({});
-
-    try {
-      const backendUrl = window.location.hostname === 'healgym-frontend.onrender.com' 
-        ? 'https://healgym-backend.onrender.com'
-        : 'http://localhost:5000';
-      
-      console.log('🚀 Direct fetch to:', `${backendUrl}/api/auth/forgot-password`);
-      
-      const response = await fetch(`${backendUrl}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: formData.email }),
-      });
-  
   return (
     <Container>
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
