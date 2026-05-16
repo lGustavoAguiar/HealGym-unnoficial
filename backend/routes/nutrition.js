@@ -198,6 +198,39 @@ router.post('/search', authenticate, async (req, res) => {
 });
 
 /**
+ * Normaliza string de horário (ex.: "7:30", "07:30:00") para "HH:MM" 24h.
+ */
+function normalizeHorarioString(value) {
+  if (value == null || value === '') return null;
+  const str = String(value).trim();
+  const match = str.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  let hh = parseInt(match[1], 10);
+  let mm = parseInt(match[2], 10);
+  if (Number.isNaN(hh) || Number.isNaN(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+    return null;
+  }
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+/**
+ * Um horário por refeição; índices faltantes ou inválidos usam espaçamento padrão (7h, 10h, 13h…).
+ */
+function resolveHorariosParaRefeicoes(refeicoesPorDia, horariosBody) {
+  const arr = [];
+  for (let i = 0; i < refeicoesPorDia; i++) {
+    const fromUser = Array.isArray(horariosBody) ? horariosBody[i] : null;
+    const parsed = normalizeHorarioString(fromUser);
+    if (parsed) {
+      arr.push(parsed);
+    } else {
+      arr.push(`${String(7 + i * 3).padStart(2, '0')}:00`);
+    }
+  }
+  return arr;
+}
+
+/**
  * POST /api/nutrition/generate-diet
  * Gera uma dieta personalizada com informações nutricionais detalhadas
  */
@@ -209,7 +242,8 @@ router.post('/generate-diet', authenticate, async (req, res) => {
       objetivo,
       weight, // peso em kg
       refeicoesPorDia = 4,
-      preferencias = [] 
+      preferencias = [],
+      horarios = null
     } = req.body;
 
     if (!targetCalories || !objetivo || !weight) {
@@ -247,6 +281,8 @@ router.post('/generate-diet', authenticate, async (req, res) => {
     console.log(`   ✅ Diferença: ${Math.round(totalCaloriasCalculadas - targetCalories)} kcal`);
     console.log('');
 
+    const horariosResolvidos = resolveHorariosParaRefeicoes(refeicoesPorDia, horarios);
+
     // Gera o plano de refeições
     const mealPlan = await generateMealPlan(
       targetCalories,
@@ -255,7 +291,8 @@ router.post('/generate-diet', authenticate, async (req, res) => {
       targetFat,
       weight,
       refeicoesPorDia,
-      preferencias
+      preferencias,
+      horariosResolvidos
     );
 
     // Salva a dieta no banco de dados
@@ -299,7 +336,7 @@ router.post('/generate-diet', authenticate, async (req, res) => {
  * Função auxiliar para gerar plano de refeições com cálculo preciso de macros
  * Usa APENAS: Frango, Arroz, Feijão, Ovo, Azeite
  */
-async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targetFat, weight, refeicoesPorDia, preferencias) {
+async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targetFat, weight, refeicoesPorDia, preferencias, horariosResolvidos) {
   const mealPlan = [];
   const mealNames = ['Café da Manhã', 'Almoço', 'Lanche da Tarde', 'Jantar'];
 
@@ -572,7 +609,7 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
 
     const meal = {
       nome: nomeRefeicao,
-      horario: `${7 + (i * 3)}:00`,
+      horario: horariosResolvidos[i] || `${String(7 + (i * 3)).padStart(2, '0')}:00`,
       alimentos: []
     };
 

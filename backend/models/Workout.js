@@ -44,7 +44,7 @@ const workoutSchema = new mongoose.Schema({
   grupamento: {
     type: String,
     required: true,
-    enum: ['PEITO', 'COSTAS', 'OMBROS', 'TRICEPS', 'BICEPS', 'PERNAS', 'PEITO_TRICEPS', 'COSTAS_BICEPS', 'PERNAS_OMBROS']
+    enum: ['PEITO', 'COSTAS', 'OMBROS', 'TRICEPS', 'BICEPS', 'PERNAS', 'PEITO_TRICEPS', 'COSTAS_BICEPS', 'PERNAS_OMBROS', 'OMBROS_BRACOS', 'FULL_BODY']
   },
   objetivo: {
     type: String,

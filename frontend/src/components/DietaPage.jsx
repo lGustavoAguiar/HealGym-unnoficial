@@ -6,6 +6,20 @@ import { FiArrowLeft, FiTarget, FiTrendingUp, FiClock, FiActivity, FiHeart, FiRe
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 
+const MEAL_LABELS = ['Café da Manhã', 'Almoço', 'Lanche da Tarde', 'Jantar'];
+
+/** Converte horário vindo da API (ex.: "7:00") para o formato do input time (HH:MM). */
+function timeToInputValue(h) {
+  if (h == null || h === '') return '08:00';
+  const match = String(h).match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return '08:00';
+  const hh = Math.min(23, Math.max(0, parseInt(match[1], 10)));
+  const mm = Math.min(59, Math.max(0, parseInt(match[2], 10)));
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+const DEFAULT_HORARIOS = MEAL_LABELS.map((_, i) => `${String(7 + i * 3).padStart(2, '0')}:00`);
+
 const DietaPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -15,6 +29,7 @@ const DietaPage = () => {
   const [historicoDietas, setHistoricoDietas] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { dietId, dietInfo }
   const [clearHistoryConfirm, setClearHistoryConfirm] = useState(false); // Confirmação para limpar histórico
+  const [horariosRefeicoes, setHorariosRefeicoes] = useState(() => [...DEFAULT_HORARIOS]);
 
   const handleBackToDashboard = () => {
     navigate('/dashboard');
@@ -138,11 +153,15 @@ const DietaPage = () => {
         objetivo: objetivo,
         weight: peso, // Enviar peso para cálculo correto dos macros
         refeicoesPorDia: 4,
-        preferencias: []
+        preferencias: [],
+        horarios: horariosRefeicoes,
       });
 
       if (response.success) {
         setDietaGerada(response.diet);
+        if (response.diet?.mealPlan?.length) {
+          setHorariosRefeicoes(response.diet.mealPlan.map((m) => timeToInputValue(m.horario)));
+        }
         // Atualizar histórico
         const historico = await api.getMyDiets();
         if (historico.success) {
@@ -485,6 +504,33 @@ const DietaPage = () => {
               </StatCard>
             </StatsGrid>
 
+            <HorariosSection>
+              <HorariosTitle>Horários das refeições</HorariosTitle>
+              <HorariosDescription>
+                Defina os horários que combinam com a sua rotina. Eles serão usados ao gerar a dieta e aparecem em cada refeição.
+              </HorariosDescription>
+              <HorariosGrid>
+                {MEAL_LABELS.map((label, index) => (
+                  <HorarioRow key={label}>
+                    <HorarioMealLabel>{label}</HorarioMealLabel>
+                    <TimeField
+                      type="time"
+                      value={horariosRefeicoes[index] ?? DEFAULT_HORARIOS[index]}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setHorariosRefeicoes((prev) => {
+                          const next = [...prev];
+                          while (next.length < MEAL_LABELS.length) next.push(DEFAULT_HORARIOS[next.length]);
+                          next[index] = v;
+                          return next;
+                        });
+                      }}
+                    />
+                  </HorarioRow>
+                ))}
+              </HorariosGrid>
+            </HorariosSection>
+
             {error && (
               <ErrorMessage style={{ marginBottom: '2rem', textAlign: 'center', color: '#ff6b6b' }}>
                 {error}
@@ -588,7 +634,8 @@ const DietaPage = () => {
                           <div>
                             <MealName>{refeicao.nome}</MealName>
                             <MealTime>
-                              <FiClock size={14} /> {refeicao.horario}
+                              <FiClock size={14} />
+                              {horariosRefeicoes[index] ?? timeToInputValue(refeicao.horario)}
                             </MealTime>
                           </div>
                           <MealCalories>{Math.round(totaisRefeicao.calorias)} kcal</MealCalories>
@@ -754,6 +801,9 @@ const DietaPage = () => {
                           mealPlan: diet.mealPlan
                         };
                         setDietaGerada(dietData);
+                        if (diet.mealPlan?.length) {
+                          setHorariosRefeicoes(diet.mealPlan.map((m) => timeToInputValue(m.horario)));
+                        }
                       }}
                       isActive={dietaGerada?.id === diet._id}
                     >
@@ -893,6 +943,72 @@ const StatValue = styled.div`
 const StatSubtext = styled.div`
   color: var(--text-secondary);
   font-size: 0.85rem;
+`;
+
+const HorariosSection = styled.div`
+  background: rgba(198, 169, 100, 0.06);
+  border: 1px solid rgba(198, 169, 100, 0.25);
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 2rem;
+`;
+
+const HorariosTitle = styled.h3`
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+`;
+
+const HorariosDescription = styled.p`
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem 0;
+`;
+
+const HorariosGrid = styled.div`
+  display: grid;
+  gap: 1rem;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+`;
+
+const HorarioRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(198, 169, 100, 0.12);
+`;
+
+const HorarioMealLabel = styled.span`
+  color: var(--white);
+  font-size: 0.95rem;
+  font-weight: 500;
+`;
+
+const TimeField = styled.input`
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(198, 169, 100, 0.35);
+  border-radius: 8px;
+  color: var(--white);
+  padding: 0.45rem 0.65rem;
+  font-size: 1rem;
+  font-family: inherit;
+  color-scheme: dark;
+  min-width: 7rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(198, 169, 100, 0.2);
+  }
 `;
 
 const ErrorCard = styled.div`

@@ -231,8 +231,62 @@ function selecionarExercicios(grupamento, tempoDisponivel) {
   return exerciciosSelecionados;
 }
 
+/**
+ * Full body compacto: um exercício por grande grupo (+ extras se houver tempo).
+ */
+function selecionarFullBody(tempoDisponivel) {
+  let seriesPadrao = 3;
+  let repeticoesPadrao = '8-12';
+  let descansoPadrao = '60-90s';
+  if (tempoDisponivel <= 45) {
+    seriesPadrao = 2;
+    repeticoesPadrao = '10-15';
+    descansoPadrao = '45-60s';
+  } else if (tempoDisponivel >= 75) {
+    seriesPadrao = 4;
+    repeticoesPadrao = '6-12 (pirâmide)';
+    descansoPadrao = '60-90s';
+  }
+
+  const nucleo = [
+    { g: 'PEITO', p: 'superior', i: 0 },
+    { g: 'COSTAS', p: 'lats_largura', i: 0 },
+    { g: 'PERNAS', p: 'quadriceps_completo', i: 0 },
+    { g: 'OMBROS', p: 'anterior', i: 0 },
+    { g: 'TRICEPS', p: 'lateral', i: 0 },
+    { g: 'BICEPS', p: 'longa', i: 0 }
+  ];
+
+  const extras = [
+    { g: 'PEITO', p: 'medio', i: 0 },
+    { g: 'COSTAS', p: 'lats_espessura', i: 0 },
+    { g: 'PERNAS', p: 'posteriores', i: 0 }
+  ];
+
+  const picks = tempoDisponivel >= 60
+    ? [...nucleo, ...extras.slice(0, tempoDisponivel >= 75 ? 3 : 2)]
+    : nucleo;
+
+  const lista = [];
+  for (const { g, p, i } of picks) {
+    const db = exerciseDatabase[g];
+    if (!db || !db[p] || !db[p][i]) continue;
+    const ex = db[p][i];
+    lista.push({
+      nome: ex.nome,
+      porcaoMuscular: `${g} ${p.replace(/_/g, ' ').toUpperCase()}`,
+      series: seriesPadrao,
+      repeticoes: repeticoesPadrao,
+      descanso: descansoPadrao,
+      tecnica: ex.tecnica,
+      equipamento: ex.equipamento
+    });
+  }
+  return lista;
+}
+
 // Função para gerar título e objetivo baseado no grupamento
-function gerarMetadados(grupamento) {
+function gerarMetadados(grupamento, letraTreino = null) {
   const metadata = {
     PEITO: {
       titulo: 'Treino A — Peito Completo',
@@ -269,10 +323,25 @@ function gerarMetadados(grupamento) {
     PERNAS_OMBROS: {
       titulo: 'Treino C — Pernas e Ombros',
       objetivo: 'Treino de pernas completo com foco em quadríceps, posteriores e glúteos, finalizado com ombros 3D para sessão de corpo inteiro.'
+    },
+    OMBROS_BRACOS: {
+      titulo: 'Treino D — Ombros e Braços',
+      objetivo: 'Ombros em todas as angulações combinados com tríceps e bíceps para finalizar a semana com braços completos.'
+    },
+    FULL_BODY: {
+      titulo: 'Treino Full Body',
+      objetivo: 'Estímulo global do corpo em uma única sessão: peito, costas, pernas, ombros e braços com volume moderado por grupo.'
     }
   };
 
-  return metadata[grupamento] || { titulo: 'Treino', objetivo: 'Hipertrofia muscular' };
+  const base = metadata[grupamento] || { titulo: 'Treino', objetivo: 'Hipertrofia muscular' };
+  if (letraTreino && /^[A-D]$/.test(letraTreino) && base.titulo.match(/^Treino [A-Z](?= —)/)) {
+    return {
+      ...base,
+      titulo: base.titulo.replace(/^Treino [A-Z](?= —)/, `Treino ${letraTreino}`)
+    };
+  }
+  return base;
 }
 
 // Função para gerar resumo explicando cobertura de porções musculares
@@ -286,38 +355,77 @@ function gerarResumo(grupamento, exercicios) {
     resumo += `✓ ${porcao}: ${exerciciosDaPorcao.map(e => e.nome).join(', ')}\n`;
   });
 
-  resumo += `\nTodas as subdivisões anatômicas do grupamento ${grupamento.replace(/_/g, ' ')} foram trabalhadas de forma completa e equilibrada.`;
+  const labelGrupo = grupamento === 'FULL_BODY' ? 'corpo inteiro (full body)' : grupamento.replace(/_/g, ' ');
+  resumo += `\nTodas as subdivisões anatômicas do grupamento ${labelGrupo} foram trabalhadas de forma completa e equilibrada.`;
   
   return resumo;
+}
+
+/**
+ * Resolve grupamento interno a partir da escolha do usuário (divisão + letra) ou modo legado.
+ */
+function resolveGrupamentoGeracao(body) {
+  const { grupamento: grupamentoLegado, tipoDivisao, letraTreino } = body;
+
+  if (tipoDivisao === 'FULL_BODY') {
+    return { grupamento: 'FULL_BODY', letra: null };
+  }
+
+  if (tipoDivisao === 'ABC') {
+    const map = { A: 'PEITO_TRICEPS', B: 'COSTAS_BICEPS', C: 'PERNAS_OMBROS' };
+    const g = map[letraTreino];
+    if (!g) {
+      return { error: 'Para divisão ABC, informe letraTreino: A, B ou C' };
+    }
+    return { grupamento: g, letra: letraTreino };
+  }
+
+  if (tipoDivisao === 'ABCD') {
+    const map = { A: 'PEITO_TRICEPS', B: 'COSTAS_BICEPS', C: 'PERNAS', D: 'OMBROS_BRACOS' };
+    const g = map[letraTreino];
+    if (!g) {
+      return { error: 'Para divisão ABCD, informe letraTreino: A, B, C ou D' };
+    }
+    return { grupamento: g, letra: letraTreino };
+  }
+
+  if (grupamentoLegado) {
+    return { grupamento: grupamentoLegado, letra: null };
+  }
+
+  return { error: 'Informe tipoDivisao (ABC, ABCD ou FULL_BODY) e letraTreino quando aplicável, ou grupamento (modo legado)' };
 }
 
 // POST /api/workouts/generate - Gerar novo treino
 router.post('/generate', authenticate, async (req, res) => {
   try {
-    const { grupamento, tempoDisponivel } = req.body;
-
-    // Validações
-    if (!grupamento) {
-      return res.status(400).json({ message: 'Grupamento muscular é obrigatório' });
-    }
+    const { tempoDisponivel } = req.body;
 
     if (!tempoDisponivel || tempoDisponivel < 30 || tempoDisponivel > 90) {
       return res.status(400).json({ message: 'Tempo disponível deve estar entre 30 e 90 minutos' });
     }
 
-    const grupamentosValidos = ['PEITO', 'COSTAS', 'OMBROS', 'TRICEPS', 'BICEPS', 'PERNAS', 'PEITO_TRICEPS', 'COSTAS_BICEPS', 'PERNAS_OMBROS'];
+    const resolved = resolveGrupamentoGeracao(req.body);
+    if (resolved.error) {
+      return res.status(400).json({ message: resolved.error });
+    }
+
+    const { grupamento, letra: letraTreino } = resolved;
+
+    const grupamentosValidos = ['PEITO', 'COSTAS', 'OMBROS', 'TRICEPS', 'BICEPS', 'PERNAS', 'PEITO_TRICEPS', 'COSTAS_BICEPS', 'PERNAS_OMBROS', 'OMBROS_BRACOS', 'FULL_BODY'];
     if (!grupamentosValidos.includes(grupamento)) {
       return res.status(400).json({ message: 'Grupamento muscular inválido' });
     }
 
-    // Gerar metadados
-    const { titulo, objetivo } = gerarMetadados(grupamento);
+    // Gerar metadados (ajusta letra A–D no título quando vier de divisão ABCD/ABC)
+    const { titulo, objetivo } = gerarMetadados(grupamento, letraTreino);
 
     // Selecionar exercícios baseado no grupamento e tempo
     let exercicios = [];
     
-    // Para grupamentos combinados, dividir exercícios
-    if (grupamento === 'PEITO_TRICEPS') {
+    if (grupamento === 'FULL_BODY') {
+      exercicios = selecionarFullBody(tempoDisponivel);
+    } else if (grupamento === 'PEITO_TRICEPS') {
       const exerciciosPeito = selecionarExercicios('PEITO', Math.floor(tempoDisponivel * 0.6));
       const exerciciosTriceps = selecionarExercicios('TRICEPS', Math.ceil(tempoDisponivel * 0.4));
       exercicios = [...exerciciosPeito, ...exerciciosTriceps];
@@ -329,6 +437,11 @@ router.post('/generate', authenticate, async (req, res) => {
       const exerciciosPernas = selecionarExercicios('PERNAS', Math.floor(tempoDisponivel * 0.7));
       const exerciciosOmbros = selecionarExercicios('OMBROS', Math.ceil(tempoDisponivel * 0.3));
       exercicios = [...exerciciosPernas, ...exerciciosOmbros];
+    } else if (grupamento === 'OMBROS_BRACOS') {
+      const exerciciosOmbros = selecionarExercicios('OMBROS', Math.floor(tempoDisponivel * 0.35));
+      const exerciciosTriceps = selecionarExercicios('TRICEPS', Math.ceil(tempoDisponivel * 0.32));
+      const exerciciosBiceps = selecionarExercicios('BICEPS', Math.ceil(tempoDisponivel * 0.33));
+      exercicios = [...exerciciosOmbros, ...exerciciosTriceps, ...exerciciosBiceps];
     } else {
       exercicios = selecionarExercicios(grupamento, tempoDisponivel);
     }

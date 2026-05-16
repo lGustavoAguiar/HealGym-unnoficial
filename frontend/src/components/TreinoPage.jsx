@@ -7,31 +7,36 @@ import { FiArrowLeft, FiActivity, FiClock, FiTrash2, FiCheck, FiZap, FiPlay, FiP
 import api from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 
+const TIPOS_DIVISAO = [
+  {
+    value: 'ABC',
+    label: 'ABC — 3 dias',
+    short: '3 dias',
+    detalhe: 'A: peito + tríceps · B: costas + bíceps · C: pernas + ombros'
+  },
+  {
+    value: 'ABCD',
+    label: 'ABCD — 4 dias',
+    short: '4 dias',
+    detalhe: 'A e B iguais ao ABC · C: só pernas · D: ombros + braços'
+  },
+  {
+    value: 'FULL_BODY',
+    label: 'Full body',
+    short: 'Corpo inteiro',
+    detalhe: 'Peito, costas, pernas, ombros e braços na mesma sessão'
+  }
+];
+
 const TreinoPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
   console.log('TreinoPage renderizando...', { user });
   
-  // Função para detectar o grupamento muscular do dia
-  const getGrupamentoDoDia = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = domingo, 1 = segunda, ..., 6 = sábado
-    
-    const cronograma = {
-      1: 'PEITO_TRICEPS',  // Segunda
-      2: 'COSTAS_BICEPS',  // Terça
-      3: 'PERNAS_OMBROS',  // Quarta
-      4: 'PEITO_TRICEPS',  // Quinta
-      5: 'COSTAS_BICEPS',  // Sexta
-      6: 'PERNAS_OMBROS'   // Sábado
-    };
-    
-    return cronograma[dayOfWeek] || 'PEITO_TRICEPS'; // Default para segunda se for domingo
-  };
-
+  const [tipoDivisao, setTipoDivisao] = useState('ABC');
+  const [letraTreino, setLetraTreino] = useState('A');
   const [tempoDisponivel, setTempoDisponivel] = useState('');
-  const [grupamento] = useState(getGrupamentoDoDia()); // Definido automaticamente
   const [loading, setLoading] = useState(false);
   const [treinoGerado, setTreinoGerado] = useState(null);
   const [historico, setHistorico] = useState([]);
@@ -64,17 +69,11 @@ const TreinoPage = () => {
   const timerTreinoRef = useRef(null);
   const timerDescansoRef = useRef(null);
 
-  const grupamentos = [
-    { value: 'PEITO', label: 'Peito Completo', icon: '💪', color: '#ff6b6b' },
-    { value: 'COSTAS', label: 'Costas Completas', icon: '🔥', color: '#4ecdc4' },
-    { value: 'OMBROS', label: 'Ombros 3D', icon: '⚡', color: '#ffd93d' },
-    { value: 'TRICEPS', label: 'Tríceps Completo', icon: '💥', color: '#a8e6cf' },
-    { value: 'BICEPS', label: 'Bíceps e Antebraços', icon: '🎯', color: '#c7ceea' },
-    { value: 'PERNAS', label: 'Pernas Completas', icon: '🦵', color: '#ff8787' },
-    { value: 'PEITO_TRICEPS', label: 'Peito + Tríceps', icon: '🔥💪', color: '#95e1d3' },
-    { value: 'COSTAS_BICEPS', label: 'Costas + Bíceps', icon: '💪🎯', color: '#f38181' },
-    { value: 'PERNAS_OMBROS', label: 'Pernas + Ombros', icon: '🦵⚡', color: '#aa96da' }
-  ];
+  useEffect(() => {
+    if (tipoDivisao === 'ABC' && letraTreino === 'D') {
+      setLetraTreino('A');
+    }
+  }, [tipoDivisao, letraTreino]);
 
   useEffect(() => {
     carregarHistorico();
@@ -305,12 +304,22 @@ const TreinoPage = () => {
       return;
     }
 
+    if (tipoDivisao !== 'FULL_BODY' && !letraTreino) {
+      mostrarAlerta('Treino', 'Escolha qual treino (A, B, C ou D) deseja gerar.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await api.generateWorkout({
-        grupamento,
-        tempoDisponivel: parseInt(tempoDisponivel)
-      });
+      const payload = {
+        tempoDisponivel: parseInt(tempoDisponivel, 10),
+        tipoDivisao
+      };
+      if (tipoDivisao !== 'FULL_BODY') {
+        payload.letraTreino = letraTreino;
+      }
+
+      const response = await api.generateWorkout(payload);
 
       if (response.success) {
         setTreinoGerado(response.data);
@@ -477,7 +486,7 @@ const TreinoPage = () => {
         >
           <PageTitle>Sistema de Treinos</PageTitle>
           <PageSubtitle>
-            Gere treinos personalizados baseados no tempo disponível e grupo muscular
+            Escolha a divisão (ABC, ABCD ou full body), o treino do dia quando aplicável e o tempo disponível.
           </PageSubtitle>
 
           <ContentContainer>
@@ -494,15 +503,39 @@ const TreinoPage = () => {
 
           <FormContainer>
             <TreinoDoDiaCard>
-              <TreinoDoDiaLabel>Treino do Dia</TreinoDoDiaLabel>
-              <TreinoDoDiaGrupo>
-                <GrupamentoIconLarge>
-                  {grupamentos.find(g => g.value === grupamento)?.icon}
-                </GrupamentoIconLarge>
-                <TreinoDoDiaNome>
-                  {grupamentos.find(g => g.value === grupamento)?.label}
-                </TreinoDoDiaNome>
-              </TreinoDoDiaGrupo>
+              <TreinoDoDiaLabel>Plano de treino</TreinoDoDiaLabel>
+              <DivisaoTipoRow>
+                {TIPOS_DIVISAO.map((tipo) => (
+                  <TipoDivisaoChip
+                    key={tipo.value}
+                    type="button"
+                    $active={tipoDivisao === tipo.value}
+                    onClick={() => setTipoDivisao(tipo.value)}
+                  >
+                    {tipo.label}
+                  </TipoDivisaoChip>
+                ))}
+              </DivisaoTipoRow>
+              <DivisaoDetalhe>
+                {TIPOS_DIVISAO.find((t) => t.value === tipoDivisao)?.detalhe}
+              </DivisaoDetalhe>
+              {tipoDivisao !== 'FULL_BODY' && (
+                <>
+                  <LetraTreinoLabel>Qual treino você quer gerar agora?</LetraTreinoLabel>
+                  <LetraTreinoRow>
+                    {(tipoDivisao === 'ABC' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D']).map((L) => (
+                      <LetraTreinoChip
+                        key={L}
+                        type="button"
+                        $active={letraTreino === L}
+                        onClick={() => setLetraTreino(L)}
+                      >
+                        Treino {L}
+                      </LetraTreinoChip>
+                    ))}
+                  </LetraTreinoRow>
+                </>
+              )}
             </TreinoDoDiaCard>
 
             <InputGroup>
@@ -1004,39 +1037,6 @@ const InputHint = styled.p`
   user-select: none;
 `;
 
-const GrupamentoGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1rem;
-`;
-
-const GrupamentoCard = styled.div`
-  background: ${props => props.selected ? props.color : 'white'};
-  border: 3px solid ${props => props.selected ? props.color : '#e0e0e0'};
-  border-radius: 15px;
-  padding: 1.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  color: ${props => props.selected ? 'white' : '#333'};
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-    border-color: ${props => props.color};
-  }
-`;
-
-const GrupamentoIcon = styled.div`
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-`;
-
-const GrupamentoLabel = styled.div`
-  font-weight: 600;
-  font-size: 0.95rem;
-`;
-
 const TreinoDoDiaCard = styled.div`
   background: rgba(198, 169, 100, 0.1);
   border: 2px solid var(--accent);
@@ -1059,28 +1059,68 @@ const TreinoDoDiaLabel = styled.div`
   user-select: none;
 `;
 
-const TreinoDoDiaGrupo = styled.div`
+const DivisaoTipoRow = styled.div`
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   justify-content: center;
-  gap: 1rem;
-  cursor: default;
-  user-select: none;
+  margin-bottom: 0.75rem;
 `;
 
-const GrupamentoIconLarge = styled.div`
-  font-size: 3rem;
-  cursor: default;
-  user-select: none;
-`;
-
-const TreinoDoDiaNome = styled.h3`
+const TipoDivisaoChip = styled.button`
+  background: ${(p) => (p.$active ? 'rgba(198, 169, 100, 0.35)' : 'rgba(255, 255, 255, 0.06)')};
+  border: 1px solid ${(p) => (p.$active ? 'var(--accent)' : 'rgba(198, 169, 100, 0.35)')};
   color: var(--white);
-  font-size: 1.8rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &:hover {
+    border-color: var(--accent);
+    background: rgba(198, 169, 100, 0.15);
+  }
+`;
+
+const DivisaoDetalhe = styled.p`
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 0 1.25rem 0;
+`;
+
+const LetraTreinoLabel = styled.div`
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 0.65rem;
+`;
+
+const LetraTreinoRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
+`;
+
+const LetraTreinoChip = styled.button`
+  background: ${(p) => (p.$active ? 'linear-gradient(135deg, var(--accent) 0%, #d4a574 100%)' : 'rgba(255, 255, 255, 0.06)')};
+  color: ${(p) => (p.$active ? 'var(--background, #0a0a0a)' : 'var(--white)')};
+  border: 1px solid ${(p) => (p.$active ? 'var(--accent)' : 'rgba(198, 169, 100, 0.35)')};
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-weight: 700;
-  margin: 0;
-  cursor: default;
-  user-select: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &:hover {
+    border-color: var(--accent);
+  }
 `;
 
 const GerarButton = styled(motion.button)`

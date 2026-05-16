@@ -61,14 +61,14 @@ const Dashboard = () => {
       Math.round(baseWeight * 0.85);
   };
 
-  // Dados do cronograma semanal
+  // Dados do cronograma semanal (rótulos neutros — a divisão A/B/C ou full body fica em Treinos)
   const cronogramaSemanal = [
-    { dia: 'Segunda', treino: 'Treino A', grupos: 'Peito e Tríceps', dayOfWeek: 1 },
-    { dia: 'Terça', treino: 'Treino B', grupos: 'Costas e Bíceps', dayOfWeek: 2 },
-    { dia: 'Quarta', treino: 'Treino C', grupos: 'Pernas e Ombros', dayOfWeek: 3 },
-    { dia: 'Quinta', treino: 'Treino A', grupos: 'Peito e Tríceps', dayOfWeek: 4 },
-    { dia: 'Sexta', treino: 'Treino B', grupos: 'Costas e Bíceps', dayOfWeek: 5 },
-    { dia: 'Sábado', treino: 'Treino C', grupos: 'Pernas e Ombros', dayOfWeek: 6 }
+    { dia: 'Segunda', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 1 },
+    { dia: 'Terça', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 2 },
+    { dia: 'Quarta', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 3 },
+    { dia: 'Quinta', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 4 },
+    { dia: 'Sexta', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 5 },
+    { dia: 'Sábado', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 6 }
   ];
 
   // Carregar treinos realizados da API
@@ -382,6 +382,10 @@ const Dashboard = () => {
             >
               <WeeklyCalendar>
                 <CalendarTitle>Cronograma Semanal</CalendarTitle>
+                <CalendarSubtitle>
+                  Em <strong>Treinos</strong> você escolhe divisão em <strong>ABC</strong> (3 dias), <strong>ABCD</strong> (4 dias) ou <strong>full body</strong>.
+                  Aqui marcamos apenas se houve treino realizado naquele dia.
+                </CalendarSubtitle>
                 <CalendarGrid>
                   {cronogramaSemanal.map((diaInfo, index) => {
                     const isToday = getDiaAtual() === diaInfo.dayOfWeek;
@@ -774,11 +778,20 @@ const CalendarTitle = styled.h2`
   color: var(--white);
   font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   text-align: center;
   background: var(--gold-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+`;
+
+const CalendarSubtitle = styled.p`
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 auto 1.25rem auto;
+  max-width: 640px;
+  text-align: center;
 `;
 
 const CalendarGrid = styled.div`
