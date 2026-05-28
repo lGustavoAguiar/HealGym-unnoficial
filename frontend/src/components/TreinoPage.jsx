@@ -1,9 +1,9 @@
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { FiArrowLeft, FiActivity, FiClock, FiTrash2, FiCheck, FiZap, FiPlay, FiPause, FiStopCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiArrowLeft, FiActivity, FiClock, FiTrash2, FiCheck, FiZap, FiPlay, FiPause, FiStopCircle, FiCheckCircle, FiRotateCcw } from 'react-icons/fi';
 import api from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -18,7 +18,7 @@ const TIPOS_DIVISAO = [
     value: 'ABCD',
     label: 'ABCD — 4 dias',
     short: '4 dias',
-    detalhe: 'A e B iguais ao ABC · C: só pernas · D: ombros + braços'
+    detalhe: 'A: peito + tríceps · B: costas + bíceps · C: só pernas · D: ombros + braços'
   },
   {
     value: 'FULL_BODY',
@@ -27,6 +27,77 @@ const TIPOS_DIVISAO = [
     detalhe: 'Peito, costas, pernas, ombros e braços na mesma sessão'
   }
 ];
+
+const ORDEM_LETRAS_ABC = ['A', 'B', 'C'];
+const ORDEM_LETRAS_ABCD = ['A', 'B', 'C', 'D'];
+
+function inferirLetraDoTitulo(titulo) {
+  const match = titulo?.match(/^Treino ([A-D])(?:\s|—|-)/);
+  return match ? match[1] : null;
+}
+
+function inferirTipoDivisaoDoGrupamento(grupamento, titulo = '') {
+  if (grupamento === 'FULL_BODY' || titulo.includes('Full Body')) return 'FULL_BODY';
+  if (grupamento === 'OMBROS_BRACOS' || titulo.includes('Ombros e Braços')) return 'ABCD';
+  if (grupamento === 'PERNAS_OMBROS' || titulo.includes('Pernas e Ombros')) return 'ABC';
+  if (grupamento === 'PERNAS' || titulo.includes('Pernas Completas')) return 'ABCD';
+  return 'ABC';
+}
+
+function formatarDataRelativa(dataIso) {
+  if (!dataIso) return '';
+  const data = new Date(dataIso);
+  const hoje = new Date();
+  const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  const inicioData = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  const diffDias = Math.round((inicioHoje - inicioData) / 86400000);
+
+  if (diffDias === 0) return 'hoje';
+  if (diffDias === 1) return 'ontem';
+  if (diffDias > 1 && diffDias < 7) return `há ${diffDias} dias`;
+  return data.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+}
+
+function obterUltimoTreinoRelevante(lista) {
+  if (!lista?.length) return null;
+  const realizados = lista.filter((t) => t.realizado && t.dataRealizacao);
+  if (realizados.length) {
+    return [...realizados].sort(
+      (a, b) => new Date(b.dataRealizacao) - new Date(a.dataRealizacao)
+    )[0];
+  }
+  return [...lista].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+}
+
+function calcularSugestaoProximo(ultimo) {
+  if (!ultimo) return null;
+
+  const tipoDivisao = inferirTipoDivisaoDoGrupamento(ultimo.grupamento, ultimo.titulo);
+  if (tipoDivisao === 'FULL_BODY') {
+    return {
+      tipoDivisao: 'FULL_BODY',
+      letraTreino: null,
+      tempoDisponivel: ultimo.tempoDisponivel,
+      mensagem: 'Hoje pode ser outro full body com o mesmo tempo de sessão.'
+    };
+  }
+
+  const letraAtual = inferirLetraDoTitulo(ultimo.titulo);
+  const ordem = tipoDivisao === 'ABCD' ? ORDEM_LETRAS_ABCD : ORDEM_LETRAS_ABC;
+  const idx = letraAtual ? ordem.indexOf(letraAtual) : -1;
+  const proximaLetra = idx >= 0 ? ordem[(idx + 1) % ordem.length] : ordem[0];
+
+  return {
+    tipoDivisao,
+    letraTreino: proximaLetra,
+    tempoDisponivel: ultimo.tempoDisponivel,
+    mensagem: `Na sequência ${tipoDivisao}, depois do Treino ${letraAtual || '?'} costuma vir o Treino ${proximaLetra}.`
+  };
+}
 
 const TreinoPage = () => {
   const navigate = useNavigate();
@@ -74,6 +145,23 @@ const TreinoPage = () => {
       setLetraTreino('A');
     }
   }, [tipoDivisao, letraTreino]);
+
+  const ultimoTreino = useMemo(() => obterUltimoTreinoRelevante(historico), [historico]);
+  const sugestaoProximo = useMemo(
+    () => calcularSugestaoProximo(ultimoTreino),
+    [ultimoTreino]
+  );
+
+  const aplicarSugestaoProximo = useCallback(() => {
+    if (!sugestaoProximo) return;
+    setTipoDivisao(sugestaoProximo.tipoDivisao);
+    if (sugestaoProximo.letraTreino) {
+      setLetraTreino(sugestaoProximo.letraTreino);
+    }
+    if (sugestaoProximo.tempoDisponivel) {
+      setTempoDisponivel(String(sugestaoProximo.tempoDisponivel));
+    }
+  }, [sugestaoProximo]);
 
   useEffect(() => {
     carregarHistorico();
@@ -205,7 +293,8 @@ const TreinoPage = () => {
     treinoGerado.exercicios.forEach((_, index) => {
       progressoInicial[index] = {
         seriesCompletadas: 0,
-        totalSeries: treinoGerado.exercicios[index].series
+        totalSeries: treinoGerado.exercicios[index].series,
+        seriesAntesAtalho: null
       };
     });
     setProgressoExercicios(progressoInicial);
@@ -250,7 +339,8 @@ const TreinoPage = () => {
       if (!novoProgresso[exercicioIndex]) {
         novoProgresso[exercicioIndex] = {
           seriesCompletadas: 0,
-          totalSeries: treinoGerado.exercicios[exercicioIndex].series
+          totalSeries: treinoGerado.exercicios[exercicioIndex].series,
+          seriesAntesAtalho: null
         };
       }
       
@@ -263,7 +353,8 @@ const TreinoPage = () => {
       if (seriesAtuais < totalSeries) {
         novoProgresso[exercicioIndex] = {
           ...novoProgresso[exercicioIndex],
-          seriesCompletadas: seriesAtuais + 1
+          seriesCompletadas: seriesAtuais + 1,
+          seriesAntesAtalho: null
         };
         
         // Verificar se é o último exercício
@@ -290,6 +381,76 @@ const TreinoPage = () => {
       setProcessandoSerie(false);
     }, 300);
   }, [treinoGerado, extrairTempoDescanso, processandoSerie]);
+
+  const iniciarDescansoAposExercicio = useCallback((exercicioIndex, tempoDescanso) => {
+    const ehUltimoExercicio = exercicioIndex === treinoGerado.exercicios.length - 1;
+    if (ehUltimoExercicio) return;
+
+    const tempoEmSegundos = extrairTempoDescanso(tempoDescanso);
+    setTempoDescansoRestante(tempoEmSegundos);
+    setDescansoAtivo(true);
+    setExercicioEmDescanso(exercicioIndex);
+  }, [treinoGerado, extrairTempoDescanso]);
+
+  const completarExercicio = useCallback((exercicioIndex, tempoDescanso) => {
+    if (processandoSerie || !treinoGerado) return;
+
+    setProcessandoSerie(true);
+
+    setProgressoExercicios((prev) => {
+      const novoProgresso = { ...prev };
+      const totalSeries = treinoGerado.exercicios[exercicioIndex].series;
+      const atual = novoProgresso[exercicioIndex] || {
+        seriesCompletadas: 0,
+        totalSeries,
+        seriesAntesAtalho: null
+      };
+
+      if (atual.seriesCompletadas >= atual.totalSeries) {
+        return prev;
+      }
+
+      novoProgresso[exercicioIndex] = {
+        ...atual,
+        seriesAntesAtalho: atual.seriesCompletadas,
+        seriesCompletadas: atual.totalSeries
+      };
+
+      return novoProgresso;
+    });
+
+    iniciarDescansoAposExercicio(exercicioIndex, tempoDescanso);
+
+    setTimeout(() => {
+      setProcessandoSerie(false);
+    }, 300);
+  }, [treinoGerado, processandoSerie, iniciarDescansoAposExercicio]);
+
+  const desfazerExercicioCompleto = useCallback((exercicioIndex) => {
+    if (processandoSerie) return;
+
+    setProgressoExercicios((prev) => {
+      const atual = prev[exercicioIndex];
+      if (!atual || atual.seriesAntesAtalho == null) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [exercicioIndex]: {
+          ...atual,
+          seriesCompletadas: atual.seriesAntesAtalho,
+          seriesAntesAtalho: null
+        }
+      };
+    });
+
+    if (exercicioEmDescanso === exercicioIndex) {
+      setDescansoAtivo(false);
+      setTempoDescansoRestante(0);
+      setExercicioEmDescanso(null);
+    }
+  }, [processandoSerie, exercicioEmDescanso]);
 
   // Pular descanso
   const pularDescanso = useCallback(() => {
@@ -473,7 +634,7 @@ const TreinoPage = () => {
         </motion.div>
         <BackButton onClick={() => navigate('/dashboard')}>
           <FiArrowLeft />
-          Voltar ao Dashboard
+          Início
         </BackButton>
       </Header>
 
@@ -502,6 +663,51 @@ const TreinoPage = () => {
               </SectionTitle>
 
           <FormContainer>
+            {!loadingHistorico && ultimoTreino && (
+              <UltimoTreinoSugestaoCard
+                as={motion.div}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35 }}
+              >
+                <UltimoTreinoSugestaoTitulo>
+                  {ultimoTreino.realizado ? '💡 Lembrete do seu último treino' : '💡 Seu último treino gerado'}
+                </UltimoTreinoSugestaoTitulo>
+                <UltimoTreinoSugestaoTexto>
+                  {ultimoTreino.realizado ? (
+                    <>
+                      <strong>{formatarDataRelativa(ultimoTreino.dataRealizacao)}</strong> você treinou{' '}
+                      <strong>{ultimoTreino.titulo}</strong>
+                    </>
+                  ) : (
+                    <>
+                      <strong>{formatarDataRelativa(ultimoTreino.createdAt)}</strong> você gerou{' '}
+                      <strong>{ultimoTreino.titulo}</strong>
+                      {!ultimoTreino.realizado && ' (ainda não marcado como realizado)'}
+                    </>
+                  )}
+                  {' — '}
+                  {ultimoTreino.tempoDisponivel} min · {ultimoTreino.exercicios?.length ?? 0} exercícios
+                </UltimoTreinoSugestaoTexto>
+                {sugestaoProximo && (
+                  <UltimoTreinoSugestaoDica>{sugestaoProximo.mensagem}</UltimoTreinoSugestaoDica>
+                )}
+                {sugestaoProximo && (
+                  <AplicarSugestaoButton
+                    type="button"
+                    onClick={aplicarSugestaoProximo}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Usar sugestão
+                    {sugestaoProximo.tipoDivisao === 'FULL_BODY'
+                      ? ' (full body)'
+                      : ` (Treino ${sugestaoProximo.letraTreino}, ${sugestaoProximo.tempoDisponivel} min)`}
+                  </AplicarSugestaoButton>
+                )}
+              </UltimoTreinoSugestaoCard>
+            )}
+
             <TreinoDoDiaCard>
               <TreinoDoDiaLabel>Plano de treino</TreinoDoDiaLabel>
               <DivisaoTipoRow>
@@ -700,8 +906,13 @@ const TreinoPage = () => {
 
               <ExerciciosList>
                 {treinoGerado.exercicios.map((exercicio, index) => {
-                  const progresso = progressoExercicios[index] || { seriesCompletadas: 0, totalSeries: exercicio.series };
+                  const progresso = progressoExercicios[index] || {
+                    seriesCompletadas: 0,
+                    totalSeries: exercicio.series,
+                    seriesAntesAtalho: null
+                  };
                   const serieCompleta = progresso.seriesCompletadas >= progresso.totalSeries;
+                  const concluidoViaAtalho = serieCompleta && progresso.seriesAntesAtalho != null;
                   const emDescanso = descansoAtivo && exercicioEmDescanso === index;
                   
                   return (
@@ -720,16 +931,53 @@ const TreinoPage = () => {
                             <PorcaoMuscular>{exercicio.porcaoMuscular}</PorcaoMuscular>
                           </div>
                           {treinoAtivo && !treinoGerado.realizado && (
-                            <CompletarSerieButton
-                              onClick={() => completarSerie(index, exercicio.descanso)}
-                              disabled={serieCompleta || !treinoAtivo || processandoSerie}
-                              completo={serieCompleta}
-                              whileHover={!serieCompleta && treinoAtivo && !processandoSerie ? { scale: 1.05 } : {}}
-                              whileTap={!serieCompleta && treinoAtivo && !processandoSerie ? { scale: 0.95 } : {}}
-                            >
-                              <FiCheckCircle />
-                              {processandoSerie ? 'Processando...' : serieCompleta ? 'Completo!' : 'Série Completa'}
-                            </CompletarSerieButton>
+                            <ExercicioBotoes>
+                              {concluidoViaAtalho ? (
+                                <DesfazerExercicioButton
+                                  type="button"
+                                  onClick={() => desfazerExercicioCompleto(index)}
+                                  disabled={processandoSerie}
+                                  whileHover={!processandoSerie ? { scale: 1.05 } : {}}
+                                  whileTap={!processandoSerie ? { scale: 0.95 } : {}}
+                                >
+                                  <FiRotateCcw />
+                                  Voltar séries ({progresso.seriesAntesAtalho}/{progresso.totalSeries})
+                                </DesfazerExercicioButton>
+                              ) : serieCompleta ? (
+                                <CompletarSerieButton
+                                  type="button"
+                                  disabled
+                                  completo
+                                >
+                                  <FiCheckCircle />
+                                  Completo!
+                                </CompletarSerieButton>
+                              ) : (
+                                <>
+                                  <CompletarSerieButton
+                                    type="button"
+                                    onClick={() => completarSerie(index, exercicio.descanso)}
+                                    disabled={!treinoAtivo || processandoSerie}
+                                    completo={false}
+                                    whileHover={treinoAtivo && !processandoSerie ? { scale: 1.05 } : {}}
+                                    whileTap={treinoAtivo && !processandoSerie ? { scale: 0.95 } : {}}
+                                  >
+                                    <FiCheckCircle />
+                                    {processandoSerie ? 'Processando...' : 'Série Completa'}
+                                  </CompletarSerieButton>
+                                  <CompletarExercicioButton
+                                    type="button"
+                                    onClick={() => completarExercicio(index, exercicio.descanso)}
+                                    disabled={!treinoAtivo || processandoSerie}
+                                    whileHover={treinoAtivo && !processandoSerie ? { scale: 1.05 } : {}}
+                                    whileTap={treinoAtivo && !processandoSerie ? { scale: 0.95 } : {}}
+                                  >
+                                    <FiCheck />
+                                    Exercício Completo
+                                  </CompletarExercicioButton>
+                                </>
+                              )}
+                            </ExercicioBotoes>
                           )}
                         </ExercicioHeader>
                         
@@ -1035,6 +1283,66 @@ const InputHint = styled.p`
   font-style: italic;
   cursor: default;
   user-select: none;
+`;
+
+const UltimoTreinoSugestaoCard = styled.div`
+  background: rgba(78, 205, 196, 0.08);
+  border: 1px solid rgba(78, 205, 196, 0.35);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+`;
+
+const UltimoTreinoSugestaoTitulo = styled.div`
+  color: #4ecdc4;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.65rem;
+`;
+
+const UltimoTreinoSugestaoTexto = styled.p`
+  color: var(--white);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin: 0 0 0.75rem 0;
+
+  strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+`;
+
+const UltimoTreinoSugestaoDica = styled.p`
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 0 1rem 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid rgba(198, 169, 100, 0.5);
+`;
+
+const AplicarSugestaoButton = styled(motion.button)`
+  background: rgba(198, 169, 100, 0.15);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+
+  @media (min-width: 480px) {
+    width: auto;
+  }
+
+  &:hover {
+    background: rgba(198, 169, 100, 0.25);
+  }
 `;
 
 const TreinoDoDiaCard = styled.div`
@@ -1454,11 +1762,12 @@ const LoadingContainer = styled.div`
 const EmptyState = styled.div`
   text-align: center;
   padding: 3rem;
-  color: var(--text-secondary);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.65));
 
   svg {
     margin-bottom: 1rem;
     opacity: 0.5;
+    color: var(--accent);
   }
 `;
 
@@ -1466,11 +1775,12 @@ const EmptyText = styled.p`
   font-size: 1.2rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+  color: var(--white, #f5f5f5);
 `;
 
 const EmptySubtext = styled.p`
   font-size: 1rem;
-  color: #bbb;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.55));
 `;
 
 const HistoricoGrid = styled.div`
@@ -1480,17 +1790,26 @@ const HistoricoGrid = styled.div`
 `;
 
 const HistoricoCard = styled(motion.div)`
-  background: ${props => props.realizado ? '#e8f8f5' : '#f9f9f9'};
-  border: 2px solid ${props => props.realizado ? '#4ecdc4' : '#e0e0e0'};
-  border-radius: 15px;
+  background: ${(props) =>
+    props.realizado
+      ? 'rgba(78, 205, 196, 0.12)'
+      : 'rgba(255, 255, 255, 0.04)'};
+  border: 1px solid
+    ${(props) =>
+      props.realizado
+        ? 'rgba(78, 205, 196, 0.45)'
+        : 'rgba(198, 169, 100, 0.25)'};
+  border-radius: 12px;
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
 
   &:hover {
-    border-color: #667eea;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    border-color: var(--accent);
+    background: rgba(198, 169, 100, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    transform: translateY(-2px);
   }
 `;
 
@@ -1510,32 +1829,36 @@ const RealizadoIcon = styled.div`
 `;
 
 const HistoricoTitulo = styled.h4`
-  color: var(--white);
+  color: var(--white, #f5f5f5);
   font-size: 1.2rem;
   margin-bottom: 1rem;
+  margin-right: 2.5rem;
   font-weight: 700;
+  line-height: 1.35;
 `;
 
 const HistoricoInfo = styled.div`
   display: flex;
   gap: 1rem;
   margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 `;
 
 const HistoricoDetalhe = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #666;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
   font-size: 0.9rem;
 
   svg {
-    color: #667eea;
+    color: var(--accent);
+    flex-shrink: 0;
   }
 `;
 
 const HistoricoData = styled.div`
-  color: #999;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.55));
   font-size: 0.85rem;
   font-style: italic;
 `;
@@ -1763,6 +2086,20 @@ const ExercicioHeader = styled.div`
   margin-bottom: 1rem;
 `;
 
+const ExercicioBotoes = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+
+  @media (min-width: 520px) {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+`;
+
 const CompletarSerieButton = styled(motion.button)`
   display: flex;
   align-items: center;
@@ -1785,6 +2122,67 @@ const CompletarSerieButton = styled(motion.button)`
 
   &:hover:not(:disabled) {
     box-shadow: 0 4px 12px rgba(198, 169, 100, 0.4);
+  }
+`;
+
+const CompletarExercicioButton = styled(motion.button)`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(78, 205, 196, 0.15);
+  color: #4ecdc4;
+  border: 1px solid rgba(78, 205, 196, 0.55);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  font-family: inherit;
+
+  svg {
+    font-size: 1.1rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(78, 205, 196, 0.25);
+    box-shadow: 0 4px 12px rgba(78, 205, 196, 0.25);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const DesfazerExercicioButton = styled(motion.button)`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 217, 61, 0.12);
+  color: #ffd93d;
+  border: 1px solid rgba(255, 217, 61, 0.45);
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  font-family: inherit;
+
+  svg {
+    font-size: 1.1rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 217, 61, 0.2);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 
