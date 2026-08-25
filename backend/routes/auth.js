@@ -1,17 +1,35 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
+import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import { authenticate } from '../middleware/auth.js';
+import { createProfileValidationRules } from '../validators/profile.js';
 
 const router = express.Router();
+const STRONG_PASSWORD_PATTERN = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+
+const authenticationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
+});
+
+const passwordRecoveryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Muitas solicitações. Tente novamente em alguns minutos.' },
+});
 
 const generateToken = (userId) => {
-  const secret = process.env.JWT_SECRET || 'sua_chave_secreta_super_segura';
   return jwt.sign(
     { userId },
-    secret,
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
 };
@@ -28,7 +46,7 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-router.post('/register', [
+router.post('/register', authenticationLimiter, [
   body('name')
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -40,7 +58,7 @@ router.post('/register', [
   body('password')
     .isLength({ min: 6 })
     .withMessage('Senha deve ter pelo menos 6 caracteres')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .matches(STRONG_PASSWORD_PATTERN)
     .withMessage('Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número'),
   body('confirmPassword')
     .custom((value, { req }) => {
@@ -94,7 +112,7 @@ router.post('/register', [
   }
 });
 
-router.post('/login', [
+router.post('/login', authenticationLimiter, [
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -106,11 +124,8 @@ router.post('/login', [
   try {
     const { email, password } = req.body;
 
-    console.log('🔐 Tentativa de login para email:', email);
-
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
-      console.log('❌ Usuário não encontrado para email:', email);
       return res.status(401).json({
         error: 'Credenciais inválidas'
       });
@@ -123,9 +138,6 @@ router.post('/login', [
     }
 
     const isValidPassword = await user.comparePassword(password);
-    console.log('🔐 Verificação de senha para', user.email, ':', isValidPassword ? 'SUCESSO' : 'FALHA');
-    console.log('🔍 Hash da senha no banco:', user.password ? user.password.substring(0, 20) + '...' : 'VAZIO');
-    console.log('🔍 Senha enviada:', password ? '[PRESENTE]' : '[VAZIA]');
     if (!isValidPassword) {
       return res.status(401).json({
         error: 'Credenciais inválidas'
@@ -182,33 +194,12 @@ router.put('/profile', authenticate, [
     .isEmail()
     .normalizeEmail()
     .withMessage('E-mail inválido'),
-  body('gender')
-    .optional()
-    .isIn(['masculino', 'feminino'])
-    .withMessage('Gênero deve ser masculino ou feminino'),
-  body('height')
-    .optional()
-    .isNumeric()
-    .isFloat({ min: 100, max: 250 })
-    .withMessage('Altura deve estar entre 100 e 250 cm'),
-  body('weight')
-    .optional()
-    .isNumeric()
-    .isFloat({ min: 30, max: 300 })
-    .withMessage('Peso deve estar entre 30 e 300 kg'),
-  body('bodyType')
-    .optional()
-    .isIn(['ectomorfo', 'mesomorfo', 'endomorfo'])
-    .withMessage('Biotipo deve ser ectomorfo, mesomorfo ou endomorfo'),
-  body('age')
-    .optional()
-    .isInt({ min: 13, max: 120 })
-    .withMessage('Idade deve estar entre 13 e 120 anos'),
+  ...createProfileValidationRules({ optional: true }),
   body('newPassword')
     .optional()
     .isLength({ min: 6 })
     .withMessage('Nova senha deve ter pelo menos 6 caracteres')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .matches(STRONG_PASSWORD_PATTERN)
     .withMessage('Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número')
 ], handleValidationErrors, async (req, res) => {
   try {
@@ -216,26 +207,6 @@ router.put('/profile', authenticate, [
     const userId = req.user._id;
 
 
-
-    const updateData = {};
-    if (name) updateData.name = name;
-    
-    if (gender || height || weight || bodyType || age) {
-      updateData.profile = {
-        ...req.user.profile,
-        ...(gender && { gender }),
-        ...(height && { height: parseFloat(height) }),
-        ...(weight && { weight: parseFloat(weight) }),
-        ...(bodyType && { bodyType })
-      };
-
-      if (age) {
-        const currentYear = new Date().getFullYear();
-        const birthYear = currentYear - parseInt(age);
-        const dateOfBirth = new Date(birthYear, 0, 1);
-        updateData.profile.dateOfBirth = dateOfBirth;
-      }
-    }
 
     const user = await User.findById(userId);
     
@@ -273,7 +244,7 @@ router.put('/profile', authenticate, [
       message: 'Perfil atualizado com sucesso',
       user
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
@@ -287,7 +258,7 @@ router.post('/change-password', authenticate, [
   body('newPassword')
     .isLength({ min: 6 })
     .withMessage('Nova senha deve ter pelo menos 6 caracteres')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .matches(STRONG_PASSWORD_PATTERN)
     .withMessage('Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número')
 ], handleValidationErrors, async (req, res) => {
   try {
@@ -324,7 +295,7 @@ router.post('/verify-token', authenticate, (req, res) => {
   });
 });
 
-router.post('/forgot-password', [
+router.post('/forgot-password', passwordRecoveryLimiter, [
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -333,13 +304,10 @@ router.post('/forgot-password', [
   try {
     const { email } = req.body;
     
-    console.log(`📧 Recebida solicitação de forgot-password para: ${email}`);
-
     const user = await User.findOne({ email });
     if (!user) {
-      console.log(`❌ Tentativa de recuperação para email não cadastrado: ${email}`);
-      return res.status(404).json({
-        error: 'E-mail não encontrado. Verifique se o e-mail está correto ou cadastre-se primeiro.'
+      return res.json({
+        message: 'Se o e-mail estiver cadastrado, você receberá as instruções de recuperação.'
       });
     }
 
@@ -358,15 +326,12 @@ router.post('/forgot-password', [
       const result = await EmailService.sendPasswordResetEmail(user.email, resetToken);
       
       if (result.devMode) {
-        console.log(`📤 [MODO DEV] Email simulado para: ${user.email}`);
-        console.log(`⚠️ [MODO DEV] Erro de autenticação: ${result.authError}`);
         res.json({
           message: 'E-mail de recuperação enviado com sucesso!',
           devMode: true,
           note: 'Modo de desenvolvimento - configure as credenciais do Gmail para envio real'
         });
       } else {
-        console.log(`✅ Email de recuperação enviado para: ${user.email}`);
         res.json({
           message: 'E-mail de recuperação enviado com sucesso!'
         });
@@ -391,11 +356,11 @@ router.post('/forgot-password', [
 });
 
 
-router.post('/reset-password/:token', [
+router.post('/reset-password/:token', passwordRecoveryLimiter, [
   body('password')
     .isLength({ min: 6 })
     .withMessage('Nova senha deve ter pelo menos 6 caracteres')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .matches(STRONG_PASSWORD_PATTERN)
     .withMessage('Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número'),
   body('confirmPassword')
     .custom((value, { req }) => {
@@ -409,11 +374,7 @@ router.post('/reset-password/:token', [
     const { token } = req.params;
     const { password } = req.body;
 
-    console.log(`🔑 Recebido token para reset: ${token}`);
-
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    
-    console.log(`🔐 Token hasheado: ${hashedToken}`);
 
     const user = await User.findOne({
       passwordResetToken: hashedToken,
@@ -421,20 +382,15 @@ router.post('/reset-password/:token', [
     }).select('+passwordResetToken +passwordResetExpires');
 
     if (!user) {
-      console.log(`❌ Token inválido ou expirado: ${token.substring(0, 10)}...`);
       return res.status(400).json({
         error: 'Token de recuperação inválido ou expirado'
       });
     }
 
-    console.log(`✅ Token válido para usuário: ${user.email}`);
-
     user.password = password;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
-
-    console.log(`✅ Senha redefinida com sucesso para: ${user.email}`);
 
     res.json({
       message: 'Senha redefinida com sucesso!'
@@ -450,8 +406,6 @@ router.post('/reset-password/:token', [
 router.post('/request-account-deletion', authenticate, async (req, res) => {
   try {
     const userId = req.user._id;
-    
-    console.log(`🗑️ Solicitação de exclusão de conta para usuário: ${req.user.email}`);
     
     const user = await User.findById(userId);
     if (!user) {
@@ -475,15 +429,12 @@ router.post('/request-account-deletion', authenticate, async (req, res) => {
       const result = await EmailService.sendAccountDeletionEmail(user.email, deletionToken);
       
       if (result.devMode) {
-        console.log(`📤 [MODO DEV] Email de confirmação simulado para: ${user.email}`);
-        console.log(`⚠️ [MODO DEV] Erro de autenticação: ${result.authError}`);
         res.json({
           message: 'E-mail de confirmação de exclusão enviado com sucesso!',
           devMode: true,
           note: 'Modo de desenvolvimento - configure as credenciais do Gmail para envio real'
         });
       } else {
-        console.log(`✅ Email de confirmação de exclusão enviado para: ${user.email}`);
         res.json({
           message: 'E-mail de confirmação de exclusão enviado com sucesso! Verifique sua caixa de entrada.'
         });
@@ -511,8 +462,6 @@ router.post('/confirm-account-deletion/:token', async (req, res) => {
   try {
     const { token } = req.params;
     
-    console.log(`🗑️ Confirmação de exclusão recebida com token: ${token}`);
-
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
     
     const user = await User.findOne({
@@ -521,18 +470,13 @@ router.post('/confirm-account-deletion/:token', async (req, res) => {
     }).select('+accountDeletionToken +accountDeletionExpires');
 
     if (!user) {
-      console.log(`❌ Token de exclusão inválido ou expirado: ${token.substring(0, 10)}...`);
       return res.status(400).json({
         error: 'Token de confirmação inválido ou expirado'
       });
     }
 
-    console.log(`✅ Token válido para exclusão do usuário: ${user.email}`);
-
     // Excluir o usuário permanentemente
     await User.findByIdAndDelete(user._id);
-
-    console.log(`✅ Conta excluída permanentemente: ${user.email}`);
 
     res.json({
       message: 'Conta excluída com sucesso. Sentiremos sua falta!'
@@ -542,34 +486,6 @@ router.post('/confirm-account-deletion/:token', async (req, res) => {
     res.status(500).json({
       error: 'Erro interno do servidor'
     });
-  }
-});
-
-router.get('/debug-user/:email', authenticate, async (req, res) => {
-  try {
-    const { email } = req.params;
-    
-    if (req.user.role !== 'admin' && req.user.email !== email) {
-      return res.status(403).json({ error: 'Acesso negado' });
-    }
-    
-    const user = await User.findOne({ email }).select('+password');
-    
-    if (!user) {
-      return res.status(404).json({ error: 'Usuário não encontrado' });
-    }
-    
-    res.json({
-      email: user.email,
-      name: user.name,
-      hasPassword: !!user.password,
-      passwordLength: user.password ? user.password.length : 0,
-      passwordStartsWith: user.password ? user.password.substring(0, 10) + '...' : null,
-      profile: user.profile
-    });
-  } catch (error) {
-    console.error('Erro no debug:', error);
-    res.status(500).json({ error: 'Erro interno' });
   }
 });
 

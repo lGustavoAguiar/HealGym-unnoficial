@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 const LoginPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
-  const { login, loading, isAuthenticated, needsProfileSetup } = useAuth();
+  const { login, loading, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -99,7 +99,7 @@ const LoginPage = () => {
       setSubmitMessage('Login realizado com sucesso! Redirecionando...');
       
       setTimeout(() => {
-        if (needsProfileSetup()) {
+        if (!response.user.profileSetupCompleted) {
           navigate('/profile-setup');
         } else {
           navigate('/dashboard');
@@ -107,7 +107,6 @@ const LoginPage = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('Erro ao fazer login:', error);
       setSubmitMessage(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setIsSubmitting(false);

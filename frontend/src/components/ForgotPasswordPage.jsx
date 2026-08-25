@@ -79,7 +79,6 @@ const ForgotPasswordPage = () => {
       await api.forgotPassword(formData.email);
       setIsSubmitted(true);
     } catch (error) {
-      console.error('❌ Forgot password error:', error);
       const errorMessage = error.message || 'Erro ao enviar email de recuperação';
       setErrors({ general: errorMessage });
     } finally {

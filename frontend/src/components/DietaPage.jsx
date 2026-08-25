@@ -5,6 +5,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { FiArrowLeft, FiTarget, FiTrendingUp, FiClock, FiActivity, FiHeart, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
+import {
+  calculateAge,
+  calculateBasalMetabolicRate,
+  calculateBodyMassIndex,
+} from '../utils/healthCalculations';
 
 const MEAL_LABELS = ['Café da Manhã', 'Almoço', 'Lanche da Tarde', 'Jantar'];
 
@@ -44,22 +49,11 @@ const DietaPage = () => {
 
     const peso = user.profile.weight;
     const altura = user.profile.height;
-    const nascimento = new Date(user.profile.dateOfBirth);
-    
-    // Calcular idade corretamente (considerando mês e dia)
-    const hoje = new Date();
-    let idade = hoje.getFullYear() - nascimento.getFullYear();
-    const monthDiff = hoje.getMonth() - nascimento.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && hoje.getDate() < nascimento.getDate())) {
-      idade--;
-    }
-    
+    const idade = calculateAge(user.profile.dateOfBirth);
     const genero = user.profile.gender;
 
-    console.log('📊 Dados do perfil:', { peso, altura, idade, genero });
-
     // Cálculo do IMC e classificação
-    const imc = peso / ((altura / 100) ** 2);
+    const imc = calculateBodyMassIndex(peso, altura);
     let classificacaoIMC = '';
     let objetivo = '';
     
@@ -78,12 +72,7 @@ const DietaPage = () => {
     }
 
     // TMB (Taxa Metabólica Basal) - Fórmula de Mifflin-St Jeor (mesma do Dashboard)
-    let tmb;
-    if (genero === 'masculino') {
-      tmb = (10 * peso) + (6.25 * altura) - (5 * idade) + 5;
-    } else {
-      tmb = (10 * peso) + (6.25 * altura) - (5 * idade) - 161;
-    }
+    const tmb = calculateBasalMetabolicRate(peso, altura, idade, genero);
 
     const gastoEnergetico = Math.round(tmb);
     
@@ -126,9 +115,7 @@ const DietaPage = () => {
         if (response.success) {
           setHistoricoDietas(response.diets || []);
         }
-      } catch (error) {
-        console.error('Erro ao buscar histórico:', error);
-      }
+      } catch {}
     };
 
     fetchHistorico();
@@ -169,7 +156,6 @@ const DietaPage = () => {
         }
       }
     } catch (error) {
-      console.error('Erro ao gerar dieta:', error);
       setError(error.message || 'Erro ao gerar dieta. Tente novamente.');
     } finally {
       setLoading(false);
@@ -208,8 +194,7 @@ const DietaPage = () => {
         
         setDeleteConfirm(null);
       }
-    } catch (error) {
-      console.error('Erro ao excluir dieta:', error);
+    } catch {
       setError('Erro ao excluir dieta. Tente novamente.');
       setDeleteConfirm(null);
     }
@@ -232,8 +217,7 @@ const DietaPage = () => {
       setDietaGerada(null);
       setClearHistoryConfirm(false);
       
-    } catch (error) {
-      console.error('Erro ao limpar histórico:', error);
+    } catch {
       setError('Erro ao limpar o histórico');
     } finally {
       setLoading(false);

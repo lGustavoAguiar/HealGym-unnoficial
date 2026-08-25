@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment files and local credentials
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Build and coverage output
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Temporary and backup files
+*.backup
+*.bak
+*.tmp
+*.temp
+*~
+
+# Tooling and operating system files
+.cache/
+.vite/
+.eslintcache
+.DS_Store
+Thumbs.db
+
+# Local editor settings
+.vscode/
+.idea/

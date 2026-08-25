@@ -1,11 +1,11 @@
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../services/api';
+
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
-  const formRef = useRef(null);
   const { token } = useParams();
   const [formData, setFormData] = useState({
     password: '',
@@ -83,32 +83,13 @@ const ResetPasswordPage = () => {
     setErrors({});
     
     try {
-      const backendUrl = window.location.hostname === 'healgym-frontend.onrender.com' 
-        ? ''
-        : 'http://localhost:5000';
-      
-      console.log('🚀 Direct fetch to:', `${backendUrl}/api/auth/reset-password/${token}`);
-      
-      const response = await fetch(`${backendUrl}/api/auth/reset-password/${token}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          password: formData.password,
-          confirmPassword: formData.confirmPassword
-        }),
+      await api.resetPassword(token, {
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
       });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao redefinir senha');
-      }
-      
+
       setIsSuccess(true);
     } catch (error) {
-      console.error('❌ Reset password error:', error);
       const errorMessage = error.message || 'Erro ao redefinir senha. Tente novamente.';
       setErrors({ general: errorMessage });
       if (error.message && error.message.includes('Token')) {
@@ -163,7 +144,7 @@ const ResetPasswordPage = () => {
   return (
     <Container>
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
-      <FormSection ref={formRef}>
+      <FormSection>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

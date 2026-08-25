@@ -266,32 +266,14 @@ router.post('/generate-diet', authenticate, async (req, res) => {
     const caloriasRestantes = targetCalories - caloriasProteina - caloriasGordura;
     const targetCarbs = Math.max(0, caloriasRestantes / 4); // resto em carboidratos
     
-    // Validar se as contas batem
-    const totalCaloriasCalculadas = (targetProtein * 4) + (targetCarbs * 4) + (targetFat * 9);
-    
-    console.log('🎯 CÁLCULO DE MACROS - REGRA FIXA:');
-    console.log(`   Peso: ${weight}kg`);
-    console.log(`   TMB/Calorias Alvo: ${targetCalories} kcal`);
-    console.log('');
-    console.log(`   Proteína: ${weight}kg × 2 = ${targetProtein}g → ${targetProtein * 4} kcal`);
-    console.log(`   Gordura: ${weight}kg × 1 = ${targetFat}g → ${targetFat * 9} kcal`);
-    console.log(`   Carboidratos (resto): ${Math.round(targetCarbs)}g → ${Math.round(targetCarbs * 4)} kcal`);
-    console.log('');
-    console.log(`   ✅ Total Calculado: ${Math.round(totalCaloriasCalculadas)} kcal`);
-    console.log(`   ✅ Diferença: ${Math.round(totalCaloriasCalculadas - targetCalories)} kcal`);
-    console.log('');
-
     const horariosResolvidos = resolveHorariosParaRefeicoes(refeicoesPorDia, horarios);
 
     // Gera o plano de refeições
     const mealPlan = await generateMealPlan(
-      targetCalories,
       targetProtein,
       targetCarbs,
       targetFat,
-      weight,
       refeicoesPorDia,
-      preferencias,
       horariosResolvidos
     );
 
@@ -304,7 +286,8 @@ router.post('/generate-diet', authenticate, async (req, res) => {
       targetCarbs,
       targetFat,
       mealPlan,
-      createdAt: new Date()
+      preferencias,
+      createdAt: new Date(),
     });
 
     await diet.save();
@@ -336,7 +319,7 @@ router.post('/generate-diet', authenticate, async (req, res) => {
  * Função auxiliar para gerar plano de refeições com cálculo preciso de macros
  * Usa APENAS: Frango, Arroz, Feijão, Ovo, Azeite
  */
-async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targetFat, weight, refeicoesPorDia, preferencias, horariosResolvidos) {
+async function generateMealPlan(targetProtein, targetCarbs, targetFat, refeicoesPorDia, horariosResolvidos) {
   const mealPlan = [];
   const mealNames = ['Café da Manhã', 'Almoço', 'Lanche da Tarde', 'Jantar'];
 
@@ -459,15 +442,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
     colesterol: 0
   };
 
-  console.log('📊 Valores nutricionais (macros fixos + micronutrientes):');
-  console.log(`   Frango (100g): P:${frango.proteinas}g C:${frango.carboidratos}g G:${frango.gorduras}g`);
-  console.log(`   Arroz (100g): P:${arroz.proteinas}g C:${arroz.carboidratos}g G:${arroz.gorduras}g`);
-  console.log(`   Feijão (100g): P:${feijao.proteinas}g C:${feijao.carboidratos}g G:${feijao.gorduras}g`);
-  console.log(`   Ovo (unidade): P:${ovo.proteinas}g C:${ovo.carboidratos}g G:${ovo.gorduras}g`);
-  console.log(`   Azeite (100ml): P:${azeite.proteinas}g C:${azeite.carboidratos}g G:${azeite.gorduras}g`);
-  console.log('   ⚠️  Calorias calculadas APENAS pelo modelo 4/4/9 (não usamos tabelas)');
-  console.log('');
-
   // ====================================================================
   // CÁLCULO DINÂMICO DAS QUANTIDADES - SEMPRE BATE OS MACROS EXATOS
   // ====================================================================
@@ -475,14 +449,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
   // Quantidades ajustadas automaticamente para o peso do usuário
   // ====================================================================
   
-  console.log('🎯 ALVOS (regra fixa - 2g P/kg, 1g G/kg, resto C):');
-  console.log(`   Peso: ${weight}kg`);
-  console.log(`   Proteína: ${targetProtein}g → ${targetProtein * 4} kcal`);
-  console.log(`   Gordura: ${targetFat}g → ${targetFat * 9} kcal`);
-  console.log(`   Carboidrato: ${Math.round(targetCarbs)}g → ${Math.round(targetCarbs * 4)} kcal`);
-  console.log(`   TOTAL: ${targetCalories} kcal`);
-  console.log('');
-
   // CÁLCULO DAS QUANTIDADES BASEADO NOS MACROS
   // Estrutura fixa: 6 ovos divididos em café e lanche
   const ovosTotal = 6;
@@ -516,41 +482,12 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
   const gorduraRestante = targetFat - gorduraAcumulada;
   // Não arredondar ainda - manter precisão
   let azeiteML = (gorduraRestante / 100) * 100; // 100g gordura/100ml
-  const gorduraAzeite = (azeiteML / 100) * 100;
-
-  // VALIDAÇÃO ANTES DO ARREDONDAMENTO
-  let pAntes = proteinaOvos + (frangoGramas/100)*31 + proteinaArroz + proteinaFeijao;
-  let cAntes = carboOvos + (arrozGramas/100)*28 + (feijaoGramas/100)*23;
-  let gAntes = gorduraOvos + gorduraFrango + gorduraArroz + gorduraFeijao + gorduraAzeite;
-
-  console.log('📊 Antes do arredondamento:');
-  console.log(`   P: ${pAntes.toFixed(2)}g | C: ${cAntes.toFixed(2)}g | G: ${gAntes.toFixed(2)}g`);
 
   // ARREDONDAR para valores práticos
   arrozGramas = Math.round(arrozGramas);
   feijaoGramas = Math.round(feijaoGramas);
   frangoGramas = Math.round(frangoGramas);
   azeiteML = Math.round(azeiteML);
-
-  // VALIDAÇÃO APÓS ARREDONDAMENTO: Calcular macros finais
-  const pFinal = proteinaOvos + (frangoGramas/100)*31 + (arrozGramas/100)*2.7 + (feijaoGramas/100)*9;
-  const cFinal = carboOvos + (arrozGramas/100)*28 + (feijaoGramas/100)*23;
-  const gFinal = gorduraOvos + (frangoGramas/100)*3.6 + (arrozGramas/100)*0.3 + (feijaoGramas/100)*0.5 + (azeiteML/100)*100;
-  const calFinal = (pFinal*4) + (cFinal*4) + (gFinal*9);
-
-  console.log('🎯 Quantidades calculadas para ' + weight + 'kg:');
-  console.log(`   Ovos: ${ovosTotal} unidades`);
-  console.log(`   Frango: ${frangoGramas}g`);
-  console.log(`   Arroz: ${arrozGramas}g`);
-  console.log(`   Feijão: ${feijaoGramas}g`);
-  console.log(`   Azeite: ${azeiteML}ml`);
-  console.log('');
-  console.log('📊 VALIDAÇÃO DOS MACROS (após arredondamento):');
-  console.log(`   ✅ Proteína: ${pFinal.toFixed(1)}g (alvo: ${targetProtein}g) - Erro: ${(pFinal - targetProtein).toFixed(1)}g`);
-  console.log(`   ✅ Carboidrato: ${cFinal.toFixed(1)}g (alvo: ${Math.round(targetCarbs)}g) - Erro: ${(cFinal - targetCarbs).toFixed(1)}g`);
-  console.log(`   ✅ Gordura: ${gFinal.toFixed(1)}g (alvo: ${targetFat}g) - Erro: ${(gFinal - targetFat).toFixed(1)}g`);
-  console.log(`   ✅ Calorias: ${Math.round(calFinal)} kcal (alvo: ${targetCalories} kcal)`);
-  console.log('');
 
   // DISTRIBUIÇÃO EXATA POR REFEIÇÃO COM AJUSTE FINO
   // Dividir pelas 4 refeições e ajustar o último valor para compensar arredondamento
@@ -564,13 +501,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
   const restoFeijao = feijaoGramas - (feijaoPorRefeicao * 4);
   const restoAzeite = azeiteML - (azeitePorRefeicao * 4);
   const restoFrango = frangoGramas - (frangoPorRefeicao * 2);
-
-  console.log('📦 Distribuição base por refeição:');
-  console.log(`   Arroz: ${arrozPorRefeicao}g × 4 = ${arrozPorRefeicao * 4}g (resto: ${restoArroz}g)`);
-  console.log(`   Feijão: ${feijaoPorRefeicao}g × 4 = ${feijaoPorRefeicao * 4}g (resto: ${restoFeijao}g)`);
-  console.log(`   Azeite: ${azeitePorRefeicao}ml × 4 = ${azeitePorRefeicao * 4}ml (resto: ${restoAzeite}ml)`);
-  console.log(`   Frango: ${frangoPorRefeicao}g × 2 = ${frangoPorRefeicao * 2}g (resto: ${restoFrango}g)`);
-  console.log('');
 
   const distribuicao = {
     'Café da Manhã': {
@@ -613,8 +543,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
       alimentos: []
     };
 
-    console.log(`✅ ${nomeRefeicao}:`);
-
     // ORDEM FIXA: Arroz → Feijão → Azeite → Proteína (Ovo ou Frango)
 
     // 1. Adicionar arroz (sempre)
@@ -626,7 +554,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         unidade: 'g',
         nutrition: arroz
       });
-      console.log(`   - Arroz: ${dist.arroz}g`);
     }
 
     // 2. Adicionar feijão (sempre)
@@ -638,7 +565,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         unidade: 'g',
         nutrition: feijao
       });
-      console.log(`   - Feijão: ${dist.feijao}g`);
     }
 
     // 3. Adicionar azeite (sempre)
@@ -650,7 +576,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         unidade: 'ml',
         nutrition: azeite
       });
-      console.log(`   - Azeite: ${dist.azeite}ml (${Math.round(dist.azeite/15)} colher(es))`);
     }
 
     // 4. Adicionar proteína (ovo OU frango)
@@ -662,7 +587,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         unidade: 'unidade',
         nutrition: ovo
       });
-      console.log(`   - Ovos: ${dist.ovo} unidade(s)`);
     }
 
     if (dist.frango > 0) {
@@ -673,7 +597,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         unidade: 'g',
         nutrition: frango
       });
-      console.log(`   - Frango: ${dist.frango}g`);
     }
 
     // 5. SUPLEMENTOS GROWTH (não contam nos macros)
@@ -687,7 +610,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         nutrition: { proteinas: 0, carboidratos: 0, gorduras: 0, fibras: 0, sodio: 0, acucares: 0, calcio: 0, ferro: 0, magnesio: 0, fosforo: 0, potassio: 0, zinco: 0, vitaminaA: 0, vitaminaC: 0, vitaminaD: 0, vitaminaE: 0, vitaminaB12: 0, folato: 0, gorduraSaturada: 0, colesterol: 0 },
         isSuplemento: true
       });
-      console.log(`   - ⭐ Creatina Growth: 3g`);
 
       // Multivitamínico Growth - 1 cápsula
       meal.alimentos.push({
@@ -698,7 +620,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         nutrition: { proteinas: 0, carboidratos: 0, gorduras: 0, fibras: 0, sodio: 0, acucares: 0, calcio: 0, ferro: 0, magnesio: 0, fosforo: 0, potassio: 0, zinco: 0, vitaminaA: 0, vitaminaC: 0, vitaminaD: 0, vitaminaE: 0, vitaminaB12: 0, folato: 0, gorduraSaturada: 0, colesterol: 0 },
         isSuplemento: true
       });
-      console.log(`   - ⭐ Multivitamínico Growth: 1 cápsula`);
 
       // Ômega-3 Growth - 2 cápsulas
       meal.alimentos.push({
@@ -709,7 +630,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         nutrition: { proteinas: 0, carboidratos: 0, gorduras: 0, fibras: 0, sodio: 0, acucares: 0, calcio: 0, ferro: 0, magnesio: 0, fosforo: 0, potassio: 0, zinco: 0, vitaminaA: 0, vitaminaC: 0, vitaminaD: 0, vitaminaE: 0, vitaminaB12: 0, folato: 0, gorduraSaturada: 0, colesterol: 0 },
         isSuplemento: true
       });
-      console.log(`   - ⭐ Ômega-3 Growth: 2 cápsulas`);
 
       // Cálcio + Vitamina D Growth - 1 cápsula
       meal.alimentos.push({
@@ -720,7 +640,6 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         nutrition: { proteinas: 0, carboidratos: 0, gorduras: 0, fibras: 0, sodio: 0, acucares: 0, calcio: 600, ferro: 0, magnesio: 0, fosforo: 0, potassio: 0, zinco: 0, vitaminaA: 0, vitaminaC: 0, vitaminaD: 10, vitaminaE: 0, vitaminaB12: 0, folato: 0, gorduraSaturada: 0, colesterol: 0 },
         isSuplemento: true
       });
-      console.log(`   - ⭐ Cálcio + Vitamina D Growth: 1 cápsula`);
     }
 
     if (nomeRefeicao === 'Jantar') {
@@ -733,43 +652,10 @@ async function generateMealPlan(targetCalories, targetProtein, targetCarbs, targ
         nutrition: { proteinas: 0, carboidratos: 0, gorduras: 0, fibras: 0, sodio: 0, acucares: 0, calcio: 0, ferro: 0, magnesio: 450, fosforo: 0, potassio: 0, zinco: 30, vitaminaA: 0, vitaminaC: 0, vitaminaD: 0, vitaminaE: 0, vitaminaB12: 0, folato: 0, gorduraSaturada: 0, colesterol: 0 },
         isSuplemento: true
       });
-      console.log(`   - ⭐ ZMA Growth: 2 cápsulas`);
     }
 
     mealPlan.push(meal);
   }
-
-  // VALIDAÇÃO FINAL
-  let totaisReais = {
-    proteinas: 0,
-    carboidratos: 0,
-    gorduras: 0,
-    calorias: 0
-  };
-
-  mealPlan.forEach(refeicao => {
-    refeicao.alimentos.forEach(alimento => {
-      let fator;
-      if (alimento.unidade === 'unidade') {
-        fator = alimento.porcao; // ovos: quantidade direta
-      } else {
-        fator = alimento.porcao / 100; // outros: converter para 100g
-      }
-      
-      totaisReais.proteinas += (alimento.nutrition.proteinas || 0) * fator;
-      totaisReais.carboidratos += (alimento.nutrition.carboidratos || 0) * fator;
-      totaisReais.gorduras += (alimento.nutrition.gorduras || 0) * fator;
-    });
-  });
-
-  totaisReais.calorias = (totaisReais.proteinas * 4) + (totaisReais.carboidratos * 4) + (totaisReais.gorduras * 9);
-
-  console.log('');
-  console.log('📈 VALIDAÇÃO FINAL DA DIETA:');
-  console.log(`   🎯 Alvo: P:${Math.round(targetProtein)}g | C:${Math.round(targetCarbs)}g | G:${Math.round(targetFat)}g | ${Math.round(targetCalories)} kcal`);
-  console.log(`   ✅ Real: P:${Math.round(totaisReais.proteinas)}g | C:${Math.round(totaisReais.carboidratos)}g | G:${Math.round(totaisReais.gorduras)}g | ${Math.round(totaisReais.calorias)} kcal`);
-  console.log(`   📊 Diferença: P:${Math.round(totaisReais.proteinas - targetProtein)}g | C:${Math.round(totaisReais.carboidratos - targetCarbs)}g | G:${Math.round(totaisReais.gorduras - targetFat)}g | ${Math.round(totaisReais.calorias - targetCalories)} kcal`);
-  console.log('');
 
   return mealPlan;
 }

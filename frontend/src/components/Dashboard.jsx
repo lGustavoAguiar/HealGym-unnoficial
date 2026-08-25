@@ -3,8 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FiLogOut, FiUser, FiActivity, FiHeart, FiTrendingUp, FiTarget, FiCheck, FiX, FiClock } from 'react-icons/fi';
+import { FiLogOut, FiUser, FiActivity, FiHeart, FiTarget, FiCheck, FiX, FiClock } from 'react-icons/fi';
 import api from '../services/api';
+import {
+  calculateAge,
+  calculateBasalMetabolicRate,
+  calculateBodyMassIndex,
+} from '../utils/healthCalculations';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -13,34 +18,6 @@ const Dashboard = () => {
   const [modalHistorico, setModalHistorico] = useState(false);
   const [treinosDoDia, setTreinosDoDia] = useState([]);
   const [diaSelecionado, setDiaSelecionado] = useState(null);
-
-  const calculateAge = (dateOfBirth) => {
-    if (!dateOfBirth) return null;
-    const birth = new Date(dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
-  };
-
-  const calculateTMB = (weight, height, age, gender) => {
-    if (!weight || !height || !age || !gender) return null;
-    
-    if (gender === 'masculino') {
-      return Math.round((10 * weight) + (6.25 * height) - (5 * age) + 5);
-    } else {
-      return Math.round((10 * weight) + (6.25 * height) - (5 * age) - 161);
-    }
-  };
-
-  const calculateIMC = (weight, height) => {
-    if (!weight || !height) return null;
-    const heightInMeters = height / 100;
-    return (weight / (heightInMeters * heightInMeters)).toFixed(1);
-  };
 
   const getIMCClassification = (imc) => {
     if (!imc) return null;
@@ -96,9 +73,7 @@ const Dashboard = () => {
         const realizados = response.data.filter(treino => treino.realizado);
         setTreinosRealizados(realizados);
       }
-    } catch (error) {
-      console.error('Erro ao carregar treinos:', error);
-    }
+    } catch {}
   };
 
   // Função para verificar se um treino foi realizado em um dia específico
@@ -167,8 +142,18 @@ const Dashboard = () => {
     navigate('/dieta');
   };
   const age = calculateAge(user?.profile?.dateOfBirth);
-  const tmb = calculateTMB(user?.profile?.weight, user?.profile?.height, age, user?.profile?.gender);
-  const imc = calculateIMC(user?.profile?.weight, user?.profile?.height);
+  const basalMetabolicRate = calculateBasalMetabolicRate(
+    user?.profile?.weight,
+    user?.profile?.height,
+    age,
+    user?.profile?.gender
+  );
+  const bodyMassIndex = calculateBodyMassIndex(
+    user?.profile?.weight,
+    user?.profile?.height
+  );
+  const tmb = basalMetabolicRate === null ? null : Math.round(basalMetabolicRate);
+  const imc = bodyMassIndex === null ? null : bodyMassIndex.toFixed(1);
   const imcClass = getIMCClassification(imc);
   const idealWeight = calculateIdealWeight(user?.profile?.height, user?.profile?.gender);
 

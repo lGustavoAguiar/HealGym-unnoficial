@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { calculateAge } from '../utils/healthCalculations';
+import { validatePhysicalProfileField } from '../utils/profileValidation';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
-  const formRef = useRef(null);
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -31,18 +32,6 @@ const EditProfilePage = () => {
   const deleteMessageRef = useRef(null);
   const submitMessageRef = useRef(null);
 
-  const calculateAge = (dateOfBirth) => {
-    if (!dateOfBirth) return '';
-    const birth = new Date(dateOfBirth);
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age.toString();
-  };
-
   useEffect(() => {
     if (user) {
       setFormData({
@@ -53,7 +42,7 @@ const EditProfilePage = () => {
         height: user.profile?.height || '',
         weight: user.profile?.weight || '',
         bodyType: user.profile?.bodyType || '',
-        age: calculateAge(user.profile?.dateOfBirth)
+        age: (calculateAge(user.profile?.dateOfBirth) ?? '').toString()
       });
       setIsLoadingUser(false);
     }
@@ -101,26 +90,8 @@ const EditProfilePage = () => {
           error = 'Confirmação de senha não confere';
         }
         break;
-      case 'gender':
-        if (!value) error = 'Gênero é obrigatório';
-        break;
-      case 'height':
-        if (!value) error = 'Altura é obrigatória';
-        else if (isNaN(value) || value < 100 || value > 250) error = 'Altura deve estar entre 100 e 250 cm';
-        break;
-      case 'weight':
-        if (!value) error = 'Peso é obrigatório';
-        else if (isNaN(value) || value < 30 || value > 300) error = 'Peso deve estar entre 30 e 300 kg';
-        break;
-      case 'bodyType':
-        if (!value) error = 'Biotipo é obrigatório';
-        break;
-      case 'age':
-        if (!value) error = 'Idade é obrigatória';
-        else if (isNaN(value) || value < 13 || value > 120) error = 'Idade deve estar entre 13 e 120 anos';
-        break;
       default:
-        break;
+        return validatePhysicalProfileField(name, value);
     }
     return error;
   };
@@ -212,9 +183,6 @@ const EditProfilePage = () => {
     }
   };
 
-  const handleLogoClick = () => {
-  };
-
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     setDeleteMessage('');
@@ -273,7 +241,7 @@ const EditProfilePage = () => {
   return (
     <Container className="custom-scroll">
       <LogoTitle>HealGym</LogoTitle>
-      <FormSection ref={formRef}>
+      <FormSection>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -746,17 +714,6 @@ const InputGroup = styled.div`
   width: 100%;
 `;
 
-const InputRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: min(2vw, 15px);
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: min(2vh, 15px);
-  }
-`;
-
 const TripleInputRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -964,7 +921,7 @@ const DangerTitle = styled.h3`
 `;
 
 const DangerDescription = styled.p`
-  color:rgb(218, 34, 34)
+  color: rgb(218, 34, 34);
   font-size: min(1.6vw, 0.9rem);
   margin-bottom: min(2vh, 15px);
   font-family: 'Cormorant', serif;

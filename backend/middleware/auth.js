@@ -4,61 +4,52 @@ import User from '../models/User.js';
 export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.header('Authorization');
-    
-    console.log('🔍 Auth Header:', authHeader ? 'Present' : 'Missing');
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('❌ Token not provided or invalid format');
       return res.status(401).json({
-        error: 'Acesso negado. Token não fornecido.'
+        error: 'Acesso negado. Token não fornecido.',
       });
     }
 
     const token = authHeader.substring(7);
-    console.log('🔑 Token extracted:', token.substring(0, 10) + '...');
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('✅ Token decoded successfully for user:', decoded.userId);
-      
       const user = await User.findById(decoded.userId).select('-password');
-      
+
       if (!user) {
-        console.log('❌ User not found for token');
         return res.status(401).json({
-          error: 'Token inválido. Usuário não encontrado.'
+          error: 'Token inválido. Usuário não encontrado.',
         });
       }
 
       if (!user.isActive) {
-        console.log('❌ User account is inactive');
         return res.status(401).json({
-          error: 'Conta desativada. Entre em contato com o suporte.'
+          error: 'Conta desativada. Entre em contato com o suporte.',
         });
       }
 
-      console.log('✅ User authenticated successfully:', user.name);
       req.user = user;
       next();
     } catch (tokenError) {
       if (tokenError.name === 'TokenExpiredError') {
         return res.status(401).json({
-          error: 'Token expirado. Faça login novamente.'
+          error: 'Token expirado. Faça login novamente.',
         });
       }
-      
+
       if (tokenError.name === 'JsonWebTokenError') {
         return res.status(401).json({
-          error: 'Token inválido.'
+          error: 'Token inválido.',
         });
       }
-      
+
       throw tokenError;
     }
   } catch (error) {
     console.error('Erro na autenticação:', error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 };
@@ -67,13 +58,13 @@ export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
-        error: 'Usuário não autenticado'
+        error: 'Usuário não autenticado',
       });
     }
 
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
-        error: 'Acesso negado. Permissões insuficientes.'
+        error: 'Acesso negado. Permissões insuficientes.',
       });
     }
 

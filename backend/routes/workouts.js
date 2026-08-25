@@ -401,8 +401,8 @@ router.post('/generate', authenticate, async (req, res) => {
   try {
     const { tempoDisponivel } = req.body;
 
-    if (!tempoDisponivel || tempoDisponivel < 30 || tempoDisponivel > 90) {
-      return res.status(400).json({ message: 'Tempo disponível deve estar entre 30 e 90 minutos' });
+    if (!tempoDisponivel || tempoDisponivel < 30 || tempoDisponivel > 120) {
+      return res.status(400).json({ message: 'Tempo disponível deve estar entre 30 e 120 minutos' });
     }
 
     const resolved = resolveGrupamentoGeracao(req.body);

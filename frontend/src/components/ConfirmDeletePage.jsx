@@ -43,7 +43,6 @@ const ConfirmDeletePage = () => {
       }, 3000);
       
     } catch (error) {
-      console.error('Erro ao confirmar exclusão:', error);
       setMessage(error.message || 'Erro ao confirmar exclusão. O link pode ter expirado.');
       setIsSuccess(false);
     } finally {

@@ -8,14 +8,9 @@ class EmailService {
 
   initializeSendGrid() {
     const apiKey = process.env.SENDGRID_API_KEY;
-    const emailFrom = process.env.EMAIL_FROM || 'zgustavoaguiar@gmail.com';
+    const emailFrom = process.env.EMAIL_FROM;
 
-    console.log('🔧 ===== CONFIGURAÇÃO DE EMAIL (SendGrid) =====');
-    console.log('📧 Email remetente:', emailFrom);
-    console.log('🔑 API Key configurada:', apiKey ? '[CONFIGURADA]' : '[AUSENTE]');
-
-    if (!apiKey) {
-      console.error('❌ ERRO: SendGrid API Key não configurada!');
+    if (!apiKey || !emailFrom) {
       this.initialized = false;
       return;
     }
@@ -23,84 +18,67 @@ class EmailService {
     sgMail.setApiKey(apiKey);
     this.emailFrom = emailFrom;
     this.initialized = true;
-    console.log('✅ SendGrid configurado com sucesso!');
-    console.log('🔧 ===== CONFIGURAÇÃO CONCLUÍDA =====');
   }
 
   async sendPasswordResetEmail(email, resetToken) {
     if (!this.initialized) {
-      console.log('📤 [MODO DEV] SendGrid não configurado - simulando envio');
-      console.log(`📧 [MODO DEV] Email de destino: ${email}`);
-      console.log(`🔗 [MODO DEV] Token de reset: ${resetToken}`);
-      
-      return { 
-        success: true, 
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Serviço de e-mail não configurado.');
+      }
+
+      return {
+        success: true,
         messageId: 'dev-mode-' + Date.now(),
-        devMode: true
+        devMode: true,
       };
     }
 
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
-    
+
     const msg = {
       to: email,
       from: this.emailFrom,
       subject: '🔐 Recuperação de Senha - HealGym',
       html: this.getPasswordResetTemplate(resetUrl),
-      text: `Olá! Você solicitou a recuperação de senha do HealGym. Acesse o link para redefinir sua senha: ${resetUrl} (O link expira em 15 minutos)`
+      text: `Olá! Você solicitou a recuperação de senha do HealGym. Acesse o link para redefinir sua senha: ${resetUrl} (O link expira em 15 minutos)`,
     };
 
     try {
-      console.log(`📤 Enviando email via SendGrid para: ${email}`);
-      console.log(`📧 Remetente: ${this.emailFrom}`);
-      console.log(`🔗 Link de reset: ${resetUrl}`);
-      
       const response = await sgMail.send(msg);
-      
-      console.log('✅ EMAIL ENVIADO COM SUCESSO via SendGrid!');
-      console.log('📧 Status:', response[0].statusCode);
-      console.log(`✅ Email de recuperação enviado para: ${email}`);
-      
+
       return { success: true, messageId: response[0].headers['x-message-id'] };
     } catch (error) {
-      console.error('❌ ERRO AO ENVIAR EMAIL via SendGrid:');
-      console.error('🔍 Código:', error.code);
-      console.error('🔍 Mensagem:', error.message);
-      console.error('🔍 Response:', error.response?.body);
-      
-      throw new Error(`Falha ao enviar email: ${error.message}`);
+      console.error('Erro ao enviar e-mail de recuperação:', error.message);
+      throw new Error('Falha ao enviar e-mail de recuperação.');
     }
   }
 
   async sendAccountDeletionEmail(email, deletionToken) {
     if (!this.initialized) {
-      console.log('📤 [MODO DEV] SendGrid não configurado - simulando envio');
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Serviço de e-mail não configurado.');
+      }
+
       return { success: true, messageId: 'dev-mode-' + Date.now(), devMode: true };
     }
 
     const confirmationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-delete/${deletionToken}`;
-    
+
     const msg = {
       to: email,
       from: this.emailFrom,
       subject: '⚠️ Confirmação de Exclusão de Conta - HealGym',
       html: this.getAccountDeletionTemplate(confirmationUrl),
-      text: `Olá! Você solicitou a exclusão da sua conta no HealGym. Para confirmar, acesse o link: ${confirmationUrl} (O link expira em 30 minutos). Se não foi você, ignore este email.`
+      text: `Olá! Você solicitou a exclusão da sua conta no HealGym. Para confirmar, acesse o link: ${confirmationUrl} (O link expira em 30 minutos). Se não foi você, ignore este email.`,
     };
 
     try {
-      console.log(`📤 Enviando email de exclusão via SendGrid para: ${email}`);
-      
       const response = await sgMail.send(msg);
-      
-      console.log('✅ EMAIL DE EXCLUSÃO ENVIADO COM SUCESSO via SendGrid!');
-      
+
       return { success: true, messageId: response[0].headers['x-message-id'] };
     } catch (error) {
-      console.error('❌ ERRO AO ENVIAR EMAIL DE EXCLUSÃO via SendGrid:');
-      console.error('🔍 Mensagem:', error.message);
-      
-      throw new Error(`Falha ao enviar email: ${error.message}`);
+      console.error('Erro ao enviar e-mail de exclusão:', error.message);
+      throw new Error('Falha ao enviar e-mail de exclusão.');
     }
   }
 

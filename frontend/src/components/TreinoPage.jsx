@@ -2,7 +2,6 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { FiArrowLeft, FiActivity, FiClock, FiTrash2, FiCheck, FiZap, FiPlay, FiPause, FiStopCircle, FiCheckCircle, FiRotateCcw } from 'react-icons/fi';
 import api from '../services/api';
 import LoadingSpinner from './LoadingSpinner';
@@ -101,10 +100,7 @@ function calcularSugestaoProximo(ultimo) {
 
 const TreinoPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  
-  console.log('TreinoPage renderizando...', { user });
-  
+
   const [tipoDivisao, setTipoDivisao] = useState('ABC');
   const [letraTreino, setLetraTreino] = useState('A');
   const [tempoDisponivel, setTempoDisponivel] = useState('');
@@ -220,9 +216,7 @@ const TreinoPage = () => {
             try {
               const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dyvg==');
               audio.play();
-            } catch (e) {
-              console.log('Audio notification not available');
-            }
+            } catch {}
             return 0;
           }
           return prev - 1;
@@ -247,8 +241,8 @@ const TreinoPage = () => {
       if (response.success) {
         setHistorico(response.data);
       }
-    } catch (error) {
-      console.error('Erro ao carregar histórico:', error);
+    } catch {
+      setHistorico([]);
     } finally {
       setLoadingHistorico(false);
     }
@@ -347,8 +341,6 @@ const TreinoPage = () => {
       const seriesAtuais = novoProgresso[exercicioIndex].seriesCompletadas;
       const totalSeries = novoProgresso[exercicioIndex].totalSeries;
       
-      console.log(`[DEBUG] Exercício ${exercicioIndex}: ${seriesAtuais} -> ${seriesAtuais + 1} de ${totalSeries}`);
-      
       // Incrementar séries completadas
       if (seriesAtuais < totalSeries) {
         novoProgresso[exercicioIndex] = {
@@ -367,9 +359,6 @@ const TreinoPage = () => {
           setTempoDescansoRestante(tempoEmSegundos);
           setDescansoAtivo(true);
           setExercicioEmDescanso(exercicioIndex);
-          console.log(`[DEBUG] Iniciando descanso de ${tempoEmSegundos}s`);
-        } else {
-          console.log(`[DEBUG] Último exercício e última série - sem descanso`);
         }
       }
       
@@ -460,8 +449,8 @@ const TreinoPage = () => {
   }, []);
 
   const handleGerarTreino = async () => {
-    if (!tempoDisponivel || tempoDisponivel < 30 || tempoDisponivel > 90) {
-      mostrarAlerta('Tempo Inválido', 'Por favor, insira um tempo válido entre 30 e 90 minutos.');
+    if (!tempoDisponivel || tempoDisponivel < 30 || tempoDisponivel > 120) {
+      mostrarAlerta('Tempo Inválido', 'Por favor, insira um tempo válido entre 30 e 120 minutos.');
       return;
     }
 
@@ -486,8 +475,7 @@ const TreinoPage = () => {
         setTreinoGerado(response.data);
         carregarHistorico();
       }
-    } catch (error) {
-      console.error('Erro ao gerar treino:', error);
+    } catch {
       mostrarAlerta('Erro', 'Erro ao gerar treino. Tente novamente.');
     } finally {
       setLoading(false);
@@ -504,8 +492,7 @@ const TreinoPage = () => {
         }
         mostrarAlerta('Parabéns! 🎉', 'Treino marcado como realizado! Você pode ver seu progresso no Dashboard.');
       }
-    } catch (error) {
-      console.error('Erro ao marcar treino:', error);
+    } catch {
       mostrarAlerta('Erro', 'Erro ao marcar treino como realizado. Tente novamente.');
     }
   };
@@ -525,8 +512,7 @@ const TreinoPage = () => {
             setModalAberto(false);
             mostrarAlerta('Sucesso', 'Treino deletado com sucesso!');
           }
-        } catch (error) {
-          console.error('Erro ao deletar treino:', error);
+        } catch {
           setModalAberto(false);
           mostrarAlerta('Erro', 'Erro ao deletar treino. Tente novamente.');
         }
@@ -547,8 +533,7 @@ const TreinoPage = () => {
             setModalAberto(false);
             mostrarAlerta('Sucesso', 'Histórico limpo com sucesso!');
           }
-        } catch (error) {
-          console.error('Erro ao limpar histórico:', error);
+        } catch {
           setModalAberto(false);
           mostrarAlerta('Erro', 'Erro ao limpar histórico. Tente novamente.');
         }
@@ -752,12 +737,12 @@ const TreinoPage = () => {
               <Input
                 type="number"
                 min="30"
-                max="90"
+                max="120"
                 value={tempoDisponivel}
                 onChange={(e) => setTempoDisponivel(e.target.value)}
-                placeholder="Entre 30 e 90 minutos"
+                placeholder="Entre 30 e 120 minutos"
               />
-              <InputHint>30 min = treino rápido | 45-60 min = ideal | 75-90 min = avançado</InputHint>
+              <InputHint>30 min = treino rápido | 45-60 min = ideal | 75-120 min = avançado</InputHint>
             </InputGroup>
 
             <GerarButton

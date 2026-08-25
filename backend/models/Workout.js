@@ -54,7 +54,7 @@ const workoutSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 30,
-    max: 90
+    max: 120
   },
   exercicios: [exercicioSchema],
   resumo: {

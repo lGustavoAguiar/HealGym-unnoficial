@@ -119,16 +119,6 @@ userSchema.methods.createPasswordResetToken = function() {
   return resetToken;
 };
 
-userSchema.methods.validatePasswordResetToken = function(token) {
-  const hashedToken = crypto
-    .createHash('sha256')
-    .update(token)
-    .digest('hex');
-    
-  return this.passwordResetToken === hashedToken && 
-         this.passwordResetExpires > Date.now();
-};
-
 userSchema.methods.createAccountDeletionToken = function() {
   const deletionToken = crypto.randomBytes(32).toString('hex');
   
@@ -140,16 +130,6 @@ userSchema.methods.createAccountDeletionToken = function() {
   this.accountDeletionExpires = Date.now() + 30 * 60 * 1000;
   
   return deletionToken;
-};
-
-userSchema.methods.validateAccountDeletionToken = function(token) {
-  const hashedToken = crypto
-    .createHash('sha256')
-    .update(token)
-    .digest('hex');
-    
-  return this.accountDeletionToken === hashedToken && 
-         this.accountDeletionExpires > Date.now();
 };
 
 userSchema.methods.toJSON = function() {

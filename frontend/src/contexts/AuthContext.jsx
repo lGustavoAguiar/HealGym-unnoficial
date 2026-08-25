@@ -27,10 +27,7 @@ export const AuthProvider = ({ children }) => {
               const userData = JSON.parse(storedUser);
               setUser(userData);
               setIsAuthenticated(true);
-              console.log('✅ Dados do usuário carregados do localStorage:', userData);
-            } catch (parseError) {
-              console.error('Erro ao parsear dados do usuário do localStorage:', parseError);
-            }
+            } catch {}
           }
 
           const response = await apiService.verifyToken();
@@ -38,13 +35,11 @@ export const AuthProvider = ({ children }) => {
             setUser(response.user);
             setIsAuthenticated(true);
             localStorage.setItem('user', JSON.stringify(response.user));
-            console.log('✅ Dados do usuário atualizados do servidor:', response.user);
           } else {
             apiService.logout();
           }
         }
-      } catch (error) {
-        console.error('Erro ao verificar autenticação:', error);
+      } catch {
         apiService.logout();
       } finally {
         setLoading(false);
@@ -62,8 +57,6 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(response.user));
       return response;
-    } catch (error) {
-      throw error;
     } finally {
       setLoading(false);
     }
@@ -77,8 +70,6 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       localStorage.setItem('user', JSON.stringify(response.user));
       return response;
-    } catch (error) {
-      throw error;
     } finally {
       setLoading(false);
     }

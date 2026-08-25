@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import { validatePhysicalProfileField } from '../utils/profileValidation';
 
 const ProfileSetupPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
-  const { user, updateUser, needsProfileSetup, logout } = useAuth();
+  const { updateUser, logout } = useAuth();
   
   const [formData, setFormData] = useState({
     gender: '',
@@ -48,32 +49,7 @@ const ProfileSetupPage = () => {
     }
   }, [submitMessage]);
 
-  const validateField = (name, value) => {
-    let error = '';
-    switch (name) {
-      case 'gender':
-        if (!value) error = 'Gênero é obrigatório';
-        break;
-      case 'height':
-        if (!value) error = 'Altura é obrigatória';
-        else if (isNaN(value) || value < 100 || value > 250) error = 'Altura deve estar entre 100 e 250 cm';
-        break;
-      case 'weight':
-        if (!value) error = 'Peso é obrigatório';
-        else if (isNaN(value) || value < 30 || value > 300) error = 'Peso deve estar entre 30 e 300 kg';
-        break;
-      case 'bodyType':
-        if (!value) error = 'Biotipo é obrigatório';
-        break;
-      case 'age':
-        if (!value) error = 'Idade é obrigatória';
-        else if (isNaN(value) || value < 13 || value > 120) error = 'Idade deve estar entre 13 e 120 anos';
-        break;
-      default:
-        break;
-    }
-    return error;
-  };
+  const validateField = (name, value) => validatePhysicalProfileField(name, value);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -118,8 +94,6 @@ const ProfileSetupPage = () => {
     setSubmitMessage('');
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
       const response = await api.setupProfile({
         gender: formData.gender,
         height: parseFloat(formData.height),
@@ -424,17 +398,6 @@ const FormContainer = styled.form`
 
 const InputGroup = styled.div`
   width: 100%;
-`;
-
-const InputRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: min(2vw, 20px);
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: min(3vh, 20px);
-  }
 `;
 
 const TripleInputRow = styled.div`

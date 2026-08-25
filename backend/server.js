@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import nutritionRoutes from './routes/nutrition.js';
@@ -9,22 +10,21 @@ import workoutRoutes from './routes/workouts.js';
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET deve ser configurado antes de iniciar o servidor.');
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-console.log('🚀 HealGym Backend Starting...');
-console.log('🔧 PORT:', PORT);
+app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS || 1));
 
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://mongodb:27017/healgym';
-    console.log('🔗 Connecting to MongoDB:', mongoURI);
-    
-    await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    
+
+    await mongoose.connect(mongoURI);
+
     console.log('✅ MongoDB conectado com sucesso');
   } catch (error) {
     console.error('❌ Erro ao conectar ao MongoDB:', error.message);
@@ -41,21 +41,18 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
+app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir requisições sem origin (mobile apps, Postman, etc)
     if (!origin) return callback(null, true);
-    
-    // Permitir qualquer origin em desenvolvimento
+
     if (process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    
-    // Em produção, verificar lista de origins permitidas
-    if (allowedOrigins.indexOf(origin) !== -1) {
+
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('❌ Origin bloqueada por CORS:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -66,34 +63,18 @@ app.use(cors({
 
 app.use(express.json());
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', '*');
-  res.header('Access-Control-Allow-Headers', '*');
-  
-  if (req.method === 'OPTIONS') {
-    console.log('🔧 OPTIONS request');
-    return res.sendStatus(200);
-  }
-  
-  console.log(`📥 ${req.method} ${req.path}`);
-  next();
-});
-
 app.get('/', (req, res) => {
-  console.log('📍 Root endpoint accessed');
-  res.json({ 
-    message: 'HealGym Backend is ALIVE!', 
+  res.json({
+    message: 'HealGym Backend is ALIVE!',
     timestamp: new Date().toISOString(),
-    status: 'working'
+    status: 'working',
   });
 });
 
 app.get('/api/health', (req, res) => {
-  console.log('📍 Health endpoint accessed');
-  res.json({ 
-    message: 'API Health OK', 
-    timestamp: new Date().toISOString() 
+  res.json({
+    message: 'API Health OK',
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -103,25 +84,23 @@ app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/workouts', workoutRoutes);
 
 app.use('*', (req, res) => {
-  console.log(`❌ 404: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     error: '404 - Route not found',
     method: req.method,
-    path: req.originalUrl
+    path: req.originalUrl,
   });
 });
 
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   console.error('❌ Erro no servidor:', error);
   res.status(500).json({
     error: 'Erro interno do servidor',
-    message: process.env.NODE_ENV === 'development' ? error.message : 'Algo deu errado'
+    message: process.env.NODE_ENV === 'development' ? error.message : 'Algo deu errado',
   });
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Listening on all interfaces`);
 });
 
 export default app;

@@ -1,7 +1,8 @@
 import express from 'express';
-import { body, validationResult } from 'express-validator';
+import { validationResult } from 'express-validator';
 import User from '../models/User.js';
 import { authenticate, authorize } from '../middleware/auth.js';
+import { createProfileValidationRules } from '../validators/profile.js';
 
 const router = express.Router();
 
@@ -39,21 +40,7 @@ router.post('/profile-setup/skip', authenticate, async (req, res) => {
 
 router.post('/profile-setup', [
   authenticate,
-  body('gender')
-    .isIn(['masculino', 'feminino'])
-    .withMessage('Gênero inválido'),
-  body('height')
-    .isFloat({ min: 100, max: 250 })
-    .withMessage('Altura deve estar entre 100 e 250 cm'),
-  body('weight')
-    .isFloat({ min: 30, max: 300 })
-    .withMessage('Peso deve estar entre 30 e 300 kg'),
-  body('bodyType')
-    .isIn(['ectomorfo', 'mesomorfo', 'endomorfo'])
-    .withMessage('Biotipo inválido'),
-  body('age')
-    .isInt({ min: 13, max: 120 })
-    .withMessage('Idade deve estar entre 13 e 120 anos')
+  ...createProfileValidationRules(),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -96,7 +83,7 @@ router.post('/profile-setup', [
       message: 'Perfil atualizado com sucesso',
       user
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({
       error: 'Erro interno do servidor'
     });

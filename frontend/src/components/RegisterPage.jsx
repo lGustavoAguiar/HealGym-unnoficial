@@ -7,7 +7,7 @@ import '../styles/RegisterPage.css';
 const RegisterPage = () => {
   const navigate = useNavigate();
   const formRef = useRef(null);
-  const { register, loading, isAuthenticated, needsProfileSetup } = useAuth();
+  const { register, loading, isAuthenticated } = useAuth();
   useEffect(() => {
     if (!loading && isAuthenticated) {
       navigate('/dashboard');
@@ -170,14 +170,13 @@ const RegisterPage = () => {
         password: formData.password,
         confirmPassword: formData.confirmPassword
       };
-      const response = await register(userData);
+      await register(userData);
       setHasErrors(false);
       setSubmitMessage('Cadastro realizado com sucesso! Redirecionando...');
       setTimeout(() => {
         navigate('/profile-setup');
       }, 2000);
     } catch (error) {
-      console.error('Erro ao cadastrar:', error);
       setSubmitMessage(error.message || 'Erro ao realizar cadastro. Tente novamente.');
       setHasErrors(true);
       setTimeout(() => {

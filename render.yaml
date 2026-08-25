@@ -16,9 +16,11 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: EMAIL_USER
+      - key: SENDGRID_API_KEY
         sync: false
-      - key: EMAIL_PASS
+      - key: EMAIL_FROM
+        sync: false
+      - key: USDA_API_KEY
         sync: false
       - key: FRONTEND_URL
         value: https://healgym.onrender.com
@@ -42,8 +44,16 @@ services:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=()
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
-
