@@ -5,7 +5,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { calculateAge } from '../utils/healthCalculations';
+import { isStrongPassword } from '../utils/authValidation';
 import { validatePhysicalProfileField } from '../utils/profileValidation';
+import { BODY_TYPE_OPTIONS, GENDER_OPTIONS } from '../utils/profileOptions';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -81,7 +83,7 @@ const EditProfilePage = () => {
       case 'newPassword':
         if (value && value.length < 6) {
           error = 'Nova senha deve ter pelo menos 6 caracteres';
-        } else if (value && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+        } else if (value && !isStrongPassword(value)) {
           error = 'Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
         }
         break;
@@ -336,8 +338,9 @@ const EditProfilePage = () => {
                   error={touched.gender && errors.gender}
                 >
                   <option value="">Selecione seu gênero</option>
-                  <option value="masculino">Masculino</option>
-                  <option value="feminino">Feminino</option>
+                  {GENDER_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </Select>
               </SelectWrapper>
               <AnimatePresence>
@@ -445,9 +448,9 @@ const EditProfilePage = () => {
                   error={touched.bodyType && errors.bodyType}
                 >
                   <option value="">Selecione seu biotipo</option>
-                  <option value="ectomorfo">Ectomorfo (Magro, dificuldade para ganhar peso)</option>
-                  <option value="mesomorfo">Mesomorfo (Atlético, ganha músculo facilmente)</option>
-                  <option value="endomorfo">Endomorfo (Tendência a acumular gordura)</option>
+                  {BODY_TYPE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </Select>
               </SelectWrapper>
               <AnimatePresence>

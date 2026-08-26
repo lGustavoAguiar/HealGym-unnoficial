@@ -23,6 +23,14 @@ function timeToInputValue(h) {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
+const calcularFatorPorcao = ({ porcao, unidade }) => (
+  unidade === 'unidade' ? porcao : porcao / 100
+);
+
+const calcularCaloriasPorMacros = ({ proteinas, carboidratos, gorduras }) => (
+  (proteinas * 4) + (carboidratos * 4) + (gorduras * 9)
+);
+
 const DEFAULT_HORARIOS = MEAL_LABELS.map((_, i) => `${String(7 + i * 3).padStart(2, '0')}:00`);
 
 const DietaPage = () => {
@@ -106,14 +114,18 @@ const DietaPage = () => {
     };
   }, [user?.profile?.weight, user?.profile?.height, user?.profile?.dateOfBirth, user?.profile?.gender]);
 
+  const carregarHistoricoDietas = async () => {
+    const response = await api.getMyDiets();
+    if (response.success) {
+      setHistoricoDietas(response.diets || []);
+    }
+  };
+
   // Buscar histórico de dietas ao montar o componente
   useEffect(() => {
     const fetchHistorico = async () => {
       try {
-        const response = await api.getMyDiets();
-        if (response.success) {
-          setHistoricoDietas(response.diets || []);
-        }
+        await carregarHistoricoDietas();
       } catch {}
     };
 
@@ -149,10 +161,7 @@ const DietaPage = () => {
           setHorariosRefeicoes(response.diet.mealPlan.map((m) => timeToInputValue(m.horario)));
         }
         // Atualizar histórico
-        const historico = await api.getMyDiets();
-        if (historico.success) {
-          setHistoricoDietas(historico.diets || []);
-        }
+        await carregarHistoricoDietas();
       }
     } catch (error) {
       setError(error.message || 'Erro ao gerar dieta. Tente novamente.');
@@ -181,10 +190,7 @@ const DietaPage = () => {
       
       if (response.success) {
         // Atualizar histórico
-        const historico = await api.getMyDiets();
-        if (historico.success) {
-          setHistoricoDietas(historico.diets || []);
-        }
+        await carregarHistoricoDietas();
         
         // Se a dieta excluída estava sendo visualizada, limpar
         if (dietaGerada?.id === deleteConfirm.dietId) {
@@ -270,7 +276,7 @@ const DietaPage = () => {
 
         // ALIMENTOS NORMAIS: contar normalmente
         // Ovos são por unidade, outros alimentos por 100g/ml
-        const fator = unidade === 'unidade' ? porcao : porcao / 100;
+        const fator = calcularFatorPorcao({ porcao, unidade });
 
         // ⚠️ IMPORTANTE: Calorias NÃO vêm da tabela nutricional!
         // São calculadas APENAS pelos macros usando o modelo 4/4/9
@@ -296,7 +302,7 @@ const DietaPage = () => {
 
     // CALCULAR CALORIAS PELO MODELO 4/4/9 (NÃO PELA TABELA)
     // Proteína: 4 kcal/g | Carboidrato: 4 kcal/g | Gordura: 9 kcal/g
-    totais.calorias = (totais.proteinas * 4) + (totais.carboidratos * 4) + (totais.gorduras * 9);
+    totais.calorias = calcularCaloriasPorMacros(totais);
 
     // Arredondar valores
     Object.keys(totais).forEach(key => {
@@ -593,7 +599,7 @@ const DietaPage = () => {
                       if (alimento.isSuplemento) return;
                       
                       // Ovos são por unidade, outros alimentos por 100g
-                      const fator = alimento.unidade === 'unidade' ? alimento.porcao : alimento.porcao / 100;
+                      const fator = calcularFatorPorcao(alimento);
                       // NÃO somar calorias da tabela! Calcular depois pelos macros
                       totaisRefeicao.proteinas += (alimento.nutrition.proteinas || 0) * fator;
                       totaisRefeicao.carboidratos += (alimento.nutrition.carboidratos || 0) * fator;
@@ -601,7 +607,7 @@ const DietaPage = () => {
                     });
 
                     // CALCULAR CALORIAS PELO MODELO 4/4/9
-                    totaisRefeicao.calorias = (totaisRefeicao.proteinas * 4) + (totaisRefeicao.carboidratos * 4) + (totaisRefeicao.gorduras * 9);
+                    totaisRefeicao.calorias = calcularCaloriasPorMacros(totaisRefeicao);
 
                     return (
                       <MealCard key={index}>
@@ -618,7 +624,7 @@ const DietaPage = () => {
 
                         <FoodsList>
                           {refeicao.alimentos.map((alimento, foodIndex) => {
-                            const fatorAlimento = alimento.unidade === 'unidade' ? alimento.porcao : alimento.porcao / 100;
+                            const fatorAlimento = calcularFatorPorcao(alimento);
                             
                             // SUPLEMENTOS têm estilo diferente
                             if (alimento.isSuplemento) {

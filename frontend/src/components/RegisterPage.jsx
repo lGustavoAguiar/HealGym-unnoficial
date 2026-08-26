@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { validateEmail, validateRequiredPassword } from '../utils/authValidation';
 import '../styles/RegisterPage.css';
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -61,12 +62,10 @@ const RegisterPage = () => {
         else if (!/^[A-Za-zÀ-ÖØ-öø-ÿ\s]*$/.test(value)) error = 'O nome deve conter apenas letras';
         break;
       case 'email':
-        if (!value) error = 'E-mail é obrigatório';
-        else if (!/\S+@\S+\.\S+/.test(value)) error = 'E-mail inválido';
+        error = validateEmail(value);
         break;
       case 'password':
-        if (!value) error = 'Senha é obrigatória';
-        else if (value.length < 6) error = 'Senha deve ter pelo menos 6 caracteres';
+        error = validateRequiredPassword(value);
         break;
       case 'confirmPassword':
         if (!value) error = 'Confirmação de senha é obrigatória';

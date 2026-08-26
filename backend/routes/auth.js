@@ -46,6 +46,8 @@ const generateToken = (userId) => {
   );
 };
 
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -365,7 +367,7 @@ router.post('/reset-password/:token', passwordResetLimiter, [
     const { token } = req.params;
     const { password } = req.body;
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = hashToken(token);
 
     const user = await User.findOne({
       passwordResetToken: hashedToken,
@@ -453,7 +455,7 @@ router.post('/confirm-account-deletion/:token', async (req, res) => {
   try {
     const { token } = req.params;
     
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = hashToken(token);
     
     const user = await User.findOne({
       accountDeletionToken: hashedToken,

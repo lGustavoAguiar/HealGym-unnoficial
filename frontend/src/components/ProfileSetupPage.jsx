@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { validatePhysicalProfileField } from '../utils/profileValidation';
+import { BODY_TYPE_OPTIONS, GENDER_OPTIONS } from '../utils/profileOptions';
 
 const ProfileSetupPage = () => {
   const navigate = useNavigate();
@@ -147,8 +148,9 @@ const ProfileSetupPage = () => {
                   error={touched.gender && errors.gender}
                 >
                   <option value="">Selecione seu gênero</option>
-                  <option value="masculino">Masculino</option>
-                  <option value="feminino">Feminino</option>
+                  {GENDER_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </Select>
               </SelectWrapper>
               <AnimatePresence>
@@ -256,9 +258,9 @@ const ProfileSetupPage = () => {
                   error={touched.bodyType && errors.bodyType}
                 >
                   <option value="">Selecione seu biotipo</option>
-                  <option value="ectomorfo">Ectomorfo (Magro, dificuldade para ganhar peso)</option>
-                  <option value="mesomorfo">Mesomorfo (Atlético, ganha músculo facilmente)</option>
-                  <option value="endomorfo">Endomorfo (Tendência a acumular gordura)</option>
+                  {BODY_TYPE_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
                 </Select>
               </SelectWrapper>
               <AnimatePresence>

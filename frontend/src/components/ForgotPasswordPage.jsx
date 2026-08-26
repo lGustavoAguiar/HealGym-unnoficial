@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { validateEmail } from '../utils/authValidation';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -30,8 +31,7 @@ const ForgotPasswordPage = () => {
     let error = '';
     switch (name) {
       case 'email':
-        if (!value) error = 'E-mail é obrigatório';
-        else if (!/\S+@\S+\.\S+/.test(value)) error = 'E-mail inválido';
+        error = validateEmail(value);
         break;
       default:
         break;

@@ -1,5 +1,5 @@
 import express from 'express';
-import Workout from '../models/Workout.js';
+import Workout, { WORKOUT_GROUPS } from '../models/Workout.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -412,8 +412,7 @@ router.post('/generate', authenticate, async (req, res) => {
 
     const { grupamento, letra: letraTreino } = resolved;
 
-    const grupamentosValidos = ['PEITO', 'COSTAS', 'OMBROS', 'TRICEPS', 'BICEPS', 'PERNAS', 'PEITO_TRICEPS', 'COSTAS_BICEPS', 'PERNAS_OMBROS', 'OMBROS_BRACOS', 'FULL_BODY'];
-    if (!grupamentosValidos.includes(grupamento)) {
+    if (!WORKOUT_GROUPS.includes(grupamento)) {
       return res.status(400).json({ message: 'Grupamento muscular inválido' });
     }
 

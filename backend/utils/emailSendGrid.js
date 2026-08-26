@@ -1,5 +1,7 @@
 import sgMail from '@sendgrid/mail';
 
+const getFrontendBaseUrl = () => process.env.FRONTEND_URL || 'http://localhost:3000';
+
 class EmailService {
   constructor() {
     this.initialized = false;
@@ -21,7 +23,7 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(email, resetToken) {
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+    const resetUrl = `${getFrontendBaseUrl()}/reset-password/${resetToken}`;
 
     if (!this.initialized) {
       if (process.env.NODE_ENV !== 'development') {
@@ -56,7 +58,7 @@ class EmailService {
   }
 
   async sendAccountDeletionEmail(email, deletionToken) {
-    const confirmationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-delete/${deletionToken}`;
+    const confirmationUrl = `${getFrontendBaseUrl()}/confirm-delete/${deletionToken}`;
 
     if (!this.initialized) {
       if (process.env.NODE_ENV !== 'development') {

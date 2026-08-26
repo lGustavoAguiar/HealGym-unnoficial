@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import api from '../services/api';
+import { isStrongPassword } from '../utils/authValidation';
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ const ResetPasswordPage = () => {
       case 'password':
         if (!value) error = 'Nova senha é obrigatória';
         else if (value.length < 6) error = 'Senha deve ter pelo menos 6 caracteres';
-        else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) 
+        else if (!isStrongPassword(value))
           error = 'Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
         break;
       case 'confirmPassword':

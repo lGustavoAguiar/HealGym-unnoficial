@@ -1,5 +1,19 @@
 import mongoose from 'mongoose';
 
+export const WORKOUT_GROUPS = [
+  'PEITO',
+  'COSTAS',
+  'OMBROS',
+  'TRICEPS',
+  'BICEPS',
+  'PERNAS',
+  'PEITO_TRICEPS',
+  'COSTAS_BICEPS',
+  'PERNAS_OMBROS',
+  'OMBROS_BRACOS',
+  'FULL_BODY',
+];
+
 const exercicioSchema = new mongoose.Schema({
   nome: {
     type: String,
@@ -44,7 +58,7 @@ const workoutSchema = new mongoose.Schema({
   grupamento: {
     type: String,
     required: true,
-    enum: ['PEITO', 'COSTAS', 'OMBROS', 'TRICEPS', 'BICEPS', 'PERNAS', 'PEITO_TRICEPS', 'COSTAS_BICEPS', 'PERNAS_OMBROS', 'OMBROS_BRACOS', 'FULL_BODY']
+    enum: WORKOUT_GROUPS
   },
   objetivo: {
     type: String,
