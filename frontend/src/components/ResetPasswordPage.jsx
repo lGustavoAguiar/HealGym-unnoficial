@@ -10,7 +10,7 @@ const ResetPasswordPage = () => {
   const { token } = useParams();
   const [formData, setFormData] = useState({
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -52,26 +52,26 @@ const ResetPasswordPage = () => {
   };
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (touched[name]) {
       const newError = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: newError }));
+      setErrors((prev) => ({ ...prev, [name]: newError }));
     }
     if (name === 'password' && touched.confirmPassword) {
       const confirmError = formData.confirmPassword !== value ? 'Senhas não conferem' : '';
-      setErrors(prev => ({ ...prev, confirmPassword: confirmError }));
+      setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
     }
   };
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
     const newError = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: newError }));
+    setErrors((prev) => ({ ...prev, [name]: newError }));
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
-    Object.keys(formData).forEach(key => {
+    Object.keys(formData).forEach((key) => {
       const error = validateField(key, formData[key]);
       if (error) newErrors[key] = error;
     });
@@ -82,7 +82,7 @@ const ResetPasswordPage = () => {
     }
     setIsSubmitting(true);
     setErrors({});
-    
+
     try {
       await api.resetPassword(token, {
         password: formData.password,
@@ -113,9 +113,7 @@ const ResetPasswordPage = () => {
             <ErrorContainer>
               <ErrorIcon>⚠️</ErrorIcon>
               <ErrorTitle>Link Inválido</ErrorTitle>
-              <ErrorMessage>
-                O link de recuperação de senha é inválido ou expirou.
-              </ErrorMessage>
+              <ErrorMessage>O link de recuperação de senha é inválido ou expirou.</ErrorMessage>
               <ErrorSubtext>
                 Solicite um novo link de recuperação ou entre em contato com o suporte.
               </ErrorSubtext>
@@ -154,9 +152,7 @@ const ResetPasswordPage = () => {
           {!isSuccess ? (
             <>
               <FormTitle>Redefinir Senha</FormTitle>
-              <FormSubtitle>
-                Digite sua nova senha abaixo
-              </FormSubtitle>
+              <FormSubtitle>Digite sua nova senha abaixo</FormSubtitle>
               {errors.general && (
                 <ErrorMessage
                   initial={{ opacity: 0, y: 10 }}
@@ -223,7 +219,8 @@ const ResetPasswordPage = () => {
                 </SubmitButton>
               </FormContainer>
               <BackText>
-                Lembrou da senha? <BackLink onClick={() => navigate('/login')}>Voltar ao login</BackLink>
+                Lembrou da senha?{' '}
+                <BackLink onClick={() => navigate('/login')}>Voltar ao login</BackLink>
               </BackText>
             </>
           ) : (
@@ -234,12 +231,8 @@ const ResetPasswordPage = () => {
             >
               <SuccessIcon>✅</SuccessIcon>
               <SuccessTitle>Senha Redefinida!</SuccessTitle>
-              <SuccessMessage>
-                Sua senha foi redefinida com sucesso.
-              </SuccessMessage>
-              <SuccessSubtext>
-                Agora você pode fazer login com sua nova senha.
-              </SuccessSubtext>
+              <SuccessMessage>Sua senha foi redefinida com sucesso.</SuccessMessage>
+              <SuccessSubtext>Agora você pode fazer login com sua nova senha.</SuccessSubtext>
               <ActionButtons>
                 <ActionButton
                   whileHover={{ scale: 1.05 }}
@@ -262,7 +255,12 @@ const Container = styled.div`
   margin: 0;
   padding: min(15vh, 120px) 0;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -335,27 +333,43 @@ const Input = styled.input`
   width: 100%;
   padding: min(2vh, 15px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border: 1px solid
+    ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)')};
   border-radius: 2px;
   color: var(--white);
   font-size: min(2vw, 1.2rem);
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
-  animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
+  animation: ${(props) => (props.error ? 'shake 0.5s ease-in-out' : 'none')};
   &:focus {
     outline: none;
-    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
-    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+    border-color: ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)')};
+    box-shadow: 0 0 10px
+      ${(props) => (props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)')};
   }
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
     font-style: italic;
   }
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
-    20%, 40%, 60%, 80% { transform: translateX(3px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-3px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(3px);
+    }
   }
 `;
 const ErrorText = styled(motion.span)`
@@ -435,7 +449,7 @@ const ErrorIcon = styled.div`
   margin-bottom: 20px;
 `;
 const SuccessTitle = styled.h2`
-  color: #4CAF50;
+  color: #4caf50;
   font-size: min(4vw, 1.8rem);
   font-weight: 700;
   margin-bottom: 15px;
@@ -479,18 +493,18 @@ const ActionButton = styled(motion.button)`
   font-family: 'Poppins', sans-serif;
   padding: min(2vh, 12px) min(3vw, 24px);
   font-size: min(2vw, 1rem);
-  background: ${props => props.variant === 'secondary' ? 'transparent' : 'var(--gold-gradient)'};
-  color: ${props => props.variant === 'secondary' ? 'var(--accent)' : 'var(--background)'};
-  border: ${props => props.variant === 'secondary' ? '1px solid var(--accent)' : 'none'};
+  background: ${(props) => (props.variant === 'secondary' ? 'transparent' : 'var(--gold-gradient)')};
+  color: ${(props) => (props.variant === 'secondary' ? 'var(--accent)' : 'var(--background)')};
+  border: ${(props) => (props.variant === 'secondary' ? '1px solid var(--accent)' : 'none')};
   border-radius: 25px;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.1vw;
   font-weight: 600;
-  box-shadow: ${props => props.variant === 'secondary' ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)'};
+  box-shadow: ${(props) => (props.variant === 'secondary' ? 'none' : '0 4px 15px rgba(0, 0, 0, 0.3)')};
   &:hover {
-    box-shadow: ${props => props.variant === 'secondary' ? '0 2px 10px rgba(198, 169, 100, 0.2)' : '0 6px 20px rgba(255, 215, 0, 0.4)'};
+    box-shadow: ${(props) => (props.variant === 'secondary' ? '0 2px 10px rgba(198, 169, 100, 0.2)' : '0 6px 20px rgba(255, 215, 0, 0.4)')};
   }
 `;
 export default ResetPasswordPage;

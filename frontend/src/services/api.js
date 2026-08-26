@@ -1,7 +1,5 @@
 // Use variável de ambiente em produção ou proxy local em desenvolvimento
-const API_BASE_URL = import.meta.env.VITE_API_URL 
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
 
 class ApiService {
   constructor() {
@@ -39,10 +37,13 @@ class ApiService {
 
       return data;
     } catch (error) {
-      if (error.message && (error.message.includes('Token expirado') || error.message.includes('Token inválido'))) {
+      if (
+        error.message &&
+        (error.message.includes('Token expirado') || error.message.includes('Token inválido'))
+      ) {
         this.logout();
       }
-      
+
       throw error;
     }
   }

@@ -31,7 +31,7 @@ const RegisterPage = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -80,24 +80,24 @@ const RegisterPage = () => {
     const { name, value } = e.target;
     if (name === 'name') {
       const sanitizedValue = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '');
-      setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
+      setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
       if (touched[name]) {
         const newError = validateField(name, sanitizedValue);
-        setErrors(prev => {
+        setErrors((prev) => {
           const newErrors = { ...prev, [name]: newError };
-          const hasAnyError = Object.values(newErrors).some(error => error !== '');
+          const hasAnyError = Object.values(newErrors).some((error) => error !== '');
           setHasErrors(hasAnyError);
           return newErrors;
         });
       }
       return;
     }
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (touched[name]) {
       const newError = validateField(name, value);
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev, [name]: newError };
-        const hasAnyError = Object.values(newErrors).some(error => error !== '');
+        const hasAnyError = Object.values(newErrors).some((error) => error !== '');
         setHasErrors(hasAnyError);
         return newErrors;
       });
@@ -105,18 +105,18 @@ const RegisterPage = () => {
   };
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
     const newError = validateField(name, value);
-    setErrors(prev => {
+    setErrors((prev) => {
       const newErrors = { ...prev, [name]: newError };
-      const hasAnyError = Object.values(newErrors).some(error => error !== '');
+      const hasAnyError = Object.values(newErrors).some((error) => error !== '');
       setHasErrors(hasAnyError);
       return newErrors;
     });
   };
   const handleSubmit = async () => {
     const newErrors = {};
-    Object.keys(formData).forEach(key => {
+    Object.keys(formData).forEach((key) => {
       const error = validateField(key, formData[key]);
       if (error) newErrors[key] = error;
     });
@@ -124,7 +124,7 @@ const RegisterPage = () => {
       name: true,
       email: true,
       password: true,
-      confirmPassword: true
+      confirmPassword: true,
     });
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -134,16 +134,16 @@ const RegisterPage = () => {
       if (inputElement) {
         const viewportHeight = window.innerHeight;
         const fieldRect = inputElement.getBoundingClientRect();
-        const targetScroll = fieldRect.top + window.pageYOffset - (viewportHeight / 3);
+        const targetScroll = fieldRect.top + window.pageYOffset - viewportHeight / 3;
         const startPosition = window.pageYOffset;
         const distance = targetScroll - startPosition;
         const duration = 400;
         let start = null;
-        const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+        const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
         const step = (currentTime) => {
           if (!start) start = currentTime;
           const progress = Math.min((currentTime - start) / duration, 1);
-          const currentPosition = startPosition + (distance * easeOutCubic(progress));
+          const currentPosition = startPosition + distance * easeOutCubic(progress);
           window.scrollTo(0, currentPosition);
           if (progress < 1) {
             requestAnimationFrame(step);
@@ -167,7 +167,7 @@ const RegisterPage = () => {
         name: formData.name.trim(),
         email: formData.email.toLowerCase().trim(),
         password: formData.password,
-        confirmPassword: formData.confirmPassword
+        confirmPassword: formData.confirmPassword,
       };
       await register(userData);
       setHasErrors(false);
@@ -188,15 +188,15 @@ const RegisterPage = () => {
             const distance = y - startPosition;
             const duration = 1200;
             let start = null;
-            const easeOutQuart = t => 1 - (--t) * t * t * t;
-            const step = currentTime => {
+            const easeOutQuart = (t) => 1 - --t * t * t * t;
+            const step = (currentTime) => {
               if (!start) start = currentTime;
               const progress = Math.min((currentTime - start) / duration, 1);
               if (progress === 1) {
                 window.scrollTo(0, y);
                 return;
               }
-              const currentPosition = startPosition + (distance * easeOutQuart(progress));
+              const currentPosition = startPosition + distance * easeOutQuart(progress);
               window.scrollTo(0, currentPosition);
               window.requestAnimationFrame(step);
             };
@@ -220,15 +220,15 @@ const RegisterPage = () => {
         const distance = y - startPosition;
         const duration = 1200;
         let start = null;
-        const easeOutQuart = t => 1 - (--t) * t * t * t;
-        const step = currentTime => {
+        const easeOutQuart = (t) => 1 - --t * t * t * t;
+        const step = (currentTime) => {
           if (!start) start = currentTime;
           const progress = Math.min((currentTime - start) / duration, 1);
           if (progress === 1) {
             window.scrollTo(0, y);
             return;
           }
-          const currentPosition = startPosition + (distance * easeOutQuart(progress));
+          const currentPosition = startPosition + distance * easeOutQuart(progress);
           window.scrollTo(0, currentPosition);
           window.requestAnimationFrame(step);
         };
@@ -359,7 +359,7 @@ const RegisterPage = () => {
               {isSubmitting || loading ? 'Cadastrando...' : 'Cadastrar'}
             </RegisterButton>
             {submitMessage && (
-              <SubmitMessage 
+              <SubmitMessage
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={submitMessage.includes('sucesso') ? 'success' : 'error'}
@@ -405,7 +405,12 @@ const Container = styled.div`
   margin: 0;
   padding: min(15vh, 120px) 0;
   overflow-x: hidden;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -455,27 +460,43 @@ const Input = styled.input`
   width: 100%;
   padding: min(2vh, 15px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border: 1px solid
+    ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)')};
   border-radius: 2px;
   color: var(--white);
   font-size: min(2vw, 1.2rem);
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
-  animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
+  animation: ${(props) => (props.error ? 'shake 0.5s ease-in-out' : 'none')};
   &:focus {
     outline: none;
-    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
-    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+    border-color: ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)')};
+    box-shadow: 0 0 10px
+      ${(props) => (props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)')};
   }
   &::placeholder {
     color: rgba(255, 255, 255, 0.5);
     font-style: italic;
   }
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
-    20%, 40%, 60%, 80% { transform: translateX(3px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-3px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(3px);
+    }
   }
 `;
 const ErrorMessage = styled(motion.span)`

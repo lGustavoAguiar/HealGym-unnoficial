@@ -1,15 +1,25 @@
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { FiLogOut, FiUser, FiActivity, FiHeart, FiTarget, FiCheck, FiX, FiClock } from 'react-icons/fi';
+import {
+  FiLogOut,
+  FiUser,
+  FiActivity,
+  FiHeart,
+  FiTarget,
+  FiCheck,
+  FiX,
+  FiClock,
+} from 'react-icons/fi';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import {
   calculateAge,
   calculateBasalMetabolicRate,
   calculateBodyMassIndex,
 } from '../utils/healthCalculations';
+import { cronogramaSemanal } from '../utils/cronogramaSemanal';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -33,22 +43,9 @@ const Dashboard = () => {
   const calculateIdealWeight = (height, gender) => {
     if (!height || !gender) return null;
     const baseWeight = height - 100;
-    return gender === 'masculino' ? 
-      Math.round(baseWeight * 0.9) : 
-      Math.round(baseWeight * 0.85);
+    return gender === 'masculino' ? Math.round(baseWeight * 0.9) : Math.round(baseWeight * 0.85);
   };
 
-  // Dados do cronograma semanal (rótulos neutros — a divisão A/B/C ou full body fica em Treinos)
-  const cronogramaSemanal = [
-    { dia: 'Segunda', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 1 },
-    { dia: 'Terça', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 2 },
-    { dia: 'Quarta', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 3 },
-    { dia: 'Quinta', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 4 },
-    { dia: 'Sexta', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 5 },
-    { dia: 'Sábado', treino: 'Dia de treino', grupos: 'Divisão à sua escolha em Treinos', dayOfWeek: 6 }
-  ];
-
-  // Carregar treinos realizados da API
   useEffect(() => {
     carregarTreinosRealizados();
   }, []);
@@ -69,34 +66,31 @@ const Dashboard = () => {
     try {
       const response = await api.getMyWorkouts();
       if (response.success) {
-        // Filtrar apenas treinos realizados
-        const realizados = response.data.filter(treino => treino.realizado);
+        const realizados = response.data.filter((treino) => treino.realizado);
         setTreinosRealizados(realizados);
       }
     } catch {}
   };
 
-  // Função para verificar se um treino foi realizado em um dia específico
   const isTreinoRealizado = (dayOfWeek) => {
     const today = new Date();
     const currentWeekStart = new Date(today.setDate(today.getDate() - today.getDay() + 1)); // Segunda-feira da semana atual
     const targetDate = new Date(currentWeekStart);
     targetDate.setDate(currentWeekStart.getDate() + (dayOfWeek - 1));
-    
-    return treinosRealizados.some(treino => {
+
+    return treinosRealizados.some((treino) => {
       const treinoDate = new Date(treino.dataRealizacao || treino.createdAt);
       return treinoDate.toDateString() === targetDate.toDateString();
     });
   };
 
-  // Função para abrir modal com histórico do dia
   const handleDiaClick = (dayOfWeek, diaNome) => {
     const today = new Date();
     const currentWeekStart = new Date(today.setDate(today.getDate() - today.getDay() + 1));
     const targetDate = new Date(currentWeekStart);
     targetDate.setDate(currentWeekStart.getDate() + (dayOfWeek - 1));
-    
-    const treinosDesseDia = treinosRealizados.filter(treino => {
+
+    const treinosDesseDia = treinosRealizados.filter((treino) => {
       const treinoDate = new Date(treino.dataRealizacao || treino.createdAt);
       return treinoDate.toDateString() === targetDate.toDateString();
     });
@@ -108,14 +102,11 @@ const Dashboard = () => {
     }
   };
 
-  // Função para obter o dia atual da semana (1 = segunda, 7 = domingo)
   const getDiaAtual = () => {
     const today = new Date();
     const dayOfWeek = today.getDay();
     return dayOfWeek === 0 ? 7 : dayOfWeek; // Converte domingo (0) para 7
   };
-
-
 
   const handleLogout = () => {
     logout();
@@ -128,13 +119,13 @@ const Dashboard = () => {
 
   const handleTreinoClick = () => {
     const diaAtual = getDiaAtual();
-    
+
     // Verificar se hoje é domingo (dia de descanso)
     if (diaAtual === 7) {
       alert('Domingo é dia de descanso! Volte amanhã para treinar.');
       return;
     }
-    
+
     navigate('/treino');
   };
 
@@ -146,12 +137,9 @@ const Dashboard = () => {
     user?.profile?.weight,
     user?.profile?.height,
     age,
-    user?.profile?.gender
+    user?.profile?.gender,
   );
-  const bodyMassIndex = calculateBodyMassIndex(
-    user?.profile?.weight,
-    user?.profile?.height
-  );
+  const bodyMassIndex = calculateBodyMassIndex(user?.profile?.weight, user?.profile?.height);
   const tmb = basalMetabolicRate === null ? null : Math.round(basalMetabolicRate);
   const imc = bodyMassIndex === null ? null : bodyMassIndex.toFixed(1);
   const imcClass = getIMCClassification(imc);
@@ -174,7 +162,7 @@ const Dashboard = () => {
               initial={{ opacity: 0, scale: 0.9, y: -50 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -50 }}
-              transition={{ type: "spring", duration: 0.5 }}
+              transition={{ type: 'spring', duration: 0.5 }}
               onClick={(e) => e.stopPropagation()}
             >
               <ModalHeader>
@@ -191,7 +179,7 @@ const Dashboard = () => {
                       <TreinoCardData>
                         {new Date(treino.dataRealizacao).toLocaleTimeString('pt-BR', {
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
                         })}
                       </TreinoCardData>
                     </TreinoCardHeader>
@@ -214,221 +202,227 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-    <Container className="custom-scroll">
-      <Header>
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <Logo>HealGym</Logo>
-          <UserSection>
-            <WelcomeText>Olá, {user?.name?.split(' ')[0] || 'Usuário'}!</WelcomeText>
-            <ProfileButton
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleProfileEdit}
-              title="Editar Perfil"
-            >
-              <FiUser />
-            </ProfileButton>
-            <LogoutButton
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleLogout}
-            >
-              <FiLogOut />
-              Sair
-            </LogoutButton>
-          </UserSection>
-        </motion.div>
-      </Header>
-
-      <MainContent>
-        <HealthPanel>
+      <Container className="custom-scroll">
+        <Header>
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-
-
-            {user?.profile ? (
-              <>
-                <MetricCard>
-                  <MetricIcon>
-                    <FiHeart />
-                  </MetricIcon>
-                  <MetricContent>
-                    <MetricLabel>Taxa Metabólica Basal</MetricLabel>
-                    <MetricValue>{tmb ? `${tmb} kcal/dia` : 'Calculando...'}</MetricValue>
-                    <MetricDescription>Calorias queimadas em repouso</MetricDescription>
-                  </MetricContent>
-                </MetricCard>
-
-
-
-                <MetricCard>
-                  <MetricIcon>
-                    <FiTarget />
-                  </MetricIcon>
-                  <MetricContent>
-                    <MetricLabel>Índice de Massa Corporal</MetricLabel>
-                    <MetricValue>{imc ? `${imc} kg/m²` : 'Calculando...'}</MetricValue>
-                    {imcClass && (
-                      <IMCStatus color={imcClass.color}>
-                        {imcClass.text}
-                      </IMCStatus>
-                    )}
-                  </MetricContent>
-                </MetricCard>
-
-                <InfoGrid>
-                  <InfoItem>
-                    <InfoLabel>Idade</InfoLabel>
-                    <InfoValue>{age ? `${age} anos` : 'N/A'}</InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Sexo</InfoLabel>
-                    <InfoValue>{user.profile.gender === 'masculino' ? 'Masculino' : 'Feminino'}</InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Altura</InfoLabel>
-                    <InfoValue>{user.profile.height ? `${user.profile.height} cm` : 'N/A'}</InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Peso Atual</InfoLabel>
-                    <InfoValue>{user.profile.weight ? `${user.profile.weight} kg` : 'N/A'}</InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Peso Ideal</InfoLabel>
-                    <InfoValue>{idealWeight ? `${idealWeight} kg` : 'N/A'}</InfoValue>
-                  </InfoItem>
-                  <InfoItem>
-                    <InfoLabel>Biotipo</InfoLabel>
-                    <InfoValue>
-                      {user.profile.bodyType === 'ectomorfo' && 'Ectomorfo'}
-                      {user.profile.bodyType === 'mesomorfo' && 'Mesomorfo'}
-                      {user.profile.bodyType === 'endomorfo' && 'Endomorfo'}
-                    </InfoValue>
-                  </InfoItem>
-                </InfoGrid>
-
-
-              </>
-            ) : (
-              <EmptyState>
-                <EmptyStateText>Complete seu perfil para ver suas métricas de saúde</EmptyStateText>
-                <CompleteProfileButton
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleProfileEdit}
-                >
-                  Completar Perfil
-                </CompleteProfileButton>
-              </EmptyState>
-            )}
-          </motion.div>
-        </HealthPanel>
-
-        <MainArea>
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ duration: 0.6 }}
           >
-            <WelcomeCard>
-              <WelcomeTitle>Bem-vindo ao HealGym!</WelcomeTitle>
-              <WelcomeDescription>
-                Seu aplicativo completo para treino e dieta personalizada.
-              </WelcomeDescription>
-              <FeaturesList>
-                <FeatureItem
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleTreinoClick}
-                >
-                  Treino
-                </FeatureItem>
-                <FeatureItem
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleDietaClick}
-                >
-                  Dieta
-                </FeatureItem>
-              </FeaturesList>
-            </WelcomeCard>
+            <Logo>HealGym</Logo>
+            <UserSection>
+              <WelcomeText>Olá, {user?.name?.split(' ')[0] || 'Usuário'}!</WelcomeText>
+              <ProfileButton
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleProfileEdit}
+                title="Editar Perfil"
+              >
+                <FiUser />
+              </ProfileButton>
+              <LogoutButton
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleLogout}
+              >
+                <FiLogOut />
+                Sair
+              </LogoutButton>
+            </UserSection>
+          </motion.div>
+        </Header>
 
+        <MainContent>
+          <HealthPanel>
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              {user?.profile ? (
+                <>
+                  <MetricCard>
+                    <MetricIcon>
+                      <FiHeart />
+                    </MetricIcon>
+                    <MetricContent>
+                      <MetricLabel>Taxa Metabólica Basal</MetricLabel>
+                      <MetricValue>{tmb ? `${tmb} kcal/dia` : 'Calculando...'}</MetricValue>
+                      <MetricDescription>Calorias queimadas em repouso</MetricDescription>
+                    </MetricContent>
+                  </MetricCard>
+
+                  <MetricCard>
+                    <MetricIcon>
+                      <FiTarget />
+                    </MetricIcon>
+                    <MetricContent>
+                      <MetricLabel>Índice de Massa Corporal</MetricLabel>
+                      <MetricValue>{imc ? `${imc} kg/m²` : 'Calculando...'}</MetricValue>
+                      {imcClass && <IMCStatus color={imcClass.color}>{imcClass.text}</IMCStatus>}
+                    </MetricContent>
+                  </MetricCard>
+
+                  <InfoGrid>
+                    <InfoItem>
+                      <InfoLabel>Idade</InfoLabel>
+                      <InfoValue>{age ? `${age} anos` : 'N/A'}</InfoValue>
+                    </InfoItem>
+                    <InfoItem>
+                      <InfoLabel>Sexo</InfoLabel>
+                      <InfoValue>
+                        {user.profile.gender === 'masculino' ? 'Masculino' : 'Feminino'}
+                      </InfoValue>
+                    </InfoItem>
+                    <InfoItem>
+                      <InfoLabel>Altura</InfoLabel>
+                      <InfoValue>
+                        {user.profile.height ? `${user.profile.height} cm` : 'N/A'}
+                      </InfoValue>
+                    </InfoItem>
+                    <InfoItem>
+                      <InfoLabel>Peso Atual</InfoLabel>
+                      <InfoValue>
+                        {user.profile.weight ? `${user.profile.weight} kg` : 'N/A'}
+                      </InfoValue>
+                    </InfoItem>
+                    <InfoItem>
+                      <InfoLabel>Peso Ideal</InfoLabel>
+                      <InfoValue>{idealWeight ? `${idealWeight} kg` : 'N/A'}</InfoValue>
+                    </InfoItem>
+                    <InfoItem>
+                      <InfoLabel>Biotipo</InfoLabel>
+                      <InfoValue>
+                        {user.profile.bodyType === 'ectomorfo' && 'Ectomorfo'}
+                        {user.profile.bodyType === 'mesomorfo' && 'Mesomorfo'}
+                        {user.profile.bodyType === 'endomorfo' && 'Endomorfo'}
+                      </InfoValue>
+                    </InfoItem>
+                  </InfoGrid>
+                </>
+              ) : (
+                <EmptyState>
+                  <EmptyStateText>
+                    Complete seu perfil para ver suas métricas de saúde
+                  </EmptyStateText>
+                  <CompleteProfileButton
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleProfileEdit}
+                  >
+                    Completar Perfil
+                  </CompleteProfileButton>
+                </EmptyState>
+              )}
+            </motion.div>
+          </HealthPanel>
+
+          <MainArea>
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <WeeklyCalendar>
-                <CalendarTitle>Cronograma Semanal</CalendarTitle>
-                <CalendarSubtitle>
-                  Em <strong>Treinos</strong> você escolhe divisão em <strong>ABC</strong> (3 dias), <strong>ABCD</strong> (4 dias) ou <strong>full body</strong>.
-                  Aqui marcamos apenas se houve treino realizado naquele dia.
-                </CalendarSubtitle>
-                <CalendarGrid>
-                  {cronogramaSemanal.map((diaInfo, index) => {
-                    const isToday = getDiaAtual() === diaInfo.dayOfWeek;
-                    const isCompleted = isTreinoRealizado(diaInfo.dayOfWeek);
-                    
-                    return (
-                      <CalendarDay
-                        key={index}
-                        isToday={isToday}
-                        isCompleted={isCompleted}
-                        isClickable={isCompleted}
-                        onClick={() => isCompleted && handleDiaClick(diaInfo.dayOfWeek, diaInfo.dia)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <DayHeader>
-                          <DayName>{diaInfo.dia}</DayName>
-                          {isCompleted && (
-                            <CompletedIcon>
-                              <FiCheck />
-                            </CompletedIcon>
-                          )}
-                        </DayHeader>
-                        <WorkoutInfo>
-                          <WorkoutName>{diaInfo.treino}</WorkoutName>
-                          <MuscleGroup>{diaInfo.grupos}</MuscleGroup>
-                        </WorkoutInfo>
-                        {isToday && <TodayIndicator>HOJE</TodayIndicator>}
-                        {isCompleted && <ClickHint>Clique para ver</ClickHint>}
-                      </CalendarDay>
-                    );
-                  })}
-                  
-                  {/* Domingo - Dia de descanso */}
-                  <CalendarDay isRest={true}>
-                    <DayHeader>
-                      <DayName>Domingo</DayName>
-                    </DayHeader>
-                    <WorkoutInfo>
-                      <WorkoutName>Descanso</WorkoutName>
-                      <MuscleGroup>Recuperação</MuscleGroup>
-                    </WorkoutInfo>
-                    {getDiaAtual() === 7 && <TodayIndicator>HOJE</TodayIndicator>}
-                  </CalendarDay>
-                </CalendarGrid>
-              </WeeklyCalendar>
+              <WelcomeCard>
+                <WelcomeTitle>Bem-vindo ao HealGym!</WelcomeTitle>
+                <WelcomeDescription>
+                  Seu aplicativo completo para treino e dieta personalizada.
+                </WelcomeDescription>
+                <FeaturesList>
+                  <FeatureItem
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleTreinoClick}
+                  >
+                    Treino
+                  </FeatureItem>
+                  <FeatureItem
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleDietaClick}
+                  >
+                    Dieta
+                  </FeatureItem>
+                </FeaturesList>
+              </WelcomeCard>
+
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+              >
+                <WeeklyCalendar>
+                  <CalendarTitle>Cronograma Semanal</CalendarTitle>
+                  <CalendarSubtitle>
+                    Em <strong>Treinos</strong> você escolhe divisão em <strong>ABC</strong> (3
+                    dias), <strong>ABCD</strong> (4 dias) ou <strong>full body</strong>. Aqui
+                    marcamos apenas se houve treino realizado naquele dia.
+                  </CalendarSubtitle>
+                  <CalendarGrid>
+                    {cronogramaSemanal.map((diaInfo, index) => {
+                      const isToday = getDiaAtual() === diaInfo.dayOfWeek;
+                      const isCompleted = isTreinoRealizado(diaInfo.dayOfWeek);
+
+                      return (
+                        <CalendarDay
+                          key={index}
+                          isToday={isToday}
+                          isCompleted={isCompleted}
+                          isClickable={isCompleted}
+                          onClick={() =>
+                            isCompleted && handleDiaClick(diaInfo.dayOfWeek, diaInfo.dia)
+                          }
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <DayHeader>
+                            <DayName>{diaInfo.dia}</DayName>
+                            {isCompleted && (
+                              <CompletedIcon>
+                                <FiCheck />
+                              </CompletedIcon>
+                            )}
+                          </DayHeader>
+                          <WorkoutInfo>
+                            <WorkoutName>{diaInfo.treino}</WorkoutName>
+                            <MuscleGroup>{diaInfo.grupos}</MuscleGroup>
+                          </WorkoutInfo>
+                          {isToday && <TodayIndicator>HOJE</TodayIndicator>}
+                          {isCompleted && <ClickHint>Clique para ver</ClickHint>}
+                        </CalendarDay>
+                      );
+                    })}
+
+                    {/* Domingo - Dia de descanso */}
+                    <CalendarDay isRest={true}>
+                      <DayHeader>
+                        <DayName>Domingo</DayName>
+                      </DayHeader>
+                      <WorkoutInfo>
+                        <WorkoutName>Descanso</WorkoutName>
+                        <MuscleGroup>Recuperação</MuscleGroup>
+                      </WorkoutInfo>
+                      {getDiaAtual() === 7 && <TodayIndicator>HOJE</TodayIndicator>}
+                    </CalendarDay>
+                  </CalendarGrid>
+                </WeeklyCalendar>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        </MainArea>
-      </MainContent>
-    </Container>
+          </MainArea>
+        </MainContent>
+      </Container>
     </>
   );
 };
 
 const Container = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   color: var(--text);
   overflow-y: auto;
   overflow-x: hidden;
@@ -437,7 +431,7 @@ const Container = styled.div`
 const Header = styled.header`
   padding: 1.5rem 2rem;
   border-bottom: 1px solid rgba(198, 169, 100, 0.2);
-  
+
   > div {
     display: flex;
     justify-content: space-between;
@@ -618,10 +612,10 @@ const MetricDescription = styled.div`
 `;
 
 const IMCStatus = styled.div`
-  color: ${props => props.color};
+  color: ${(props) => props.color};
   font-size: 0.85rem;
   font-weight: 600;
-  background: ${props => `${props.color}20`};
+  background: ${(props) => `${props.color}20`};
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   display: inline-block;
@@ -794,22 +788,23 @@ const CalendarGrid = styled.div`
 `;
 
 const CalendarDay = styled(motion.div)`
-  background: ${props => {
+  background: ${(props) => {
     if (props.isRest) return 'rgba(100, 100, 100, 0.1)';
     if (props.isCompleted) return 'rgba(76, 175, 80, 0.15)';
     if (props.isToday) return 'rgba(198, 169, 100, 0.15)';
     return 'rgba(255, 255, 255, 0.05)';
   }};
-  border: 1px solid ${props => {
-    if (props.isRest) return 'rgba(100, 100, 100, 0.3)';
-    if (props.isCompleted) return 'rgba(76, 175, 80, 0.6)';
-    if (props.isToday) return 'var(--accent)';
-    return 'rgba(198, 169, 100, 0.2)';
-  }};
+  border: 1px solid
+    ${(props) => {
+      if (props.isRest) return 'rgba(100, 100, 100, 0.3)';
+      if (props.isCompleted) return 'rgba(76, 175, 80, 0.6)';
+      if (props.isToday) return 'var(--accent)';
+      return 'rgba(198, 169, 100, 0.2)';
+    }};
   border-radius: 8px;
   padding: 0.75rem;
   text-align: center;
-  cursor: ${props => props.isClickable ? 'pointer' : 'default'};
+  cursor: ${(props) => (props.isClickable ? 'pointer' : 'default')};
   transition: all 0.3s ease;
   position: relative;
   min-height: 100px;
@@ -819,9 +814,8 @@ const CalendarDay = styled(motion.div)`
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px ${props => 
-      props.isCompleted ? 'rgba(76, 175, 80, 0.4)' : 'rgba(198, 169, 100, 0.2)'
-    };
+    box-shadow: 0 4px 15px
+      ${(props) => (props.isCompleted ? 'rgba(76, 175, 80, 0.4)' : 'rgba(198, 169, 100, 0.2)')};
   }
 `;
 
@@ -839,7 +833,7 @@ const DayName = styled.div`
 `;
 
 const CompletedIcon = styled.div`
-  background: #4CAF50;
+  background: #4caf50;
   border-radius: 50%;
   width: 20px;
   height: 20px;
@@ -887,7 +881,7 @@ const TodayIndicator = styled.div`
 `;
 
 const ClickHint = styled.div`
-  color: #4CAF50;
+  color: #4caf50;
   font-size: 0.65rem;
   font-weight: 600;
   margin-top: 0.25rem;
@@ -994,7 +988,7 @@ const ModalBody = styled.div`
 const TreinoCard = styled.div`
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(198, 169, 100, 0.2);
-  border-left: 4px solid #4CAF50;
+  border-left: 4px solid #4caf50;
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1rem;
@@ -1029,7 +1023,7 @@ const TreinoCardTitulo = styled.h3`
 `;
 
 const TreinoCardData = styled.div`
-  color: #4CAF50;
+  color: #4caf50;
   font-size: 0.9rem;
   font-weight: 600;
   background: rgba(76, 175, 80, 0.1);

@@ -14,81 +14,82 @@ router.post('/profile-setup/skip', authenticate, async (req, res) => {
       userId,
       {
         $set: {
-          'profileSetupCompleted': true
-        }
+          profileSetupCompleted: true,
+        },
       },
-      { new: true, select: '-password' }
+      { new: true, select: '-password' },
     );
 
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: 'Usuário não encontrado',
       });
     }
 
     res.json({
       message: 'Setup marcado como completo',
-      user
+      user,
     });
   } catch (error) {
     console.error('Erro ao pular setup:', error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 });
 
-router.post('/profile-setup', [
-  authenticate,
-  ...createProfileValidationRules(),
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        error: 'Dados inválidos',
-        details: errors.array()
+router.post(
+  '/profile-setup',
+  [authenticate, ...createProfileValidationRules()],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          error: 'Dados inválidos',
+          details: errors.array(),
+        });
+      }
+
+      const { gender, height, weight, bodyType, age } = req.body;
+      const userId = req.user._id;
+
+      const currentYear = new Date().getFullYear();
+      const birthYear = currentYear - age;
+      const dateOfBirth = new Date(birthYear, 0, 1);
+
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            'profile.gender': gender,
+            'profile.height': height,
+            'profile.weight': weight,
+            'profile.bodyType': bodyType,
+            'profile.dateOfBirth': dateOfBirth,
+            profileSetupCompleted: true,
+          },
+        },
+        { new: true, select: '-password' },
+      );
+
+      if (!user) {
+        return res.status(404).json({
+          error: 'Usuário não encontrado',
+        });
+      }
+
+      res.json({
+        message: 'Perfil atualizado com sucesso',
+        user,
+      });
+    } catch {
+      res.status(500).json({
+        error: 'Erro interno do servidor',
       });
     }
-
-    const { gender, height, weight, bodyType, age } = req.body;
-    const userId = req.user._id;
-
-    const currentYear = new Date().getFullYear();
-    const birthYear = currentYear - age;
-    const dateOfBirth = new Date(birthYear, 0, 1);
-
-    const user = await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          'profile.gender': gender,
-          'profile.height': height,
-          'profile.weight': weight,
-          'profile.bodyType': bodyType,
-          'profile.dateOfBirth': dateOfBirth,
-          'profileSetupCompleted': true
-        }
-      },
-      { new: true, select: '-password' }
-    );
-
-    if (!user) {
-      return res.status(404).json({
-        error: 'Usuário não encontrado'
-      });
-    }
-
-    res.json({
-      message: 'Perfil atualizado com sucesso',
-      user
-    });
-  } catch {
-    res.status(500).json({
-      error: 'Erro interno do servidor'
-    });
-  }
-});
+  },
+);
 
 router.get('/', authenticate, authorize('admin'), async (req, res) => {
   try {
@@ -96,12 +97,12 @@ router.get('/', authenticate, authorize('admin'), async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
 
-    const query = search 
+    const query = search
       ? {
           $or: [
             { name: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } }
-          ]
+            { email: { $regex: search, $options: 'i' } },
+          ],
         }
       : {};
 
@@ -119,12 +120,12 @@ router.get('/', authenticate, authorize('admin'), async (req, res) => {
       totalPages: Math.ceil(total / limit),
       totalUsers: total,
       hasNextPage: page < Math.ceil(total / limit),
-      hasPrevPage: page > 1
+      hasPrevPage: page > 1,
     });
   } catch (error) {
     console.error('Erro ao listar usuários:', error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 });
@@ -135,15 +136,15 @@ router.get('/:id', authenticate, async (req, res) => {
 
     if (req.user._id.toString() !== id && req.user.role !== 'admin') {
       return res.status(403).json({
-        error: 'Acesso negado'
+        error: 'Acesso negado',
       });
     }
 
     const user = await User.findById(id).select('-password');
-    
+
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: 'Usuário não encontrado',
       });
     }
 
@@ -151,7 +152,7 @@ router.get('/:id', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Erro ao buscar usuário:', error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 });
@@ -164,7 +165,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: 'Usuário não encontrado',
       });
     }
 
@@ -172,7 +173,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({
-          error: 'E-mail já está em uso'
+          error: 'E-mail já está em uso',
         });
       }
     }
@@ -184,20 +185,19 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res) => {
     if (typeof isActive === 'boolean') updateData.isActive = isActive;
     if (profile) updateData.profile = { ...user.profile, ...profile };
 
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     res.json({
       message: 'Usuário atualizado com sucesso',
-      user: updatedUser
+      user: updatedUser,
     });
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 });
@@ -209,25 +209,25 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res) => {
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({
-        error: 'Usuário não encontrado'
+        error: 'Usuário não encontrado',
       });
     }
 
     if (req.user._id.toString() === id) {
       return res.status(400).json({
-        error: 'Você não pode deletar sua própria conta'
+        error: 'Você não pode deletar sua própria conta',
       });
     }
 
     await User.findByIdAndDelete(id);
 
     res.json({
-      message: 'Usuário deletado com sucesso'
+      message: 'Usuário deletado com sucesso',
     });
   } catch (error) {
     console.error('Erro ao deletar usuário:', error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 });
@@ -242,11 +242,11 @@ router.get('/stats/overview', authenticate, authorize('admin'), async (req, res)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const recentUsers = await User.countDocuments({
-      createdAt: { $gte: thirtyDaysAgo }
+      createdAt: { $gte: thirtyDaysAgo },
     });
 
     const recentlyActive = await User.countDocuments({
-      lastLogin: { $gte: thirtyDaysAgo }
+      lastLogin: { $gte: thirtyDaysAgo },
     });
 
     res.json({
@@ -255,12 +255,12 @@ router.get('/stats/overview', authenticate, authorize('admin'), async (req, res)
       inactiveUsers,
       admins,
       recentUsers,
-      recentlyActive
+      recentlyActive,
     });
   } catch (error) {
     console.error('Erro ao buscar estatísticas:', error);
     res.status(500).json({
-      error: 'Erro interno do servidor'
+      error: 'Erro interno do servidor',
     });
   }
 });

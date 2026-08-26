@@ -12,7 +12,7 @@ import { BODY_TYPE_OPTIONS, GENDER_OPTIONS } from '../utils/profileOptions';
 const EditProfilePage = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     newPassword: '',
@@ -21,7 +21,7 @@ const EditProfilePage = () => {
     height: '',
     weight: '',
     bodyType: '',
-    age: ''
+    age: '',
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -44,7 +44,7 @@ const EditProfilePage = () => {
         height: user.profile?.height || '',
         weight: user.profile?.weight || '',
         bodyType: user.profile?.bodyType || '',
-        age: (calculateAge(user.profile?.dateOfBirth) ?? '').toString()
+        age: (calculateAge(user.profile?.dateOfBirth) ?? '').toString(),
       });
       setIsLoadingUser(false);
     }
@@ -53,7 +53,7 @@ const EditProfilePage = () => {
   useEffect(() => {
     document.body.style.overflow = 'auto';
     document.documentElement.style.overflow = 'auto';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -62,10 +62,10 @@ const EditProfilePage = () => {
   useEffect(() => {
     if (submitMessage && submitMessageRef.current) {
       setTimeout(() => {
-        submitMessageRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
+        submitMessageRef.current?.scrollIntoView({
+          behavior: 'smooth',
           block: 'center',
-          inline: 'nearest'
+          inline: 'nearest',
         });
       }, 300);
     }
@@ -84,7 +84,8 @@ const EditProfilePage = () => {
         if (value && value.length < 6) {
           error = 'Nova senha deve ter pelo menos 6 caracteres';
         } else if (value && !isStrongPassword(value)) {
-          error = 'Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
+          error =
+            'Nova senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número';
         }
         break;
       case 'confirmPassword':
@@ -100,37 +101,37 @@ const EditProfilePage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name === 'name') {
       const sanitizedValue = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ\s]/g, '');
-      setFormData(prev => ({ ...prev, [name]: sanitizedValue }));
+      setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
       if (touched[name]) {
         const newError = validateField(name, sanitizedValue);
-        setErrors(prev => ({ ...prev, [name]: newError }));
+        setErrors((prev) => ({ ...prev, [name]: newError }));
       }
       return;
     }
-    
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (touched[name]) {
       const newError = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: newError }));
+      setErrors((prev) => ({ ...prev, [name]: newError }));
     }
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
     const newError = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: newError }));
+    setErrors((prev) => ({ ...prev, [name]: newError }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const newErrors = {};
-    Object.keys(formData).forEach(key => {
+    Object.keys(formData).forEach((key) => {
       const error = validateField(key, formData[key]);
       if (error) newErrors[key] = error;
     });
@@ -143,7 +144,7 @@ const EditProfilePage = () => {
       height: true,
       weight: true,
       bodyType: true,
-      age: true
+      age: true,
     });
 
     if (Object.keys(newErrors).length > 0) {
@@ -161,7 +162,7 @@ const EditProfilePage = () => {
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight),
         bodyType: formData.bodyType,
-        age: parseInt(formData.age)
+        age: parseInt(formData.age),
       };
 
       if (formData.newPassword) {
@@ -169,15 +170,14 @@ const EditProfilePage = () => {
       }
 
       const response = await api.updateProfile(profileData);
-      
+
       updateUser(response.user);
-      
+
       setSubmitMessage('Perfil atualizado com sucesso! Redirecionando...');
-      
+
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
-      
     } catch (error) {
       setSubmitMessage(error.message || 'Erro ao atualizar perfil. Tente novamente.');
     } finally {
@@ -191,34 +191,35 @@ const EditProfilePage = () => {
 
     try {
       const response = await api.requestAccountDeletion();
-      
-      setDeleteMessage(response.message || 'E-mail de confirmação enviado! Verifique sua caixa de entrada.');
+
+      setDeleteMessage(
+        response.message || 'E-mail de confirmação enviado! Verifique sua caixa de entrada.',
+      );
       setShowDeleteConfirmation(false);
-      
+
       if (response.devMode) {
         setDeleteMessage(response.message + ' (Modo desenvolvimento)');
       }
-      
+
       // Scroll automático para mostrar a mensagem
       setTimeout(() => {
         if (deleteMessageRef.current) {
-          deleteMessageRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
+          deleteMessageRef.current.scrollIntoView({
+            behavior: 'smooth',
             block: 'center',
-            inline: 'nearest'
+            inline: 'nearest',
           });
         }
       }, 300);
-      
     } catch (error) {
       setDeleteMessage(error.message || 'Erro ao solicitar exclusão. Tente novamente.');
-      
+
       setTimeout(() => {
         if (deleteMessageRef.current) {
-          deleteMessageRef.current.scrollIntoView({ 
-            behavior: 'smooth', 
+          deleteMessageRef.current.scrollIntoView({
+            behavior: 'smooth',
             block: 'center',
-            inline: 'nearest'
+            inline: 'nearest',
           });
         }
       }, 300);
@@ -254,7 +255,7 @@ const EditProfilePage = () => {
             <div>Atualize suas informações pessoais</div>
             <div>Mantenha seu perfil sempre atualizado</div>
           </FormSubtitle>
-          
+
           <FormContainer onSubmit={handleSubmit} noValidate>
             <InputGroup>
               <Input
@@ -339,7 +340,9 @@ const EditProfilePage = () => {
                 >
                   <option value="">Selecione seu gênero</option>
                   {GENDER_OPTIONS.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
                 </Select>
               </SelectWrapper>
@@ -449,7 +452,9 @@ const EditProfilePage = () => {
                 >
                   <option value="">Selecione seu biotipo</option>
                   {BODY_TYPE_OPTIONS.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
                 </Select>
               </SelectWrapper>
@@ -476,7 +481,7 @@ const EditProfilePage = () => {
               >
                 {isSubmitting ? 'Atualizando...' : 'Salvar Alterações'}
               </SubmitButton>
-              
+
               <CancelButton
                 type="button"
                 onClick={() => navigate('/dashboard')}
@@ -526,7 +531,11 @@ const EditProfilePage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.3 }}
-                  className={deleteMessage.includes('enviado') || deleteMessage.includes('sucesso') ? 'success' : 'error'}
+                  className={
+                    deleteMessage.includes('enviado') || deleteMessage.includes('sucesso')
+                      ? 'success'
+                      : 'error'
+                  }
                 >
                   {deleteMessage}
                 </SubmitMessage>
@@ -556,25 +565,21 @@ const EditProfilePage = () => {
               <ModalHeader>
                 <ModalTitle>⚠️ Confirmar Exclusão de Conta</ModalTitle>
               </ModalHeader>
-              
+
               <ModalBody>
                 <WarningText>
                   <strong>Esta ação é IRREVERSÍVEL!</strong>
                 </WarningText>
-                <WarningText>
-                  Ao confirmar, você:
-                </WarningText>
+                <WarningText>Ao confirmar, você:</WarningText>
                 <WarningList>
                   <li>🗑️ Perderá todos os seus dados permanentemente</li>
                   <li>🗑️ Não poderá recuperar sua conta</li>
                   <li>🗑️ Precisará criar uma nova conta para usar o HealGym novamente</li>
                   <li>📧 Receberá um email de confirmação final</li>
                 </WarningList>
-                <ConfirmText>
-                  Tem certeza absoluta que deseja excluir sua conta?
-                </ConfirmText>
+                <ConfirmText>Tem certeza absoluta que deseja excluir sua conta?</ConfirmText>
               </ModalBody>
-              
+
               <ModalFooter>
                 <ModalCancelButton
                   onClick={() => setShowDeleteConfirmation(false)}
@@ -607,7 +612,12 @@ const Container = styled.div`
   margin: 0;
   padding: min(2vh, 20px) 0;
   overflow-y: auto;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -684,10 +694,10 @@ const FormSubtitle = styled.p`
   letter-spacing: 0.1vw;
   cursor: default;
   line-height: 1.3;
-  
+
   div {
     margin-bottom: 0.2rem;
-    
+
     &:last-child {
       margin-bottom: 0;
     }
@@ -721,7 +731,7 @@ const TripleInputRow = styled.div`
   @media (max-width: 900px) {
     grid-template-columns: 1fr 1fr;
     gap: min(2vw, 15px);
-    
+
     & > div:last-child {
       grid-column: 1 / -1;
     }
@@ -730,7 +740,7 @@ const TripleInputRow = styled.div`
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
     gap: min(1.5vh, 12px);
-    
+
     & > div:last-child {
       grid-column: auto;
     }
@@ -741,19 +751,21 @@ const Input = styled.input`
   width: 100%;
   padding: min(1.5vh, 12px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border: 1px solid
+    ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)')};
   border-radius: 2px;
   color: var(--white);
   font-size: min(1.8vw, 1.1rem);
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
-  animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
+  animation: ${(props) => (props.error ? 'shake 0.5s ease-in-out' : 'none')};
 
   &:focus {
     outline: none;
-    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
-    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+    border-color: ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)')};
+    box-shadow: 0 0 10px
+      ${(props) => (props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)')};
   }
 
   &::placeholder {
@@ -762,9 +774,23 @@ const Input = styled.input`
   }
 
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
-    20%, 40%, 60%, 80% { transform: translateX(3px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-3px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(3px);
+    }
   }
 `;
 
@@ -777,7 +803,8 @@ const Select = styled.select`
   width: 100%;
   padding: min(1.5vh, 12px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border: 1px solid
+    ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)')};
   border-radius: 2px;
   color: var(--white);
   font-size: min(1.8vw, 1.1rem);
@@ -792,8 +819,9 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
-    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+    border-color: ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)')};
+    box-shadow: 0 0 10px
+      ${(props) => (props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)')};
   }
 
   option {
@@ -802,7 +830,7 @@ const Select = styled.select`
     padding: 10px;
   }
 
-  option[value=""] {
+  option[value=''] {
     color: rgba(255, 255, 255, 0.5);
   }
 `;
@@ -883,13 +911,13 @@ const SubmitMessage = styled(motion.div)`
   font-family: 'Cormorant', serif;
   font-size: min(1.8vw, 1rem);
   text-align: center;
-  
+
   &.success {
     background-color: rgba(76, 175, 80, 0.1);
     color: #4caf50;
     border: 1px solid rgba(76, 175, 80, 0.3);
   }
-  
+
   &.error {
     background-color: rgba(255, 107, 107, 0.1);
     color: #ff6b6b;
@@ -1013,7 +1041,7 @@ const WarningList = styled.ul`
   font-size: 1rem;
   margin: 20px 0;
   padding-left: 20px;
-  
+
   li {
     margin-bottom: 8px;
     line-height: 1.4;

@@ -11,10 +11,10 @@ services:
     networks:
       - healgym-network
     ports:
-      - "127.0.0.1:27017:27017"
+      - '127.0.0.1:27017:27017'
 
   backend:
-    build: 
+    build:
       context: ./backend
     restart: unless-stopped
     environment:
@@ -34,10 +34,10 @@ services:
     networks:
       - healgym-network
     ports:
-      - "5000:5000"
+      - '5000:5000'
 
   frontend:
-    build: 
+    build:
       context: ./frontend
     restart: unless-stopped
     environment:
@@ -52,9 +52,9 @@ services:
     networks:
       - healgym-network
     ports:
-      - "3000:3000"
+      - '3000:3000'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
 
 volumes:
   mongodb_data:

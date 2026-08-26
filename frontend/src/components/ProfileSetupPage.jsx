@@ -10,13 +10,13 @@ import { BODY_TYPE_OPTIONS, GENDER_OPTIONS } from '../utils/profileOptions';
 const ProfileSetupPage = () => {
   const navigate = useNavigate();
   const { updateUser, logout } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     gender: '',
     height: '',
     weight: '',
     bodyType: '',
-    age: ''
+    age: '',
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -27,7 +27,7 @@ const ProfileSetupPage = () => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -38,12 +38,12 @@ const ProfileSetupPage = () => {
     if (submitMessage && submitMessageRef.current) {
       document.body.style.overflow = 'auto';
       document.documentElement.style.overflow = 'auto';
-      
+
       setTimeout(() => {
-        submitMessageRef.current?.scrollIntoView({ 
-          behavior: 'smooth', 
+        submitMessageRef.current?.scrollIntoView({
+          behavior: 'smooth',
           block: 'center',
-          inline: 'nearest'
+          inline: 'nearest',
         });
       }, 300);
     }
@@ -53,26 +53,26 @@ const ProfileSetupPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (touched[name]) {
       const newError = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: newError }));
+      setErrors((prev) => ({ ...prev, [name]: newError }));
     }
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
     const newError = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: newError }));
+    setErrors((prev) => ({ ...prev, [name]: newError }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const newErrors = {};
-    Object.keys(formData).forEach(key => {
+    Object.keys(formData).forEach((key) => {
       const error = validateField(key, formData[key]);
       if (error) newErrors[key] = error;
     });
@@ -82,7 +82,7 @@ const ProfileSetupPage = () => {
       height: true,
       weight: true,
       bodyType: true,
-      age: true
+      age: true,
     });
 
     if (Object.keys(newErrors).length > 0) {
@@ -99,17 +99,16 @@ const ProfileSetupPage = () => {
         height: parseFloat(formData.height),
         weight: parseFloat(formData.weight),
         bodyType: formData.bodyType,
-        age: parseInt(formData.age)
+        age: parseInt(formData.age),
       });
-      
+
       updateUser(response.user);
-      
+
       setSubmitMessage('Informações salvas com sucesso! Redirecionando...');
-      
+
       setTimeout(() => {
         navigate('/dashboard');
       }, 2000);
-      
     } catch (error) {
       setSubmitMessage(error.message || 'Erro ao salvar informações. Tente novamente.');
     } finally {
@@ -136,7 +135,7 @@ const ProfileSetupPage = () => {
             <div>Vamos personalizar sua experiência!</div>
             <div>Preencha algumas informações sobre você.</div>
           </FormSubtitle>
-          
+
           <FormContainer onSubmit={handleSubmit} noValidate>
             <InputGroup>
               <SelectWrapper>
@@ -149,7 +148,9 @@ const ProfileSetupPage = () => {
                 >
                   <option value="">Selecione seu gênero</option>
                   {GENDER_OPTIONS.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
                 </Select>
               </SelectWrapper>
@@ -259,7 +260,9 @@ const ProfileSetupPage = () => {
                 >
                   <option value="">Selecione seu biotipo</option>
                   {BODY_TYPE_OPTIONS.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
                 </Select>
               </SelectWrapper>
@@ -315,7 +318,12 @@ const Container = styled.div`
   margin: 0;
   padding: min(15vh, 120px) 0;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -340,7 +348,7 @@ const LogoTitle = styled.h1`
   transition: all 0.4s ease;
   font-family: 'Cinzel', serif;
   z-index: 10;
-  
+
   &:hover {
     transform: scale(1.05);
     text-shadow: 2px 2px 8px rgba(198, 169, 100, 0.5);
@@ -381,10 +389,10 @@ const FormSubtitle = styled.p`
   letter-spacing: 0.1vw;
   cursor: default;
   line-height: 1.6;
-  
+
   div {
     margin-bottom: 0.5rem;
-    
+
     &:last-child {
       margin-bottom: 0;
     }
@@ -409,7 +417,7 @@ const TripleInputRow = styled.div`
   @media (max-width: 900px) {
     grid-template-columns: 1fr 1fr;
     gap: min(2vw, 20px);
-    
+
     & > div:last-child {
       grid-column: 1 / -1;
     }
@@ -418,7 +426,7 @@ const TripleInputRow = styled.div`
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
     gap: min(2vh, 15px);
-    
+
     & > div:last-child {
       grid-column: auto;
     }
@@ -429,19 +437,21 @@ const Input = styled.input`
   width: 100%;
   padding: min(2vh, 15px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border: 1px solid
+    ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)')};
   border-radius: 2px;
   color: var(--white);
   font-size: min(2vw, 1.2rem);
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
-  animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
+  animation: ${(props) => (props.error ? 'shake 0.5s ease-in-out' : 'none')};
 
   &:focus {
     outline: none;
-    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
-    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+    border-color: ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)')};
+    box-shadow: 0 0 10px
+      ${(props) => (props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)')};
   }
 
   &::placeholder {
@@ -450,9 +460,23 @@ const Input = styled.input`
   }
 
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
-    20%, 40%, 60%, 80% { transform: translateX(3px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-3px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(3px);
+    }
   }
 `;
 
@@ -465,7 +489,8 @@ const Select = styled.select`
   width: 100%;
   padding: min(2vh, 15px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border: 1px solid
+    ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)')};
   border-radius: 2px;
   color: var(--white);
   font-size: min(2vw, 1.2rem);
@@ -480,8 +505,9 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
-    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+    border-color: ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)')};
+    box-shadow: 0 0 10px
+      ${(props) => (props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)')};
   }
 
   option {
@@ -490,7 +516,7 @@ const Select = styled.select`
     padding: 10px;
   }
 
-  option[value=""] {
+  option[value=''] {
     color: rgba(255, 255, 255, 0.5);
   }
 `;
@@ -545,13 +571,13 @@ const SubmitMessage = styled(motion.div)`
   font-family: 'Cormorant', serif;
   font-size: min(1.8vw, 1rem);
   text-align: center;
-  
+
   &.success {
     background-color: rgba(76, 175, 80, 0.1);
     color: #4caf50;
     border: 1px solid rgba(76, 175, 80, 0.3);
   }
-  
+
   &.error {
     background-color: rgba(255, 107, 107, 0.1);
     color: #ff6b6b;

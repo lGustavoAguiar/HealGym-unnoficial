@@ -1,5 +1,5 @@
-import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 
 const ProfileSetupGuard = ({ children }) => {

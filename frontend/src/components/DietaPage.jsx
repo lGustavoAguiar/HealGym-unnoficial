@@ -1,9 +1,18 @@
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { FiArrowLeft, FiTarget, FiTrendingUp, FiClock, FiActivity, FiHeart, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiTarget,
+  FiTrendingUp,
+  FiClock,
+  FiActivity,
+  FiHeart,
+  FiRefreshCw,
+  FiTrash2,
+} from 'react-icons/fi';
 import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import {
   calculateAge,
@@ -23,13 +32,11 @@ function timeToInputValue(h) {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 }
 
-const calcularFatorPorcao = ({ porcao, unidade }) => (
-  unidade === 'unidade' ? porcao : porcao / 100
-);
+const calcularFatorPorcao = ({ porcao, unidade }) =>
+  unidade === 'unidade' ? porcao : porcao / 100;
 
-const calcularCaloriasPorMacros = ({ proteinas, carboidratos, gorduras }) => (
-  (proteinas * 4) + (carboidratos * 4) + (gorduras * 9)
-);
+const calcularCaloriasPorMacros = ({ proteinas, carboidratos, gorduras }) =>
+  proteinas * 4 + carboidratos * 4 + gorduras * 9;
 
 const DEFAULT_HORARIOS = MEAL_LABELS.map((_, i) => `${String(7 + i * 3).padStart(2, '0')}:00`);
 
@@ -41,17 +48,20 @@ const DietaPage = () => {
   const [error, setError] = useState(null);
   const [historicoDietas, setHistoricoDietas] = useState([]);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { dietId, dietInfo }
-  const [clearHistoryConfirm, setClearHistoryConfirm] = useState(false); // Confirmação para limpar histórico
+  const [clearHistoryConfirm, setClearHistoryConfirm] = useState(false);
   const [horariosRefeicoes, setHorariosRefeicoes] = useState(() => [...DEFAULT_HORARIOS]);
 
   const handleBackToDashboard = () => {
     navigate('/dashboard');
   };
 
-  // Cálculo das necessidades calóricas baseado na fórmula de Harris-Benedict revisada
-  // Atualiza automaticamente quando o perfil do usuário mudar (peso, altura, idade, gênero)
   const calcularNecessidadesNutricionais = useMemo(() => {
-    if (!user?.profile?.weight || !user?.profile?.height || !user?.profile?.dateOfBirth || !user?.profile?.gender) {
+    if (
+      !user?.profile?.weight ||
+      !user?.profile?.height ||
+      !user?.profile?.dateOfBirth ||
+      !user?.profile?.gender
+    ) {
       return null;
     }
 
@@ -60,11 +70,10 @@ const DietaPage = () => {
     const idade = calculateAge(user.profile.dateOfBirth);
     const genero = user.profile.gender;
 
-    // Cálculo do IMC e classificação
     const imc = calculateBodyMassIndex(peso, altura);
     let classificacaoIMC = '';
     let objetivo = '';
-    
+
     if (imc < 18.5) {
       classificacaoIMC = 'Abaixo do peso';
       objetivo = 'ganho_peso';
@@ -83,11 +92,10 @@ const DietaPage = () => {
     const tmb = calculateBasalMetabolicRate(peso, altura, idade, genero);
 
     const gastoEnergetico = Math.round(tmb);
-    
-    // Ajuste calórico baseado no objetivo
+
     let caloriasMeta;
     let deficitSuperavit = 0;
-    
+
     switch (objetivo) {
       case 'emagrecimento':
         caloriasMeta = Math.round(tmb);
@@ -110,9 +118,14 @@ const DietaPage = () => {
       imc: Math.round(imc * 10) / 10,
       classificacaoIMC,
       objetivo,
-      deficitSuperavit: Math.abs(deficitSuperavit)
+      deficitSuperavit: Math.abs(deficitSuperavit),
     };
-  }, [user?.profile?.weight, user?.profile?.height, user?.profile?.dateOfBirth, user?.profile?.gender]);
+  }, [
+    user?.profile?.weight,
+    user?.profile?.height,
+    user?.profile?.dateOfBirth,
+    user?.profile?.gender,
+  ]);
 
   const carregarHistoricoDietas = async () => {
     const response = await api.getMyDiets();
@@ -121,7 +134,6 @@ const DietaPage = () => {
     }
   };
 
-  // Buscar histórico de dietas ao montar o componente
   useEffect(() => {
     const fetchHistorico = async () => {
       try {
@@ -132,7 +144,6 @@ const DietaPage = () => {
     fetchHistorico();
   }, []);
 
-  // Gerador de dieta inteligente usando a API
   const gerarDieta = async () => {
     if (!calcularNecessidadesNutricionais) {
       setError('Configure seu perfil antes de gerar uma dieta');
@@ -141,15 +152,15 @@ const DietaPage = () => {
 
     setLoading(true);
     setError(null);
-    
+
     try {
       const { calorias, objetivo } = calcularNecessidadesNutricionais;
-      const peso = user.profile.weight; // Peso do usuário
-      
+      const peso = user.profile.weight;
+
       const response = await api.generateDiet({
         targetCalories: calorias,
         objetivo: objetivo,
-        weight: peso, // Enviar peso para cálculo correto dos macros
+        weight: peso,
         refeicoesPorDia: 4,
         preferencias: [],
         horarios: horariosRefeicoes,
@@ -160,7 +171,6 @@ const DietaPage = () => {
         if (response.diet?.mealPlan?.length) {
           setHorariosRefeicoes(response.diet.mealPlan.map((m) => timeToInputValue(m.horario)));
         }
-        // Atualizar histórico
         await carregarHistoricoDietas();
       }
     } catch (error) {
@@ -170,15 +180,13 @@ const DietaPage = () => {
     }
   };
 
-  // Excluir dieta
   const excluirDieta = async (dietId, event) => {
     event.stopPropagation(); // Prevenir que clique ative o onClick do item
-    
-    // Mostrar modal de confirmação
-    const diet = historicoDietas.find(d => d._id === dietId);
+
+    const diet = historicoDietas.find((d) => d._id === dietId);
     setDeleteConfirm({
       dietId,
-      dietInfo: diet
+      dietInfo: diet,
     });
   };
 
@@ -187,16 +195,15 @@ const DietaPage = () => {
 
     try {
       const response = await api.deleteDiet(deleteConfirm.dietId);
-      
+
       if (response.success) {
-        // Atualizar histórico
         await carregarHistoricoDietas();
-        
+
         // Se a dieta excluída estava sendo visualizada, limpar
         if (dietaGerada?.id === deleteConfirm.dietId) {
           setDietaGerada(null);
         }
-        
+
         setDeleteConfirm(null);
       }
     } catch {
@@ -212,16 +219,13 @@ const DietaPage = () => {
   const confirmarLimparHistorico = async () => {
     try {
       setLoading(true);
-      
-      // Deletar todas as dietas uma por uma
-      const deletePromises = historicoDietas.map(diet => api.deleteDiet(diet._id));
+
+      const deletePromises = historicoDietas.map((diet) => api.deleteDiet(diet._id));
       await Promise.all(deletePromises);
-      
-      // Limpar estado
+
       setHistoricoDietas([]);
       setDietaGerada(null);
       setClearHistoryConfirm(false);
-      
     } catch {
       setError('Erro ao limpar o histórico');
     } finally {
@@ -229,7 +233,6 @@ const DietaPage = () => {
     }
   };
 
-  // Calcular totais da dieta
   const calcularTotaisDieta = (mealPlan) => {
     let totais = {
       calorias: 0,
@@ -249,28 +252,28 @@ const DietaPage = () => {
       vitaminaD: 0,
       vitaminaE: 0,
       vitaminaB12: 0,
-      folato: 0
+      folato: 0,
     };
 
-    mealPlan.forEach(refeicao => {
-      refeicao.alimentos.forEach(alimento => {
+    mealPlan.forEach((refeicao) => {
+      refeicao.alimentos.forEach((alimento) => {
         const { nutrition, porcao, unidade, isSuplemento } = alimento;
-        
+
         // SUPLEMENTOS: contam apenas micronutrientes, NÃO contam nos macros
         if (isSuplemento) {
           // Fator fixo 1 para suplementos (valores já vêm prontos)
-          totais.calcio += (nutrition.calcio || 0);
-          totais.ferro += (nutrition.ferro || 0);
-          totais.magnesio += (nutrition.magnesio || 0);
-          totais.fosforo += (nutrition.fosforo || 0);
-          totais.potassio += (nutrition.potassio || 0);
-          totais.zinco += (nutrition.zinco || 0);
-          totais.vitaminaA += (nutrition.vitaminaA || 0);
-          totais.vitaminaC += (nutrition.vitaminaC || 0);
-          totais.vitaminaD += (nutrition.vitaminaD || 0);
-          totais.vitaminaE += (nutrition.vitaminaE || 0);
-          totais.vitaminaB12 += (nutrition.vitaminaB12 || 0);
-          totais.folato += (nutrition.folato || 0);
+          totais.calcio += nutrition.calcio || 0;
+          totais.ferro += nutrition.ferro || 0;
+          totais.magnesio += nutrition.magnesio || 0;
+          totais.fosforo += nutrition.fosforo || 0;
+          totais.potassio += nutrition.potassio || 0;
+          totais.zinco += nutrition.zinco || 0;
+          totais.vitaminaA += nutrition.vitaminaA || 0;
+          totais.vitaminaC += nutrition.vitaminaC || 0;
+          totais.vitaminaD += nutrition.vitaminaD || 0;
+          totais.vitaminaE += nutrition.vitaminaE || 0;
+          totais.vitaminaB12 += nutrition.vitaminaB12 || 0;
+          totais.folato += nutrition.folato || 0;
           return; // NÃO contar nos macros
         }
 
@@ -280,7 +283,7 @@ const DietaPage = () => {
 
         // ⚠️ IMPORTANTE: Calorias NÃO vêm da tabela nutricional!
         // São calculadas APENAS pelos macros usando o modelo 4/4/9
-        
+
         totais.proteinas += (nutrition.proteinas || 0) * fator;
         totais.carboidratos += (nutrition.carboidratos || 0) * fator;
         totais.gorduras += (nutrition.gorduras || 0) * fator;
@@ -304,8 +307,7 @@ const DietaPage = () => {
     // Proteína: 4 kcal/g | Carboidrato: 4 kcal/g | Gordura: 9 kcal/g
     totais.calorias = calcularCaloriasPorMacros(totais);
 
-    // Arredondar valores
-    Object.keys(totais).forEach(key => {
+    Object.keys(totais).forEach((key) => {
       totais[key] = Math.round(totais[key] * 10) / 10;
     });
 
@@ -344,9 +346,7 @@ const DietaPage = () => {
           >
             <ModalIcon>🗑️</ModalIcon>
             <ModalTitle>Excluir Dieta</ModalTitle>
-            <ModalMessage>
-              Tem certeza que deseja excluir esta dieta?
-            </ModalMessage>
+            <ModalMessage>Tem certeza que deseja excluir esta dieta?</ModalMessage>
             <ModalDietInfo>
               <div>
                 {deleteConfirm.dietInfo?.objetivo === 'emagrecimento' && '🔥 Emagrecimento'}
@@ -360,7 +360,7 @@ const DietaPage = () => {
                   month: '2-digit',
                   year: 'numeric',
                   hour: '2-digit',
-                  minute: '2-digit'
+                  minute: '2-digit',
                 })}
               </div>
             </ModalDietInfo>
@@ -405,9 +405,14 @@ const DietaPage = () => {
             <ModalIcon style={{ fontSize: '3rem' }}>⚠️</ModalIcon>
             <ModalTitle style={{ color: '#dc3545' }}>Limpar Todo Histórico</ModalTitle>
             <ModalMessage style={{ textAlign: 'center', lineHeight: '1.6' }}>
-              <strong>ATENÇÃO:</strong> Isso irá apagar <strong>TODAS as {historicoDietas.length} dietas</strong> do seu histórico permanentemente.
-              <br /><br />
-              <span style={{ color: '#dc3545', fontWeight: '600' }}>Esta ação NÃO pode ser desfeita!</span>
+              <strong>ATENÇÃO:</strong> Isso irá apagar{' '}
+              <strong>TODAS as {historicoDietas.length} dietas</strong> do seu histórico
+              permanentemente.
+              <br />
+              <br />
+              <span style={{ color: '#dc3545', fontWeight: '600' }}>
+                Esta ação NÃO pode ser desfeita!
+              </span>
             </ModalMessage>
             <ModalActions>
               <ModalButtonCancel
@@ -438,39 +443,43 @@ const DietaPage = () => {
           <ErrorCard>
             <ErrorIcon>⚠️</ErrorIcon>
             <ErrorTitle>Perfil Incompleto</ErrorTitle>
-            <ErrorMessage>
-              Complete seu perfil para gerar uma dieta personalizada
-            </ErrorMessage>
-            <ActionButton onClick={() => navigate('/profile-setup')}>
-              Completar Perfil
-            </ActionButton>
+            <ErrorMessage>Complete seu perfil para gerar uma dieta personalizada</ErrorMessage>
+            <ActionButton onClick={() => navigate('/profile-setup')}>Completar Perfil</ActionButton>
           </ErrorCard>
         ) : (
           <>
             <StatsGrid>
               <StatCard>
-                <StatIcon><FiTarget /></StatIcon>
+                <StatIcon>
+                  <FiTarget />
+                </StatIcon>
                 <StatLabel>IMC</StatLabel>
                 <StatValue>{calcularNecessidadesNutricionais.imc}</StatValue>
                 <StatSubtext>{calcularNecessidadesNutricionais.classificacaoIMC}</StatSubtext>
               </StatCard>
 
               <StatCard>
-                <StatIcon><FiActivity /></StatIcon>
+                <StatIcon>
+                  <FiActivity />
+                </StatIcon>
                 <StatLabel>TMB</StatLabel>
                 <StatValue>{calcularNecessidadesNutricionais.tmb}</StatValue>
                 <StatSubtext>kcal/dia</StatSubtext>
               </StatCard>
 
               <StatCard>
-                <StatIcon><FiTrendingUp /></StatIcon>
+                <StatIcon>
+                  <FiTrendingUp />
+                </StatIcon>
                 <StatLabel>Meta</StatLabel>
                 <StatValue>{calcularNecessidadesNutricionais.calorias}</StatValue>
                 <StatSubtext>kcal/dia</StatSubtext>
               </StatCard>
 
               <StatCard>
-                <StatIcon><FiHeart /></StatIcon>
+                <StatIcon>
+                  <FiHeart />
+                </StatIcon>
                 <StatLabel>Objetivo</StatLabel>
                 <StatValue style={{ fontSize: '1rem' }}>
                   {calcularNecessidadesNutricionais.objetivo === 'emagrecimento' && 'Emagrecimento'}
@@ -478,9 +487,8 @@ const DietaPage = () => {
                   {calcularNecessidadesNutricionais.objetivo === 'manutencao' && 'Manutenção'}
                 </StatValue>
                 <StatSubtext>
-                  {calcularNecessidadesNutricionais.deficitSuperavit > 0 && 
-                    `${calcularNecessidadesNutricionais.objetivo === 'emagrecimento' ? 'Déficit' : 'Superávit'}: ${calcularNecessidadesNutricionais.deficitSuperavit} kcal`
-                  }
+                  {calcularNecessidadesNutricionais.deficitSuperavit > 0 &&
+                    `${calcularNecessidadesNutricionais.objetivo === 'emagrecimento' ? 'Déficit' : 'Superávit'}: ${calcularNecessidadesNutricionais.deficitSuperavit} kcal`}
                 </StatSubtext>
               </StatCard>
             </StatsGrid>
@@ -488,7 +496,8 @@ const DietaPage = () => {
             <HorariosSection>
               <HorariosTitle>Horários das refeições</HorariosTitle>
               <HorariosDescription>
-                Defina os horários que combinam com a sua rotina. Eles serão usados ao gerar a dieta e aparecem em cada refeição.
+                Defina os horários que combinam com a sua rotina. Eles serão usados ao gerar a dieta
+                e aparecem em cada refeição.
               </HorariosDescription>
               <HorariosGrid>
                 {MEAL_LABELS.map((label, index) => (
@@ -501,7 +510,8 @@ const DietaPage = () => {
                         const v = e.target.value;
                         setHorariosRefeicoes((prev) => {
                           const next = [...prev];
-                          while (next.length < MEAL_LABELS.length) next.push(DEFAULT_HORARIOS[next.length]);
+                          while (next.length < MEAL_LABELS.length)
+                            next.push(DEFAULT_HORARIOS[next.length]);
                           next[index] = v;
                           return next;
                         });
@@ -522,8 +532,8 @@ const DietaPage = () => {
               <GenerateSection>
                 <GenerateTitle>Gerar Dieta Personalizada</GenerateTitle>
                 <GenerateDescription>
-                  Sua dieta será gerada com informações nutricionais detalhadas da API USDA FoodData Central,
-                  incluindo macronutrientes, micronutrientes, vitaminas e minerais.
+                  Sua dieta será gerada com informações nutricionais detalhadas da API USDA FoodData
+                  Central, incluindo macronutrientes, micronutrientes, vitaminas e minerais.
                 </GenerateDescription>
                 <GenerateButton
                   as={motion.button}
@@ -591,13 +601,13 @@ const DietaPage = () => {
                       calorias: 0,
                       proteinas: 0,
                       carboidratos: 0,
-                      gorduras: 0
+                      gorduras: 0,
                     };
 
-                    refeicao.alimentos.forEach(alimento => {
+                    refeicao.alimentos.forEach((alimento) => {
                       // SUPLEMENTOS não contam nos macros
                       if (alimento.isSuplemento) return;
-                      
+
                       // Ovos são por unidade, outros alimentos por 100g
                       const fator = calcularFatorPorcao(alimento);
                       // NÃO somar calorias da tabela! Calcular depois pelos macros
@@ -625,52 +635,104 @@ const DietaPage = () => {
                         <FoodsList>
                           {refeicao.alimentos.map((alimento, foodIndex) => {
                             const fatorAlimento = calcularFatorPorcao(alimento);
-                            
+
                             // SUPLEMENTOS têm estilo diferente
                             if (alimento.isSuplemento) {
                               return (
-                                <FoodItem key={foodIndex} style={{ backgroundColor: 'rgba(212, 175, 55, 0.05)', borderLeft: '3px solid #d4af37' }}>
+                                <FoodItem
+                                  key={foodIndex}
+                                  style={{
+                                    backgroundColor: 'rgba(212, 175, 55, 0.05)',
+                                    borderLeft: '3px solid #d4af37',
+                                  }}
+                                >
                                   <FoodName style={{ color: '#d4af37', fontWeight: '600' }}>
                                     ⭐ {alimento.nome}
                                   </FoodName>
                                   <FoodQuantity style={{ color: '#d4af37' }}>
                                     {alimento.porcao} {alimento.unidade}
                                   </FoodQuantity>
-                                  <FoodMacros style={{ color: '#888', fontStyle: 'italic', fontSize: '0.85rem' }}>
+                                  <FoodMacros
+                                    style={{
+                                      color: '#888',
+                                      fontStyle: 'italic',
+                                      fontSize: '0.85rem',
+                                    }}
+                                  >
                                     Suplemento (não conta nos macros)
                                   </FoodMacros>
                                 </FoodItem>
                               );
                             }
-                            
+
                             return (
                               <FoodItem key={foodIndex}>
                                 <FoodName>{alimento.nome}</FoodName>
                                 <FoodQuantity>
-                                  {alimento.porcao}{alimento.unidade === 'unidade' ? ' unidade(s)' : alimento.unidade === 'ml' ? 'ml' : alimento.unidade === 'cápsula' ? ' cápsula' : alimento.unidade === 'cápsulas' ? ' cápsulas' : 'g'}
+                                  {alimento.porcao}
+                                  {alimento.unidade === 'unidade'
+                                    ? ' unidade(s)'
+                                    : alimento.unidade === 'ml'
+                                      ? 'ml'
+                                      : alimento.unidade === 'cápsula'
+                                        ? ' cápsula'
+                                        : alimento.unidade === 'cápsulas'
+                                          ? ' cápsulas'
+                                          : 'g'}
                                 </FoodQuantity>
                                 <FoodMacros>
-                                  P: {Math.round((alimento.nutrition.proteinas || 0) * fatorAlimento)}g | 
-                                  C: {Math.round((alimento.nutrition.carboidratos || 0) * fatorAlimento)}g | 
-                                  G: {Math.round((alimento.nutrition.gorduras || 0) * fatorAlimento)}g
+                                  P:{' '}
+                                  {Math.round((alimento.nutrition.proteinas || 0) * fatorAlimento)}g
+                                  | C:{' '}
+                                  {Math.round(
+                                    (alimento.nutrition.carboidratos || 0) * fatorAlimento,
+                                  )}
+                                  g | G:{' '}
+                                  {Math.round((alimento.nutrition.gorduras || 0) * fatorAlimento)}g
                                 </FoodMacros>
-                                
+
                                 {/* Micronutrientes */}
                                 <MicronutrientsList>
                                   {alimento.nutrition.fibras > 0 && (
-                                    <MicroItem>Fibras: {Math.round((alimento.nutrition.fibras || 0) * fatorAlimento)}g</MicroItem>
+                                    <MicroItem>
+                                      Fibras:{' '}
+                                      {Math.round((alimento.nutrition.fibras || 0) * fatorAlimento)}
+                                      g
+                                    </MicroItem>
                                   )}
                                   {alimento.nutrition.calcio > 0 && (
-                                    <MicroItem>Cálcio: {Math.round((alimento.nutrition.calcio || 0) * fatorAlimento)}mg</MicroItem>
+                                    <MicroItem>
+                                      Cálcio:{' '}
+                                      {Math.round((alimento.nutrition.calcio || 0) * fatorAlimento)}
+                                      mg
+                                    </MicroItem>
                                   )}
                                   {alimento.nutrition.ferro > 0 && (
-                                    <MicroItem>Ferro: {Math.round((alimento.nutrition.ferro || 0) * fatorAlimento * 10) / 10}mg</MicroItem>
+                                    <MicroItem>
+                                      Ferro:{' '}
+                                      {Math.round(
+                                        (alimento.nutrition.ferro || 0) * fatorAlimento * 10,
+                                      ) / 10}
+                                      mg
+                                    </MicroItem>
                                   )}
                                   {alimento.nutrition.vitaminaC > 0 && (
-                                    <MicroItem>Vit. C: {Math.round((alimento.nutrition.vitaminaC || 0) * fatorAlimento)}mg</MicroItem>
+                                    <MicroItem>
+                                      Vit. C:{' '}
+                                      {Math.round(
+                                        (alimento.nutrition.vitaminaC || 0) * fatorAlimento,
+                                      )}
+                                      mg
+                                    </MicroItem>
                                   )}
                                   {alimento.nutrition.vitaminaA > 0 && (
-                                    <MicroItem>Vit. A: {Math.round((alimento.nutrition.vitaminaA || 0) * fatorAlimento)}mcg</MicroItem>
+                                    <MicroItem>
+                                      Vit. A:{' '}
+                                      {Math.round(
+                                        (alimento.nutrition.vitaminaA || 0) * fatorAlimento,
+                                      )}
+                                      mcg
+                                    </MicroItem>
                                   )}
                                 </MicronutrientsList>
                               </FoodItem>
@@ -767,8 +829,8 @@ const DietaPage = () => {
                 </HistoryHeader>
                 <HistoryList>
                   {historicoDietas.slice(0, 5).map((diet) => (
-                    <HistoryItem 
-                      key={diet._id} 
+                    <HistoryItem
+                      key={diet._id}
                       onClick={() => {
                         const dietData = {
                           id: diet._id,
@@ -777,13 +839,15 @@ const DietaPage = () => {
                             calorias: diet.targetCalories,
                             proteinas: Math.round(diet.targetProtein),
                             carboidratos: Math.round(diet.targetCarbs),
-                            gorduras: Math.round(diet.targetFat)
+                            gorduras: Math.round(diet.targetFat),
                           },
-                          mealPlan: diet.mealPlan
+                          mealPlan: diet.mealPlan,
                         };
                         setDietaGerada(dietData);
                         if (diet.mealPlan?.length) {
-                          setHorariosRefeicoes(diet.mealPlan.map((m) => timeToInputValue(m.horario)));
+                          setHorariosRefeicoes(
+                            diet.mealPlan.map((m) => timeToInputValue(m.horario)),
+                          );
                         }
                       }}
                       isActive={dietaGerada?.id === diet._id}
@@ -794,15 +858,15 @@ const DietaPage = () => {
                           month: '2-digit',
                           year: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
                         })}
                       </HistoryDate>
                       <HistoryInfo>
-                        <HistoryObjectivo>
+                        <HistoryObjetivo>
                           {diet.objetivo === 'emagrecimento' && '🔥 Emagrecimento'}
                           {diet.objetivo === 'ganho_peso' && '💪 Ganho de Peso'}
                           {diet.objetivo === 'manutencao' && '⚖️ Manutenção'}
-                        </HistoryObjectivo>
+                        </HistoryObjetivo>
                         <HistoryCalories>{diet.targetCalories} kcal</HistoryCalories>
                       </HistoryInfo>
                       <DeleteButton
@@ -1090,8 +1154,12 @@ const GenerateButton = styled.button`
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -1403,8 +1471,8 @@ const HistoryList = styled.div`
 `;
 
 const HistoryItem = styled.div`
-  background: ${props => props.isActive ? 'rgba(198, 169, 100, 0.15)' : 'rgba(255, 255, 255, 0.02)'};
-  border: 1px solid ${props => props.isActive ? 'var(--accent)' : 'rgba(198, 169, 100, 0.1)'};
+  background: ${(props) => (props.isActive ? 'rgba(198, 169, 100, 0.15)' : 'rgba(255, 255, 255, 0.02)')};
+  border: 1px solid ${(props) => (props.isActive ? 'var(--accent)' : 'rgba(198, 169, 100, 0.1)')};
   border-radius: 8px;
   padding: 1rem;
   cursor: pointer;
@@ -1431,7 +1499,7 @@ const HistoryInfo = styled.div`
   align-items: center;
 `;
 
-const HistoryObjectivo = styled.div`
+const HistoryObjetivo = styled.div`
   color: var(--white);
   font-size: 0.9rem;
   font-weight: 600;
@@ -1496,9 +1564,16 @@ const ModalIcon = styled.div`
   animation: shake 0.5s ease-in-out;
 
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-10px) rotate(-5deg); }
-    75% { transform: translateX(10px) rotate(5deg); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-10px) rotate(-5deg);
+    }
+    75% {
+      transform: translateX(10px) rotate(5deg);
+    }
   }
 `;
 
@@ -1522,7 +1597,7 @@ const ModalDietInfo = styled.div`
   border-radius: 12px;
   padding: 1rem;
   margin-bottom: 2rem;
-  
+
   div {
     color: var(--white);
     margin: 0.5rem 0;

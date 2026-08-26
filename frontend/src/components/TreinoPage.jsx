@@ -2,98 +2,27 @@ import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { FiArrowLeft, FiActivity, FiClock, FiTrash2, FiCheck, FiZap, FiPlay, FiPause, FiStopCircle, FiCheckCircle, FiRotateCcw } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiActivity,
+  FiClock,
+  FiTrash2,
+  FiCheck,
+  FiZap,
+  FiPlay,
+  FiPause,
+  FiStopCircle,
+  FiCheckCircle,
+  FiRotateCcw,
+} from 'react-icons/fi';
 import api from '../services/api';
+import {
+  TIPOS_DIVISAO,
+  formatarDataRelativa,
+  obterUltimoTreinoRelevante,
+  calcularSugestaoProximo,
+} from '../utils/treinoDivisao';
 import LoadingSpinner from './LoadingSpinner';
-
-const TIPOS_DIVISAO = [
-  {
-    value: 'ABC',
-    label: 'ABC — 3 dias',
-    detalhe: 'A: peito + tríceps · B: costas + bíceps · C: pernas + ombros'
-  },
-  {
-    value: 'ABCD',
-    label: 'ABCD — 4 dias',
-    detalhe: 'A: peito + tríceps · B: costas + bíceps · C: só pernas · D: ombros + braços'
-  },
-  {
-    value: 'FULL_BODY',
-    label: 'Full body',
-    detalhe: 'Peito, costas, pernas, ombros e braços na mesma sessão'
-  }
-];
-
-const ORDEM_LETRAS_ABC = ['A', 'B', 'C'];
-const ORDEM_LETRAS_ABCD = ['A', 'B', 'C', 'D'];
-
-function inferirLetraDoTitulo(titulo) {
-  const match = titulo?.match(/^Treino ([A-D])(?:\s|—|-)/);
-  return match ? match[1] : null;
-}
-
-function inferirTipoDivisaoDoGrupamento(grupamento, titulo = '') {
-  if (grupamento === 'FULL_BODY' || titulo.includes('Full Body')) return 'FULL_BODY';
-  if (grupamento === 'OMBROS_BRACOS' || titulo.includes('Ombros e Braços')) return 'ABCD';
-  if (grupamento === 'PERNAS_OMBROS' || titulo.includes('Pernas e Ombros')) return 'ABC';
-  if (grupamento === 'PERNAS' || titulo.includes('Pernas Completas')) return 'ABCD';
-  return 'ABC';
-}
-
-function formatarDataRelativa(dataIso) {
-  if (!dataIso) return '';
-  const data = new Date(dataIso);
-  const hoje = new Date();
-  const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-  const inicioData = new Date(data.getFullYear(), data.getMonth(), data.getDate());
-  const diffDias = Math.round((inicioHoje - inicioData) / 86400000);
-
-  if (diffDias === 0) return 'hoje';
-  if (diffDias === 1) return 'ontem';
-  if (diffDias > 1 && diffDias < 7) return `há ${diffDias} dias`;
-  return data.toLocaleDateString('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  });
-}
-
-function obterUltimoTreinoRelevante(lista) {
-  if (!lista?.length) return null;
-  const realizados = lista.filter((t) => t.realizado && t.dataRealizacao);
-  if (realizados.length) {
-    return [...realizados].sort(
-      (a, b) => new Date(b.dataRealizacao) - new Date(a.dataRealizacao)
-    )[0];
-  }
-  return [...lista].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-}
-
-function calcularSugestaoProximo(ultimo) {
-  if (!ultimo) return null;
-
-  const tipoDivisao = inferirTipoDivisaoDoGrupamento(ultimo.grupamento, ultimo.titulo);
-  if (tipoDivisao === 'FULL_BODY') {
-    return {
-      tipoDivisao: 'FULL_BODY',
-      letraTreino: null,
-      tempoDisponivel: ultimo.tempoDisponivel,
-      mensagem: 'Hoje pode ser outro full body com o mesmo tempo de sessão.'
-    };
-  }
-
-  const letraAtual = inferirLetraDoTitulo(ultimo.titulo);
-  const ordem = tipoDivisao === 'ABCD' ? ORDEM_LETRAS_ABCD : ORDEM_LETRAS_ABC;
-  const idx = letraAtual ? ordem.indexOf(letraAtual) : -1;
-  const proximaLetra = idx >= 0 ? ordem[(idx + 1) % ordem.length] : ordem[0];
-
-  return {
-    tipoDivisao,
-    letraTreino: proximaLetra,
-    tempoDisponivel: ultimo.tempoDisponivel,
-    mensagem: `Na sequência ${tipoDivisao}, depois do Treino ${letraAtual || '?'} costuma vir o Treino ${proximaLetra}.`
-  };
-}
 
 const TreinoPage = () => {
   const navigate = useNavigate();
@@ -105,31 +34,27 @@ const TreinoPage = () => {
   const [treinoGerado, setTreinoGerado] = useState(null);
   const [historico, setHistorico] = useState([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
-  
-  // Estados para controle do treino ativo
+
   const [treinoAtivo, setTreinoAtivo] = useState(false);
   const [tempoTreinoDecorrido, setTempoTreinoDecorrido] = useState(0);
   const [progressoExercicios, setProgressoExercicios] = useState({});
-  
-  // Estados para timer de descanso
+
   const [descansoAtivo, setDescansoAtivo] = useState(false);
   const [tempoDescansoRestante, setTempoDescansoRestante] = useState(0);
   const [exercicioEmDescanso, setExercicioEmDescanso] = useState(null);
-  
+
   // Estado para prevenir cliques múltiplos
   const [processandoSerie, setProcessandoSerie] = useState(false);
-  
-  // Estados para modais customizados
+
   const [modalAberto, setModalAberto] = useState(false);
   const [modalConfig, setModalConfig] = useState({
     tipo: 'confirm', // 'confirm' ou 'alert'
     titulo: '',
     mensagem: '',
     onConfirm: null,
-    onCancel: null
+    onCancel: null,
   });
-  
-  // Refs para os timers
+
   const timerTreinoRef = useRef(null);
   const timerDescansoRef = useRef(null);
 
@@ -140,10 +65,7 @@ const TreinoPage = () => {
   }, [tipoDivisao, letraTreino]);
 
   const ultimoTreino = useMemo(() => obterUltimoTreinoRelevante(historico), [historico]);
-  const sugestaoProximo = useMemo(
-    () => calcularSugestaoProximo(ultimoTreino),
-    [ultimoTreino]
-  );
+  const sugestaoProximo = useMemo(() => calcularSugestaoProximo(ultimoTreino), [ultimoTreino]);
 
   const aplicarSugestaoProximo = useCallback(() => {
     if (!sugestaoProximo) return;
@@ -180,7 +102,7 @@ const TreinoPage = () => {
   useEffect(() => {
     if (treinoAtivo) {
       timerTreinoRef.current = setInterval(() => {
-        setTempoTreinoDecorrido(prev => prev + 1);
+        setTempoTreinoDecorrido((prev) => prev + 1);
       }, 1000);
     } else {
       if (timerTreinoRef.current) {
@@ -198,12 +120,14 @@ const TreinoPage = () => {
   useEffect(() => {
     if (descansoAtivo && tempoDescansoRestante > 0) {
       timerDescansoRef.current = setInterval(() => {
-        setTempoDescansoRestante(prev => {
+        setTempoDescansoRestante((prev) => {
           if (prev <= 1) {
             setDescansoAtivo(false);
             // Notificação de som (opcional)
             try {
-              const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dyvg==');
+              const audio = new Audio(
+                'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dyvg==',
+              );
               audio.play();
             } catch {}
             return 0;
@@ -237,21 +161,19 @@ const TreinoPage = () => {
     }
   };
 
-  // Formatar tempo em MM:SS
   const formatarTempo = useCallback((segundos) => {
     const mins = Math.floor(segundos / 60);
     const secs = segundos % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
-  // Funções para modais customizados
   const mostrarConfirm = useCallback((titulo, mensagem, onConfirm) => {
     setModalConfig({
       tipo: 'confirm',
       titulo,
       mensagem,
       onConfirm,
-      onCancel: () => setModalAberto(false)
+      onCancel: () => setModalAberto(false),
     });
     setModalAberto(true);
   }, []);
@@ -262,33 +184,29 @@ const TreinoPage = () => {
       titulo,
       mensagem,
       onConfirm: () => setModalAberto(false),
-      onCancel: null
+      onCancel: null,
     });
     setModalAberto(true);
   }, []);
 
-  // Iniciar treino
   const iniciarTreino = useCallback(() => {
     setTreinoAtivo(true);
     setTempoTreinoDecorrido(0);
-    // Inicializar progresso de todos os exercícios
     const progressoInicial = {};
     treinoGerado.exercicios.forEach((_, index) => {
       progressoInicial[index] = {
         seriesCompletadas: 0,
         totalSeries: treinoGerado.exercicios[index].series,
-        seriesAntesAtalho: null
+        seriesAntesAtalho: null,
       };
     });
     setProgressoExercicios(progressoInicial);
   }, [treinoGerado]);
 
-  // Pausar/Retomar treino
   const togglePausarTreino = useCallback(() => {
-    setTreinoAtivo(prev => !prev);
+    setTreinoAtivo((prev) => !prev);
   }, []);
 
-  // Finalizar treino
   const finalizarTreino = useCallback(() => {
     mostrarConfirm(
       'Finalizar Treino',
@@ -300,7 +218,7 @@ const TreinoPage = () => {
         setProgressoExercicios({});
         setExercicioEmDescanso(null);
         setModalAberto(false);
-      }
+      },
     );
   }, [mostrarConfirm]);
 
@@ -310,127 +228,134 @@ const TreinoPage = () => {
     return match ? parseInt(match[1]) : 60;
   }, []);
 
-  // Completar uma série
-  const completarSerie = useCallback((exercicioIndex, tempoDescanso) => {
-    // Prevenir cliques múltiplos
-    if (processandoSerie) return;
-    
-    setProcessandoSerie(true);
-    
-    setProgressoExercicios(prev => {
-      const novoProgresso = { ...prev };
-      if (!novoProgresso[exercicioIndex]) {
-        novoProgresso[exercicioIndex] = {
+  const completarSerie = useCallback(
+    (exercicioIndex, tempoDescanso) => {
+      if (processandoSerie) return;
+
+      setProcessandoSerie(true);
+
+      setProgressoExercicios((prev) => {
+        const novoProgresso = { ...prev };
+        if (!novoProgresso[exercicioIndex]) {
+          novoProgresso[exercicioIndex] = {
+            seriesCompletadas: 0,
+            totalSeries: treinoGerado.exercicios[exercicioIndex].series,
+            seriesAntesAtalho: null,
+          };
+        }
+
+        const seriesAtuais = novoProgresso[exercicioIndex].seriesCompletadas;
+        const totalSeries = novoProgresso[exercicioIndex].totalSeries;
+
+        if (seriesAtuais < totalSeries) {
+          novoProgresso[exercicioIndex] = {
+            ...novoProgresso[exercicioIndex],
+            seriesCompletadas: seriesAtuais + 1,
+            seriesAntesAtalho: null,
+          };
+
+          const ehUltimoExercicio = exercicioIndex === treinoGerado.exercicios.length - 1;
+          const ehUltimaSerie = seriesAtuais + 1 === totalSeries;
+
+          // Iniciar descanso exceto se for a última série do último exercício
+          if (!(ehUltimoExercicio && ehUltimaSerie)) {
+            const tempoEmSegundos = extrairTempoDescanso(tempoDescanso);
+            setTempoDescansoRestante(tempoEmSegundos);
+            setDescansoAtivo(true);
+            setExercicioEmDescanso(exercicioIndex);
+          }
+        }
+
+        return novoProgresso;
+      });
+
+      // Liberar após um pequeno delay
+      setTimeout(() => {
+        setProcessandoSerie(false);
+      }, 300);
+    },
+    [treinoGerado, extrairTempoDescanso, processandoSerie],
+  );
+
+  const iniciarDescansoAposExercicio = useCallback(
+    (exercicioIndex, tempoDescanso) => {
+      const ehUltimoExercicio = exercicioIndex === treinoGerado.exercicios.length - 1;
+      if (ehUltimoExercicio) return;
+
+      const tempoEmSegundos = extrairTempoDescanso(tempoDescanso);
+      setTempoDescansoRestante(tempoEmSegundos);
+      setDescansoAtivo(true);
+      setExercicioEmDescanso(exercicioIndex);
+    },
+    [treinoGerado, extrairTempoDescanso],
+  );
+
+  const completarExercicio = useCallback(
+    (exercicioIndex, tempoDescanso) => {
+      if (processandoSerie || !treinoGerado) return;
+
+      setProcessandoSerie(true);
+
+      setProgressoExercicios((prev) => {
+        const novoProgresso = { ...prev };
+        const totalSeries = treinoGerado.exercicios[exercicioIndex].series;
+        const atual = novoProgresso[exercicioIndex] || {
           seriesCompletadas: 0,
-          totalSeries: treinoGerado.exercicios[exercicioIndex].series,
-          seriesAntesAtalho: null
+          totalSeries,
+          seriesAntesAtalho: null,
         };
-      }
-      
-      const seriesAtuais = novoProgresso[exercicioIndex].seriesCompletadas;
-      const totalSeries = novoProgresso[exercicioIndex].totalSeries;
-      
-      // Incrementar séries completadas
-      if (seriesAtuais < totalSeries) {
+
+        if (atual.seriesCompletadas >= atual.totalSeries) {
+          return prev;
+        }
+
         novoProgresso[exercicioIndex] = {
-          ...novoProgresso[exercicioIndex],
-          seriesCompletadas: seriesAtuais + 1,
-          seriesAntesAtalho: null
-        };
-        
-        // Verificar se é o último exercício
-        const ehUltimoExercicio = exercicioIndex === treinoGerado.exercicios.length - 1;
-        const ehUltimaSerie = seriesAtuais + 1 === totalSeries;
-        
-        // Iniciar descanso exceto se for a última série do último exercício
-        if (!(ehUltimoExercicio && ehUltimaSerie)) {
-          const tempoEmSegundos = extrairTempoDescanso(tempoDescanso);
-          setTempoDescansoRestante(tempoEmSegundos);
-          setDescansoAtivo(true);
-          setExercicioEmDescanso(exercicioIndex);
-        }
-      }
-      
-      return novoProgresso;
-    });
-    
-    // Liberar após um pequeno delay
-    setTimeout(() => {
-      setProcessandoSerie(false);
-    }, 300);
-  }, [treinoGerado, extrairTempoDescanso, processandoSerie]);
-
-  const iniciarDescansoAposExercicio = useCallback((exercicioIndex, tempoDescanso) => {
-    const ehUltimoExercicio = exercicioIndex === treinoGerado.exercicios.length - 1;
-    if (ehUltimoExercicio) return;
-
-    const tempoEmSegundos = extrairTempoDescanso(tempoDescanso);
-    setTempoDescansoRestante(tempoEmSegundos);
-    setDescansoAtivo(true);
-    setExercicioEmDescanso(exercicioIndex);
-  }, [treinoGerado, extrairTempoDescanso]);
-
-  const completarExercicio = useCallback((exercicioIndex, tempoDescanso) => {
-    if (processandoSerie || !treinoGerado) return;
-
-    setProcessandoSerie(true);
-
-    setProgressoExercicios((prev) => {
-      const novoProgresso = { ...prev };
-      const totalSeries = treinoGerado.exercicios[exercicioIndex].series;
-      const atual = novoProgresso[exercicioIndex] || {
-        seriesCompletadas: 0,
-        totalSeries,
-        seriesAntesAtalho: null
-      };
-
-      if (atual.seriesCompletadas >= atual.totalSeries) {
-        return prev;
-      }
-
-      novoProgresso[exercicioIndex] = {
-        ...atual,
-        seriesAntesAtalho: atual.seriesCompletadas,
-        seriesCompletadas: atual.totalSeries
-      };
-
-      return novoProgresso;
-    });
-
-    iniciarDescansoAposExercicio(exercicioIndex, tempoDescanso);
-
-    setTimeout(() => {
-      setProcessandoSerie(false);
-    }, 300);
-  }, [treinoGerado, processandoSerie, iniciarDescansoAposExercicio]);
-
-  const desfazerExercicioCompleto = useCallback((exercicioIndex) => {
-    if (processandoSerie) return;
-
-    setProgressoExercicios((prev) => {
-      const atual = prev[exercicioIndex];
-      if (!atual || atual.seriesAntesAtalho == null) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        [exercicioIndex]: {
           ...atual,
-          seriesCompletadas: atual.seriesAntesAtalho,
-          seriesAntesAtalho: null
+          seriesAntesAtalho: atual.seriesCompletadas,
+          seriesCompletadas: atual.totalSeries,
+        };
+
+        return novoProgresso;
+      });
+
+      iniciarDescansoAposExercicio(exercicioIndex, tempoDescanso);
+
+      setTimeout(() => {
+        setProcessandoSerie(false);
+      }, 300);
+    },
+    [treinoGerado, processandoSerie, iniciarDescansoAposExercicio],
+  );
+
+  const desfazerExercicioCompleto = useCallback(
+    (exercicioIndex) => {
+      if (processandoSerie) return;
+
+      setProgressoExercicios((prev) => {
+        const atual = prev[exercicioIndex];
+        if (!atual || atual.seriesAntesAtalho == null) {
+          return prev;
         }
-      };
-    });
 
-    if (exercicioEmDescanso === exercicioIndex) {
-      setDescansoAtivo(false);
-      setTempoDescansoRestante(0);
-      setExercicioEmDescanso(null);
-    }
-  }, [processandoSerie, exercicioEmDescanso]);
+        return {
+          ...prev,
+          [exercicioIndex]: {
+            ...atual,
+            seriesCompletadas: atual.seriesAntesAtalho,
+            seriesAntesAtalho: null,
+          },
+        };
+      });
 
-  // Pular descanso
+      if (exercicioEmDescanso === exercicioIndex) {
+        setDescansoAtivo(false);
+        setTempoDescansoRestante(0);
+        setExercicioEmDescanso(null);
+      }
+    },
+    [processandoSerie, exercicioEmDescanso],
+  );
+
   const pularDescanso = useCallback(() => {
     setDescansoAtivo(false);
     setTempoDescansoRestante(0);
@@ -452,7 +377,7 @@ const TreinoPage = () => {
     try {
       const payload = {
         tempoDisponivel: parseInt(tempoDisponivel, 10),
-        tipoDivisao
+        tipoDivisao,
       };
       if (tipoDivisao !== 'FULL_BODY') {
         payload.letraTreino = letraTreino;
@@ -479,7 +404,10 @@ const TreinoPage = () => {
         if (treinoGerado && treinoGerado._id === id) {
           setTreinoGerado(response.data);
         }
-        mostrarAlerta('Parabéns! 🎉', 'Treino marcado como realizado! Você pode ver seu progresso no Dashboard.');
+        mostrarAlerta(
+          'Parabéns! 🎉',
+          'Treino marcado como realizado! Você pode ver seu progresso no Dashboard.',
+        );
       }
     } catch {
       mostrarAlerta('Erro', 'Erro ao marcar treino como realizado. Tente novamente.');
@@ -505,7 +433,7 @@ const TreinoPage = () => {
           setModalAberto(false);
           mostrarAlerta('Erro', 'Erro ao deletar treino. Tente novamente.');
         }
-      }
+      },
     );
   };
 
@@ -526,7 +454,7 @@ const TreinoPage = () => {
           setModalAberto(false);
           mostrarAlerta('Erro', 'Erro ao limpar histórico. Tente novamente.');
         }
-      }
+      },
     );
   };
 
@@ -545,14 +473,16 @@ const TreinoPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => modalConfig.tipo === 'alert' ? modalConfig.onConfirm() : modalConfig.onCancel()}
+            onClick={() =>
+              modalConfig.tipo === 'alert' ? modalConfig.onConfirm() : modalConfig.onCancel()
+            }
           >
             <ModalContainer
               as={motion.div}
               initial={{ opacity: 0, scale: 0.8, y: -50 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: -50 }}
-              transition={{ type: "spring", duration: 0.5 }}
+              transition={{ type: 'spring', duration: 0.5 }}
               onClick={(e) => e.stopPropagation()}
             >
               <ModalHeader>
@@ -621,7 +551,8 @@ const TreinoPage = () => {
         >
           <PageTitle>Sistema de Treinos</PageTitle>
           <PageSubtitle>
-            Escolha a divisão (ABC, ABCD ou full body), o treino do dia quando aplicável e o tempo disponível.
+            Escolha a divisão (ABC, ABCD ou full body), o treino do dia quando aplicável e o tempo
+            disponível.
           </PageSubtitle>
 
           <ContentContainer>
@@ -636,449 +567,476 @@ const TreinoPage = () => {
                 Gerar Novo Treino
               </SectionTitle>
 
-          <FormContainer>
-            {!loadingHistorico && ultimoTreino && (
-              <UltimoTreinoSugestaoCard
-                as={motion.div}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35 }}
-              >
-                <UltimoTreinoSugestaoTitulo>
-                  {ultimoTreino.realizado ? '💡 Lembrete do seu último treino' : '💡 Seu último treino gerado'}
-                </UltimoTreinoSugestaoTitulo>
-                <UltimoTreinoSugestaoTexto>
-                  {ultimoTreino.realizado ? (
-                    <>
-                      <strong>{formatarDataRelativa(ultimoTreino.dataRealizacao)}</strong> você treinou{' '}
-                      <strong>{ultimoTreino.titulo}</strong>
-                    </>
-                  ) : (
-                    <>
-                      <strong>{formatarDataRelativa(ultimoTreino.createdAt)}</strong> você gerou{' '}
-                      <strong>{ultimoTreino.titulo}</strong>
-                      {!ultimoTreino.realizado && ' (ainda não marcado como realizado)'}
-                    </>
-                  )}
-                  {' — '}
-                  {ultimoTreino.tempoDisponivel} min · {ultimoTreino.exercicios?.length ?? 0} exercícios
-                </UltimoTreinoSugestaoTexto>
-                {sugestaoProximo && (
-                  <UltimoTreinoSugestaoDica>{sugestaoProximo.mensagem}</UltimoTreinoSugestaoDica>
-                )}
-                {sugestaoProximo && (
-                  <AplicarSugestaoButton
-                    type="button"
-                    onClick={aplicarSugestaoProximo}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+              <FormContainer>
+                {!loadingHistorico && ultimoTreino && (
+                  <UltimoTreinoSugestaoCard
+                    as={motion.div}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35 }}
                   >
-                    Usar sugestão
-                    {sugestaoProximo.tipoDivisao === 'FULL_BODY'
-                      ? ' (full body)'
-                      : ` (Treino ${sugestaoProximo.letraTreino}, ${sugestaoProximo.tempoDisponivel} min)`}
-                  </AplicarSugestaoButton>
-                )}
-              </UltimoTreinoSugestaoCard>
-            )}
-
-            <TreinoDoDiaCard>
-              <TreinoDoDiaLabel>Plano de treino</TreinoDoDiaLabel>
-              <DivisaoTipoRow>
-                {TIPOS_DIVISAO.map((tipo) => (
-                  <TipoDivisaoChip
-                    key={tipo.value}
-                    type="button"
-                    $active={tipoDivisao === tipo.value}
-                    onClick={() => setTipoDivisao(tipo.value)}
-                  >
-                    {tipo.label}
-                  </TipoDivisaoChip>
-                ))}
-              </DivisaoTipoRow>
-              <DivisaoDetalhe>
-                {TIPOS_DIVISAO.find((t) => t.value === tipoDivisao)?.detalhe}
-              </DivisaoDetalhe>
-              {tipoDivisao !== 'FULL_BODY' && (
-                <>
-                  <LetraTreinoLabel>Qual treino você quer gerar agora?</LetraTreinoLabel>
-                  <LetraTreinoRow>
-                    {(tipoDivisao === 'ABC' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D']).map((L) => (
-                      <LetraTreinoChip
-                        key={L}
+                    <UltimoTreinoSugestaoTitulo>
+                      {ultimoTreino.realizado
+                        ? '💡 Lembrete do seu último treino'
+                        : '💡 Seu último treino gerado'}
+                    </UltimoTreinoSugestaoTitulo>
+                    <UltimoTreinoSugestaoTexto>
+                      {ultimoTreino.realizado ? (
+                        <>
+                          <strong>{formatarDataRelativa(ultimoTreino.dataRealizacao)}</strong> você
+                          treinou <strong>{ultimoTreino.titulo}</strong>
+                        </>
+                      ) : (
+                        <>
+                          <strong>{formatarDataRelativa(ultimoTreino.createdAt)}</strong> você gerou{' '}
+                          <strong>{ultimoTreino.titulo}</strong>
+                          {!ultimoTreino.realizado && ' (ainda não marcado como realizado)'}
+                        </>
+                      )}
+                      {' — '}
+                      {ultimoTreino.tempoDisponivel} min · {ultimoTreino.exercicios?.length ?? 0}{' '}
+                      exercícios
+                    </UltimoTreinoSugestaoTexto>
+                    {sugestaoProximo && (
+                      <UltimoTreinoSugestaoDica>
+                        {sugestaoProximo.mensagem}
+                      </UltimoTreinoSugestaoDica>
+                    )}
+                    {sugestaoProximo && (
+                      <AplicarSugestaoButton
                         type="button"
-                        $active={letraTreino === L}
-                        onClick={() => setLetraTreino(L)}
-                      >
-                        Treino {L}
-                      </LetraTreinoChip>
-                    ))}
-                  </LetraTreinoRow>
-                </>
-              )}
-            </TreinoDoDiaCard>
-
-            <InputGroup>
-              <Label>
-                <FiClock />
-                Tempo Disponível (minutos)
-              </Label>
-              <Input
-                type="number"
-                min="30"
-                max="120"
-                value={tempoDisponivel}
-                onChange={(e) => setTempoDisponivel(e.target.value)}
-                placeholder="Entre 30 e 120 minutos"
-              />
-              <InputHint>30 min = treino rápido | 45-60 min = ideal | 75-120 min = avançado</InputHint>
-            </InputGroup>
-
-            <GerarButton
-              onClick={handleGerarTreino}
-              disabled={loading || !tempoDisponivel}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {loading ? 'Gerando...' : 'Gerar Treino Perfeito'}
-            </GerarButton>
-          </FormContainer>
-        </GerarTreinoSection>
-
-        <AnimatePresence mode="wait">
-          {treinoGerado && (
-            <TreinoDisplay
-              as={motion.div}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
-            >
-              <TreinoHeader>
-                <TreinoTitulo>{treinoGerado.titulo}</TreinoTitulo>
-                <TreinoMetaInfo>
-                  <MetaTag>
-                    <FiClock />
-                    {treinoGerado.tempoDisponivel} min
-                  </MetaTag>
-                  <MetaTag>
-                    <FiActivity />
-                    {treinoGerado.exercicios.length} exercícios
-                  </MetaTag>
-                </TreinoMetaInfo>
-                <TreinoObjetivo>{treinoGerado.objetivo}</TreinoObjetivo>
-                
-                {/* Timer do Treino */}
-                {!treinoGerado.realizado && (
-                  <TimerSection>
-                    {!treinoAtivo && tempoTreinoDecorrido === 0 ? (
-                      <IniciarTreinoButton
-                        onClick={iniciarTreino}
+                        onClick={aplicarSugestaoProximo}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <FiPlay />
-                        Iniciar Treino
-                      </IniciarTreinoButton>
-                    ) : (
-                      <TimerContainer>
-                        <TimerDisplay>
-                          <TimerIcon treinoAtivo={treinoAtivo}>
-                            <FiClock />
-                          </TimerIcon>
-                          <TimerTexto>
-                            <TimerLabel>Tempo de Treino</TimerLabel>
-                            <TimerValor>{formatarTempo(tempoTreinoDecorrido)}</TimerValor>
-                          </TimerTexto>
-                        </TimerDisplay>
-                        <TimerControles>
-                          <TimerButton
-                            color="#ffd93d"
-                            onClick={togglePausarTreino}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            {treinoAtivo ? <FiPause /> : <FiPlay />}
-                            {treinoAtivo ? 'Pausar' : 'Retomar'}
-                          </TimerButton>
-                          <TimerButton
-                            color="#ff6b6b"
-                            onClick={finalizarTreino}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <FiStopCircle />
-                            Finalizar
-                          </TimerButton>
-                        </TimerControles>
-                      </TimerContainer>
+                        Usar sugestão
+                        {sugestaoProximo.tipoDivisao === 'FULL_BODY'
+                          ? ' (full body)'
+                          : ` (Treino ${sugestaoProximo.letraTreino}, ${sugestaoProximo.tempoDisponivel} min)`}
+                      </AplicarSugestaoButton>
                     )}
-                  </TimerSection>
+                  </UltimoTreinoSugestaoCard>
                 )}
 
-                {/* Timer de Descanso */}
-                <AnimatePresence>
-                  {descansoAtivo && (
-                    <DescansoTimer
-                      as={motion.div}
-                      initial={{ opacity: 0, y: -20, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <DescansoContent>
-                        <DescansoIcone>⏱️</DescansoIcone>
-                        <DescansoInfo>
-                          <DescansoLabel>Descanso entre Séries</DescansoLabel>
-                          <DescansoValor urgente={tempoDescansoRestante <= 10}>
-                            {formatarTempo(tempoDescansoRestante)}
-                          </DescansoValor>
-                        </DescansoInfo>
-                        <PularDescansoButton
-                          onClick={pularDescanso}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          Pular
-                        </PularDescansoButton>
-                      </DescansoContent>
-                      <DescansoProgressBar>
-                        <DescansoProgress 
-                          progresso={(tempoDescansoRestante / extrairTempoDescanso(treinoGerado.exercicios[exercicioEmDescanso]?.descanso || '60s')) * 100}
-                        />
-                      </DescansoProgressBar>
-                    </DescansoTimer>
-                  )}
-                </AnimatePresence>
-                
-                <ActionButtons>
-                  {!treinoGerado.realizado && (
-                    <ActionButton
-                      color="#4ecdc4"
-                      onClick={() => handleMarcarRealizado(treinoGerado._id)}
-                    >
-                      <FiCheck />
-                      Marcar como Realizado
-                    </ActionButton>
-                  )}
-                  <ActionButton
-                    color="#ff6b6b"
-                    onClick={() => handleDeletarTreino(treinoGerado._id)}
-                  >
-                    <FiTrash2 />
-                    Deletar
-                  </ActionButton>
-                </ActionButtons>
-
-                {treinoGerado.realizado && (
-                  <RealizadoBadge>
-                    <FiCheck />
-                    Treino Realizado em {new Date(treinoGerado.dataRealizacao).toLocaleDateString('pt-BR')}
-                  </RealizadoBadge>
-                )}
-              </TreinoHeader>
-
-              <ExerciciosList>
-                {treinoGerado.exercicios.map((exercicio, index) => {
-                  const progresso = progressoExercicios[index] || {
-                    seriesCompletadas: 0,
-                    totalSeries: exercicio.series,
-                    seriesAntesAtalho: null
-                  };
-                  const serieCompleta = progresso.seriesCompletadas >= progresso.totalSeries;
-                  const concluidoViaAtalho = serieCompleta && progresso.seriesAntesAtalho != null;
-                  const emDescanso = descansoAtivo && exercicioEmDescanso === index;
-                  
-                  return (
-                    <ExercicioCard 
-                      key={index}
-                      completo={serieCompleta}
-                      emDescanso={emDescanso}
-                    >
-                      <ExercicioNumero completo={serieCompleta}>
-                        {serieCompleta ? <FiCheckCircle /> : index + 1}
-                      </ExercicioNumero>
-                      <ExercicioInfo>
-                        <ExercicioHeader>
-                          <div>
-                            <ExercicioNome>{exercicio.nome}</ExercicioNome>
-                            <PorcaoMuscular>{exercicio.porcaoMuscular}</PorcaoMuscular>
-                          </div>
-                          {treinoAtivo && !treinoGerado.realizado && (
-                            <ExercicioBotoes>
-                              {concluidoViaAtalho ? (
-                                <DesfazerExercicioButton
-                                  type="button"
-                                  onClick={() => desfazerExercicioCompleto(index)}
-                                  disabled={processandoSerie}
-                                  whileHover={!processandoSerie ? { scale: 1.05 } : {}}
-                                  whileTap={!processandoSerie ? { scale: 0.95 } : {}}
-                                >
-                                  <FiRotateCcw />
-                                  Voltar séries ({progresso.seriesAntesAtalho}/{progresso.totalSeries})
-                                </DesfazerExercicioButton>
-                              ) : serieCompleta ? (
-                                <CompletarSerieButton
-                                  type="button"
-                                  disabled
-                                  completo
-                                >
-                                  <FiCheckCircle />
-                                  Completo!
-                                </CompletarSerieButton>
-                              ) : (
-                                <>
-                                  <CompletarSerieButton
-                                    type="button"
-                                    onClick={() => completarSerie(index, exercicio.descanso)}
-                                    disabled={!treinoAtivo || processandoSerie}
-                                    completo={false}
-                                    whileHover={treinoAtivo && !processandoSerie ? { scale: 1.05 } : {}}
-                                    whileTap={treinoAtivo && !processandoSerie ? { scale: 0.95 } : {}}
-                                  >
-                                    <FiCheckCircle />
-                                    {processandoSerie ? 'Processando...' : 'Série Completa'}
-                                  </CompletarSerieButton>
-                                  <CompletarExercicioButton
-                                    type="button"
-                                    onClick={() => completarExercicio(index, exercicio.descanso)}
-                                    disabled={!treinoAtivo || processandoSerie}
-                                    whileHover={treinoAtivo && !processandoSerie ? { scale: 1.05 } : {}}
-                                    whileTap={treinoAtivo && !processandoSerie ? { scale: 0.95 } : {}}
-                                  >
-                                    <FiCheck />
-                                    Exercício Completo
-                                  </CompletarExercicioButton>
-                                </>
-                              )}
-                            </ExercicioBotoes>
-                          )}
-                        </ExercicioHeader>
-                        
-                        {/* Progress Bar das Séries */}
-                        {treinoAtivo && !treinoGerado.realizado && (
-                          <SeriesProgress>
-                            <SeriesProgressInfo>
-                              <SeriesProgressLabel>
-                                Séries: {progresso.seriesCompletadas} / {progresso.totalSeries}
-                              </SeriesProgressLabel>
-                              <SeriesProgressPercentual>
-                                {Math.round((progresso.seriesCompletadas / progresso.totalSeries) * 100)}%
-                              </SeriesProgressPercentual>
-                            </SeriesProgressInfo>
-                            <SeriesProgressBar>
-                              <SeriesProgressFill 
-                                progresso={(progresso.seriesCompletadas / progresso.totalSeries) * 100}
-                                as={motion.div}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(progresso.seriesCompletadas / progresso.totalSeries) * 100}%` }}
-                                transition={{ duration: 0.5, ease: "easeOut" }}
-                              />
-                            </SeriesProgressBar>
-                          </SeriesProgress>
+                <TreinoDoDiaCard>
+                  <TreinoDoDiaLabel>Plano de treino</TreinoDoDiaLabel>
+                  <DivisaoTipoRow>
+                    {TIPOS_DIVISAO.map((tipo) => (
+                      <TipoDivisaoChip
+                        key={tipo.value}
+                        type="button"
+                        $active={tipoDivisao === tipo.value}
+                        onClick={() => setTipoDivisao(tipo.value)}
+                      >
+                        {tipo.label}
+                      </TipoDivisaoChip>
+                    ))}
+                  </DivisaoTipoRow>
+                  <DivisaoDetalhe>
+                    {TIPOS_DIVISAO.find((t) => t.value === tipoDivisao)?.detalhe}
+                  </DivisaoDetalhe>
+                  {tipoDivisao !== 'FULL_BODY' && (
+                    <>
+                      <LetraTreinoLabel>Qual treino você quer gerar agora?</LetraTreinoLabel>
+                      <LetraTreinoRow>
+                        {(tipoDivisao === 'ABC' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D']).map(
+                          (L) => (
+                            <LetraTreinoChip
+                              key={L}
+                              type="button"
+                              $active={letraTreino === L}
+                              onClick={() => setLetraTreino(L)}
+                            >
+                              Treino {L}
+                            </LetraTreinoChip>
+                          ),
                         )}
-                        
-                        <ExercicioDetalhes>
-                          <Detalhe>
-                            <strong>Séries:</strong> {exercicio.series}
-                          </Detalhe>
-                          <Detalhe>
-                            <strong>Repetições:</strong> {exercicio.repeticoes}
-                          </Detalhe>
-                          <Detalhe>
-                            <strong>Descanso:</strong> {exercicio.descanso}
-                          </Detalhe>
-                        </ExercicioDetalhes>
-                        <Tecnica>
-                          <strong>Técnica:</strong> {exercicio.tecnica}
-                        </Tecnica>
-                        <Equipamentos>
-                          <strong>Equipamento:</strong> {exercicio.equipamento.join(', ')}
-                        </Equipamentos>
-                      </ExercicioInfo>
-                    </ExercicioCard>
-                  );
-                })}
-              </ExerciciosList>
+                      </LetraTreinoRow>
+                    </>
+                  )}
+                </TreinoDoDiaCard>
 
-              <ResumoSection>
-                <ResumoTitulo>Resumo de Cobertura Muscular</ResumoTitulo>
-                <ResumoTexto>{treinoGerado.resumo}</ResumoTexto>
-              </ResumoSection>
-            </TreinoDisplay>
-          )}
-        </AnimatePresence>
+                <InputGroup>
+                  <Label>
+                    <FiClock />
+                    Tempo Disponível (minutos)
+                  </Label>
+                  <Input
+                    type="number"
+                    min="30"
+                    max="120"
+                    value={tempoDisponivel}
+                    onChange={(e) => setTempoDisponivel(e.target.value)}
+                    placeholder="Entre 30 e 120 minutos"
+                  />
+                  <InputHint>
+                    30 min = treino rápido | 45-60 min = ideal | 75-120 min = avançado
+                  </InputHint>
+                </InputGroup>
 
-        <HistoricoSection
-          as={motion.div}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <HistoricoHeader>
-            <SectionTitle>
-              <FiActivity />
-              Histórico de Treinos
-            </SectionTitle>
-            {historico.length > 0 && (
-              <LimparButton onClick={handleLimparHistorico}>
-                <FiTrash2 />
-                Limpar Histórico
-              </LimparButton>
-            )}
-          </HistoricoHeader>
-
-          {loadingHistorico ? (
-            <LoadingContainer>
-              <LoadingSpinner />
-            </LoadingContainer>
-          ) : historico.length === 0 ? (
-            <EmptyState>
-              <FiActivity size={48} />
-              <EmptyText>Nenhum treino gerado ainda</EmptyText>
-              <EmptySubtext>Gere seu primeiro treino acima!</EmptySubtext>
-            </EmptyState>
-          ) : (
-            <HistoricoGrid>
-              {historico.map((treino) => (
-                <HistoricoCard
-                  key={treino._id}
-                  onClick={() => handleVisualizarTreino(treino)}
-                  realizado={treino.realizado}
+                <GerarButton
+                  onClick={handleGerarTreino}
+                  disabled={loading || !tempoDisponivel}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  {treino.realizado && (
-                    <RealizadoIcon>
-                      <FiCheck />
-                    </RealizadoIcon>
-                  )}
-                  <HistoricoTitulo>{treino.titulo}</HistoricoTitulo>
-                  <HistoricoInfo>
-                    <HistoricoDetalhe>
-                      <FiClock />
-                      {treino.tempoDisponivel} min
-                    </HistoricoDetalhe>
-                    <HistoricoDetalhe>
-                      <FiActivity />
-                      {treino.exercicios.length} exercícios
-                    </HistoricoDetalhe>
-                  </HistoricoInfo>
-                  <HistoricoData>
-                    {new Date(treino.createdAt).toLocaleDateString('pt-BR', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
+                  {loading ? 'Gerando...' : 'Gerar Treino Perfeito'}
+                </GerarButton>
+              </FormContainer>
+            </GerarTreinoSection>
+
+            <AnimatePresence mode="wait">
+              {treinoGerado && (
+                <TreinoDisplay
+                  as={motion.div}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <TreinoHeader>
+                    <TreinoTitulo>{treinoGerado.titulo}</TreinoTitulo>
+                    <TreinoMetaInfo>
+                      <MetaTag>
+                        <FiClock />
+                        {treinoGerado.tempoDisponivel} min
+                      </MetaTag>
+                      <MetaTag>
+                        <FiActivity />
+                        {treinoGerado.exercicios.length} exercícios
+                      </MetaTag>
+                    </TreinoMetaInfo>
+                    <TreinoObjetivo>{treinoGerado.objetivo}</TreinoObjetivo>
+
+                    {/* Timer do Treino */}
+                    {!treinoGerado.realizado && (
+                      <TimerSection>
+                        {!treinoAtivo && tempoTreinoDecorrido === 0 ? (
+                          <IniciarTreinoButton
+                            onClick={iniciarTreino}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <FiPlay />
+                            Iniciar Treino
+                          </IniciarTreinoButton>
+                        ) : (
+                          <TimerContainer>
+                            <TimerDisplay>
+                              <TimerIcon treinoAtivo={treinoAtivo}>
+                                <FiClock />
+                              </TimerIcon>
+                              <TimerTexto>
+                                <TimerLabel>Tempo de Treino</TimerLabel>
+                                <TimerValor>{formatarTempo(tempoTreinoDecorrido)}</TimerValor>
+                              </TimerTexto>
+                            </TimerDisplay>
+                            <TimerControles>
+                              <TimerButton
+                                color="#ffd93d"
+                                onClick={togglePausarTreino}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                {treinoAtivo ? <FiPause /> : <FiPlay />}
+                                {treinoAtivo ? 'Pausar' : 'Retomar'}
+                              </TimerButton>
+                              <TimerButton
+                                color="#ff6b6b"
+                                onClick={finalizarTreino}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <FiStopCircle />
+                                Finalizar
+                              </TimerButton>
+                            </TimerControles>
+                          </TimerContainer>
+                        )}
+                      </TimerSection>
+                    )}
+
+                    {/* Timer de Descanso */}
+                    <AnimatePresence>
+                      {descansoAtivo && (
+                        <DescansoTimer
+                          as={motion.div}
+                          initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -20, scale: 0.9 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <DescansoContent>
+                            <DescansoIcone>⏱️</DescansoIcone>
+                            <DescansoInfo>
+                              <DescansoLabel>Descanso entre Séries</DescansoLabel>
+                              <DescansoValor urgente={tempoDescansoRestante <= 10}>
+                                {formatarTempo(tempoDescansoRestante)}
+                              </DescansoValor>
+                            </DescansoInfo>
+                            <PularDescansoButton
+                              onClick={pularDescanso}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              Pular
+                            </PularDescansoButton>
+                          </DescansoContent>
+                          <DescansoProgressBar>
+                            <DescansoProgress
+                              progresso={
+                                (tempoDescansoRestante /
+                                  extrairTempoDescanso(
+                                    treinoGerado.exercicios[exercicioEmDescanso]?.descanso || '60s',
+                                  )) *
+                                100
+                              }
+                            />
+                          </DescansoProgressBar>
+                        </DescansoTimer>
+                      )}
+                    </AnimatePresence>
+
+                    <ActionButtons>
+                      {!treinoGerado.realizado && (
+                        <ActionButton
+                          color="#4ecdc4"
+                          onClick={() => handleMarcarRealizado(treinoGerado._id)}
+                        >
+                          <FiCheck />
+                          Marcar como Realizado
+                        </ActionButton>
+                      )}
+                      <ActionButton
+                        color="#ff6b6b"
+                        onClick={() => handleDeletarTreino(treinoGerado._id)}
+                      >
+                        <FiTrash2 />
+                        Deletar
+                      </ActionButton>
+                    </ActionButtons>
+
+                    {treinoGerado.realizado && (
+                      <RealizadoBadge>
+                        <FiCheck />
+                        Treino Realizado em{' '}
+                        {new Date(treinoGerado.dataRealizacao).toLocaleDateString('pt-BR')}
+                      </RealizadoBadge>
+                    )}
+                  </TreinoHeader>
+
+                  <ExerciciosList>
+                    {treinoGerado.exercicios.map((exercicio, index) => {
+                      const progresso = progressoExercicios[index] || {
+                        seriesCompletadas: 0,
+                        totalSeries: exercicio.series,
+                        seriesAntesAtalho: null,
+                      };
+                      const serieCompleta = progresso.seriesCompletadas >= progresso.totalSeries;
+                      const concluidoViaAtalho =
+                        serieCompleta && progresso.seriesAntesAtalho != null;
+                      const emDescanso = descansoAtivo && exercicioEmDescanso === index;
+
+                      return (
+                        <ExercicioCard key={index} completo={serieCompleta} emDescanso={emDescanso}>
+                          <ExercicioNumero completo={serieCompleta}>
+                            {serieCompleta ? <FiCheckCircle /> : index + 1}
+                          </ExercicioNumero>
+                          <ExercicioInfo>
+                            <ExercicioHeader>
+                              <div>
+                                <ExercicioNome>{exercicio.nome}</ExercicioNome>
+                                <PorcaoMuscular>{exercicio.porcaoMuscular}</PorcaoMuscular>
+                              </div>
+                              {treinoAtivo && !treinoGerado.realizado && (
+                                <ExercicioBotoes>
+                                  {concluidoViaAtalho ? (
+                                    <DesfazerExercicioButton
+                                      type="button"
+                                      onClick={() => desfazerExercicioCompleto(index)}
+                                      disabled={processandoSerie}
+                                      whileHover={!processandoSerie ? { scale: 1.05 } : {}}
+                                      whileTap={!processandoSerie ? { scale: 0.95 } : {}}
+                                    >
+                                      <FiRotateCcw />
+                                      Voltar séries ({progresso.seriesAntesAtalho}/
+                                      {progresso.totalSeries})
+                                    </DesfazerExercicioButton>
+                                  ) : serieCompleta ? (
+                                    <CompletarSerieButton type="button" disabled completo>
+                                      <FiCheckCircle />
+                                      Completo!
+                                    </CompletarSerieButton>
+                                  ) : (
+                                    <>
+                                      <CompletarSerieButton
+                                        type="button"
+                                        onClick={() => completarSerie(index, exercicio.descanso)}
+                                        disabled={!treinoAtivo || processandoSerie}
+                                        completo={false}
+                                        whileHover={
+                                          treinoAtivo && !processandoSerie ? { scale: 1.05 } : {}
+                                        }
+                                        whileTap={
+                                          treinoAtivo && !processandoSerie ? { scale: 0.95 } : {}
+                                        }
+                                      >
+                                        <FiCheckCircle />
+                                        {processandoSerie ? 'Processando...' : 'Série Completa'}
+                                      </CompletarSerieButton>
+                                      <CompletarExercicioButton
+                                        type="button"
+                                        onClick={() =>
+                                          completarExercicio(index, exercicio.descanso)
+                                        }
+                                        disabled={!treinoAtivo || processandoSerie}
+                                        whileHover={
+                                          treinoAtivo && !processandoSerie ? { scale: 1.05 } : {}
+                                        }
+                                        whileTap={
+                                          treinoAtivo && !processandoSerie ? { scale: 0.95 } : {}
+                                        }
+                                      >
+                                        <FiCheck />
+                                        Exercício Completo
+                                      </CompletarExercicioButton>
+                                    </>
+                                  )}
+                                </ExercicioBotoes>
+                              )}
+                            </ExercicioHeader>
+
+                            {/* Progress Bar das Séries */}
+                            {treinoAtivo && !treinoGerado.realizado && (
+                              <SeriesProgress>
+                                <SeriesProgressInfo>
+                                  <SeriesProgressLabel>
+                                    Séries: {progresso.seriesCompletadas} / {progresso.totalSeries}
+                                  </SeriesProgressLabel>
+                                  <SeriesProgressPercentual>
+                                    {Math.round(
+                                      (progresso.seriesCompletadas / progresso.totalSeries) * 100,
+                                    )}
+                                    %
+                                  </SeriesProgressPercentual>
+                                </SeriesProgressInfo>
+                                <SeriesProgressBar>
+                                  <SeriesProgressFill
+                                    progresso={
+                                      (progresso.seriesCompletadas / progresso.totalSeries) * 100
+                                    }
+                                    as={motion.div}
+                                    initial={{ width: 0 }}
+                                    animate={{
+                                      width: `${(progresso.seriesCompletadas / progresso.totalSeries) * 100}%`,
+                                    }}
+                                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                                  />
+                                </SeriesProgressBar>
+                              </SeriesProgress>
+                            )}
+
+                            <ExercicioDetalhes>
+                              <Detalhe>
+                                <strong>Séries:</strong> {exercicio.series}
+                              </Detalhe>
+                              <Detalhe>
+                                <strong>Repetições:</strong> {exercicio.repeticoes}
+                              </Detalhe>
+                              <Detalhe>
+                                <strong>Descanso:</strong> {exercicio.descanso}
+                              </Detalhe>
+                            </ExercicioDetalhes>
+                            <Tecnica>
+                              <strong>Técnica:</strong> {exercicio.tecnica}
+                            </Tecnica>
+                            <Equipamentos>
+                              <strong>Equipamento:</strong> {exercicio.equipamento.join(', ')}
+                            </Equipamentos>
+                          </ExercicioInfo>
+                        </ExercicioCard>
+                      );
                     })}
-                  </HistoricoData>
-                </HistoricoCard>
-              ))}
-            </HistoricoGrid>
-          )}
-        </HistoricoSection>
-      </ContentContainer>
+                  </ExerciciosList>
+
+                  <ResumoSection>
+                    <ResumoTitulo>Resumo de Cobertura Muscular</ResumoTitulo>
+                    <ResumoTexto>{treinoGerado.resumo}</ResumoTexto>
+                  </ResumoSection>
+                </TreinoDisplay>
+              )}
+            </AnimatePresence>
+
+            <HistoricoSection
+              as={motion.div}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <HistoricoHeader>
+                <SectionTitle>
+                  <FiActivity />
+                  Histórico de Treinos
+                </SectionTitle>
+                {historico.length > 0 && (
+                  <LimparButton onClick={handleLimparHistorico}>
+                    <FiTrash2 />
+                    Limpar Histórico
+                  </LimparButton>
+                )}
+              </HistoricoHeader>
+
+              {loadingHistorico ? (
+                <LoadingContainer>
+                  <LoadingSpinner />
+                </LoadingContainer>
+              ) : historico.length === 0 ? (
+                <EmptyState>
+                  <FiActivity size={48} />
+                  <EmptyText>Nenhum treino gerado ainda</EmptyText>
+                  <EmptySubtext>Gere seu primeiro treino acima!</EmptySubtext>
+                </EmptyState>
+              ) : (
+                <HistoricoGrid>
+                  {historico.map((treino) => (
+                    <HistoricoCard
+                      key={treino._id}
+                      onClick={() => handleVisualizarTreino(treino)}
+                      realizado={treino.realizado}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {treino.realizado && (
+                        <RealizadoIcon>
+                          <FiCheck />
+                        </RealizadoIcon>
+                      )}
+                      <HistoricoTitulo>{treino.titulo}</HistoricoTitulo>
+                      <HistoricoInfo>
+                        <HistoricoDetalhe>
+                          <FiClock />
+                          {treino.tempoDisponivel} min
+                        </HistoricoDetalhe>
+                        <HistoricoDetalhe>
+                          <FiActivity />
+                          {treino.exercicios.length} exercícios
+                        </HistoricoDetalhe>
+                      </HistoricoInfo>
+                      <HistoricoData>
+                        {new Date(treino.createdAt).toLocaleDateString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </HistoricoData>
+                    </HistoricoCard>
+                  ))}
+                </HistoricoGrid>
+              )}
+            </HistoricoSection>
+          </ContentContainer>
         </motion.div>
       </MainContent>
     </Container>
@@ -1089,7 +1047,12 @@ const TreinoPage = () => {
 
 const Container = styled.div`
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   color: var(--text);
   overflow-y: auto;
   overflow-x: hidden;
@@ -1246,7 +1209,7 @@ const Input = styled.input`
     margin: 0;
   }
 
-  &[type=number] {
+  &[type='number'] {
     -moz-appearance: textfield;
   }
 `;
@@ -1500,7 +1463,7 @@ const ActionButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: ${props => props.color};
+  background: ${(props) => props.color};
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -1543,16 +1506,19 @@ const ExerciciosList = styled.div`
 const ExercicioCard = styled.div`
   display: flex;
   gap: 1.5rem;
-  background: ${props => props.completo ? 'rgba(78, 205, 196, 0.1)' : 'rgba(255, 255, 255, 0.03)'};
-  border: 1px solid ${props => props.completo ? '#4ecdc4' : 'rgba(198, 169, 100, 0.1)'};
-  border-left: 4px solid ${props => props.completo ? '#4ecdc4' : props.emDescanso ? '#ffd93d' : 'var(--accent)'};
+  background: ${(props) => (props.completo ? 'rgba(78, 205, 196, 0.1)' : 'rgba(255, 255, 255, 0.03)')};
+  border: 1px solid ${(props) => (props.completo ? '#4ecdc4' : 'rgba(198, 169, 100, 0.1)')};
+  border-left: 4px solid
+    ${(props) => (props.completo ? '#4ecdc4' : props.emDescanso ? '#ffd93d' : 'var(--accent)')};
   border-radius: 8px;
   padding: 1.5rem;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 
-  ${props => props.emDescanso && `
+  ${(props) =>
+    props.emDescanso &&
+    `
     &::before {
       content: '';
       position: absolute;
@@ -1575,16 +1541,16 @@ const ExercicioCard = styled.div`
   `}
 
   &:hover {
-    background: ${props => props.completo ? 'rgba(78, 205, 196, 0.15)' : 'rgba(255, 255, 255, 0.05)'};
+    background: ${(props) => (props.completo ? 'rgba(78, 205, 196, 0.15)' : 'rgba(255, 255, 255, 0.05)')};
     transform: translateX(5px);
   }
 `;
 
 const ExercicioNumero = styled.div`
-  background: ${props => props.completo 
-    ? 'linear-gradient(135deg, #4ecdc4 0%, #44a3a0 100%)' 
-    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-  };
+  background: ${(props) =>
+    props.completo
+      ? 'linear-gradient(135deg, #4ecdc4 0%, #44a3a0 100%)'
+      : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
   color: white;
   width: 50px;
   height: 50px;
@@ -1592,12 +1558,14 @@ const ExercicioNumero = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: ${props => props.completo ? '1.8rem' : '1.5rem'};
+  font-size: ${(props) => (props.completo ? '1.8rem' : '1.5rem')};
   font-weight: 700;
   flex-shrink: 0;
   transition: all 0.3s ease;
-  
-  ${props => props.completo && `
+
+  ${(props) =>
+    props.completo &&
+    `
     animation: pulseComplete 2s infinite;
     
     @keyframes pulseComplete {
@@ -1765,14 +1733,9 @@ const HistoricoGrid = styled.div`
 
 const HistoricoCard = styled(motion.div)`
   background: ${(props) =>
-    props.realizado
-      ? 'rgba(78, 205, 196, 0.12)'
-      : 'rgba(255, 255, 255, 0.04)'};
+    props.realizado ? 'rgba(78, 205, 196, 0.12)' : 'rgba(255, 255, 255, 0.04)'};
   border: 1px solid
-    ${(props) =>
-      props.realizado
-        ? 'rgba(78, 205, 196, 0.45)'
-        : 'rgba(198, 169, 100, 0.25)'};
+    ${(props) => (props.realizado ? 'rgba(78, 205, 196, 0.45)' : 'rgba(198, 169, 100, 0.25)')};
   border-radius: 12px;
   padding: 1.5rem;
   cursor: pointer;
@@ -1859,7 +1822,7 @@ const IniciarTreinoButton = styled(motion.button)`
   gap: 1rem;
   transition: all 0.3s ease;
   box-shadow: 0 8px 24px rgba(198, 169, 100, 0.3);
-  
+
   svg {
     font-size: 1.8rem;
   }
@@ -1891,8 +1854,10 @@ const TimerDisplay = styled.div`
 const TimerIcon = styled.div`
   font-size: 3rem;
   color: var(--accent);
-  
-  ${props => props.treinoAtivo && `
+
+  ${(props) =>
+    props.treinoAtivo &&
+    `
     animation: pulse 2s infinite;
     
     @keyframes pulse {
@@ -1935,7 +1900,7 @@ const TimerButton = styled(motion.button)`
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: ${props => props.color};
+  background: ${(props) => props.color};
   color: var(--background);
   border: none;
   padding: 1rem 1.5rem;
@@ -1977,10 +1942,14 @@ const DescansoContent = styled.div`
 const DescansoIcone = styled.div`
   font-size: 3rem;
   animation: rotate 2s linear infinite;
-  
+
   @keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 `;
 
@@ -2000,13 +1969,15 @@ const DescansoLabel = styled.div`
 `;
 
 const DescansoValor = styled.div`
-  color: ${props => props.urgente ? '#ff6b6b' : '#ffd93d'};
+  color: ${(props) => (props.urgente ? '#ff6b6b' : '#ffd93d')};
   font-size: 2.5rem;
   font-weight: 700;
   font-family: 'Courier New', monospace;
   letter-spacing: 2px;
-  
-  ${props => props.urgente && `
+
+  ${(props) =>
+    props.urgente &&
+    `
     animation: blink 1s infinite;
     
     @keyframes blink {
@@ -2044,7 +2015,7 @@ const DescansoProgressBar = styled.div`
 const DescansoProgress = styled.div`
   height: 100%;
   background: linear-gradient(90deg, #ffd93d 0%, #ffc107 100%);
-  width: ${props => props.progresso}%;
+  width: ${(props) => props.progresso}%;
   transition: width 1s linear;
   border-radius: 3px;
   box-shadow: 0 0 10px rgba(255, 217, 61, 0.5);
@@ -2078,15 +2049,15 @@ const CompletarSerieButton = styled(motion.button)`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: ${props => props.completo ? '#4ecdc4' : 'var(--gold-gradient)'};
-  color: ${props => props.completo ? 'white' : 'var(--background)'};
+  background: ${(props) => (props.completo ? '#4ecdc4' : 'var(--gold-gradient)')};
+  color: ${(props) => (props.completo ? 'white' : 'var(--background)')};
   border: none;
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-weight: 600;
   font-size: 1rem;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  opacity: ${props => props.disabled ? 0.6 : 1};
+  cursor: ${(props) => (props.disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${(props) => (props.disabled ? 0.6 : 1)};
   transition: all 0.3s ease;
   white-space: nowrap;
 
@@ -2194,7 +2165,7 @@ const SeriesProgressBar = styled.div`
 const SeriesProgressFill = styled.div`
   height: 100%;
   background: var(--gold-gradient);
-  width: ${props => props.progresso}%;
+  width: ${(props) => props.progresso}%;
   border-radius: 4px;
   transition: width 0.5s ease;
   box-shadow: 0 0 10px rgba(198, 169, 100, 0.5);
@@ -2277,8 +2248,8 @@ const ModalButton = styled(motion.button)`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: ${props => props.color};
-  color: ${props => props.color === '#6c757d' ? 'white' : 'var(--background)'};
+  background: ${(props) => props.color};
+  color: ${(props) => (props.color === '#6c757d' ? 'white' : 'var(--background)')};
   min-width: 120px;
 
   &:hover {

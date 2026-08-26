@@ -11,7 +11,7 @@ const LoginPage = () => {
 
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
   });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
@@ -26,7 +26,7 @@ const LoginPage = () => {
 
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -50,31 +50,31 @@ const LoginPage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
     if (touched[name]) {
       const newError = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: newError }));
+      setErrors((prev) => ({ ...prev, [name]: newError }));
     }
   };
 
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
     const newError = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: newError }));
+    setErrors((prev) => ({ ...prev, [name]: newError }));
   };
 
   const handleSubmit = async () => {
     const newErrors = {};
-    Object.keys(formData).forEach(key => {
+    Object.keys(formData).forEach((key) => {
       const error = validateField(key, formData[key]);
       if (error) newErrors[key] = error;
     });
 
     setTouched({
       email: true,
-      password: true
+      password: true,
     });
 
     if (Object.keys(newErrors).length > 0) {
@@ -89,13 +89,13 @@ const LoginPage = () => {
     try {
       const credentials = {
         email: formData.email.toLowerCase().trim(),
-        password: formData.password
+        password: formData.password,
       };
 
       const response = await login(credentials);
-      
+
       setSubmitMessage('Login realizado com sucesso! Redirecionando...');
-      
+
       setTimeout(() => {
         if (!response.user.profileSetupCompleted) {
           navigate('/profile-setup');
@@ -103,14 +103,13 @@ const LoginPage = () => {
           navigate('/dashboard');
         }
       }, 2000);
-      
     } catch (error) {
       setSubmitMessage(error.message || 'Erro ao fazer login. Verifique suas credenciais.');
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   return (
     <Container className="custom-scroll">
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
@@ -122,88 +121,89 @@ const LoginPage = () => {
         >
           <FormTitle>Entrar</FormTitle>
           <FormSubtitle>Acesse sua conta e continue sua jornada</FormSubtitle>
-          
-          <FormContainer>
-          <InputGroup>
-            <Input
-              type="email"
-              name="email"
-              placeholder="E-mail"
-              value={formData.email}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              error={touched.email && errors.email}
-            />
-            <AnimatePresence>
-              {touched.email && errors.email && (
-                <ErrorMessage
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {errors.email}
-                </ErrorMessage>
-              )}
-            </AnimatePresence>
-          </InputGroup>
-          
-          <InputGroup>
-            <Input
-              type="password"
-              name="password"
-              placeholder="Senha"
-              value={formData.password}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              error={touched.password && errors.password}
-            />
-            <AnimatePresence>
-              {touched.password && errors.password && (
-                <ErrorMessage
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {errors.password}
-                </ErrorMessage>
-              )}
-            </AnimatePresence>
-          </InputGroup>
-          
-          <LoginButton
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-            disabled={isSubmitting || loading}
-          >
-            {isSubmitting || loading ? 'Entrando...' : 'Entrar'}
-          </LoginButton>
 
-          {submitMessage && (
-            <SubmitMessage 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={submitMessage.includes('sucesso') ? 'success' : 'error'}
+          <FormContainer>
+            <InputGroup>
+              <Input
+                type="email"
+                name="email"
+                placeholder="E-mail"
+                value={formData.email}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.email && errors.email}
+              />
+              <AnimatePresence>
+                {touched.email && errors.email && (
+                  <ErrorMessage
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {errors.email}
+                  </ErrorMessage>
+                )}
+              </AnimatePresence>
+            </InputGroup>
+
+            <InputGroup>
+              <Input
+                type="password"
+                name="password"
+                placeholder="Senha"
+                value={formData.password}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                error={touched.password && errors.password}
+              />
+              <AnimatePresence>
+                {touched.password && errors.password && (
+                  <ErrorMessage
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {errors.password}
+                  </ErrorMessage>
+                )}
+              </AnimatePresence>
+            </InputGroup>
+
+            <LoginButton
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSubmit();
+              }}
+              disabled={isSubmitting || loading}
             >
-              {submitMessage}
-            </SubmitMessage>
-          )}
-        </FormContainer>
-        
-        <RegisterText>
-          Não tem uma conta? <RegisterLink onClick={() => navigate('/register')}>Cadastre-se</RegisterLink>
-        </RegisterText>
-        
-        <ForgotPasswordText>
-          <ForgotPasswordLink onClick={() => navigate('/forgot-password')}>
-            Esqueci minha senha
-          </ForgotPasswordLink>
-        </ForgotPasswordText>
+              {isSubmitting || loading ? 'Entrando...' : 'Entrar'}
+            </LoginButton>
+
+            {submitMessage && (
+              <SubmitMessage
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={submitMessage.includes('sucesso') ? 'success' : 'error'}
+              >
+                {submitMessage}
+              </SubmitMessage>
+            )}
+          </FormContainer>
+
+          <RegisterText>
+            Não tem uma conta?{' '}
+            <RegisterLink onClick={() => navigate('/register')}>Cadastre-se</RegisterLink>
+          </RegisterText>
+
+          <ForgotPasswordText>
+            <ForgotPasswordLink onClick={() => navigate('/forgot-password')}>
+              Esqueci minha senha
+            </ForgotPasswordLink>
+          </ForgotPasswordText>
         </motion.div>
       </FormSection>
     </Container>
@@ -242,7 +242,12 @@ const Container = styled.div`
   padding: min(15vh, 120px) 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -298,19 +303,21 @@ const Input = styled.input`
   width: 100%;
   padding: min(2vh, 15px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid ${props => props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)'};
+  border: 1px solid
+    ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'rgba(198, 169, 100, 0.2)')};
   border-radius: 2px;
   color: var(--white);
   font-size: min(2vw, 1.2rem);
   transition: all 0.3s ease;
   font-family: 'Cormorant', serif;
   letter-spacing: 0.5px;
-  animation: ${props => props.error ? 'shake 0.5s ease-in-out' : 'none'};
+  animation: ${(props) => (props.error ? 'shake 0.5s ease-in-out' : 'none')};
 
   &:focus {
     outline: none;
-    border-color: ${props => props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)'};
-    box-shadow: 0 0 10px ${props => props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)'};
+    border-color: ${(props) => (props.error ? 'var(--error, #ff6b6b)' : 'var(--accent)')};
+    box-shadow: 0 0 10px
+      ${(props) => (props.error ? 'rgba(255, 107, 107, 0.2)' : 'rgba(198, 169, 100, 0.2)')};
   }
 
   &::placeholder {
@@ -319,9 +326,23 @@ const Input = styled.input`
   }
 
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
-    20%, 40%, 60%, 80% { transform: translateX(3px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-3px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(3px);
+    }
   }
 `;
 
@@ -401,13 +422,13 @@ const SubmitMessage = styled(motion.div)`
   font-family: 'Cormorant', serif;
   font-size: min(1.8vw, 1rem);
   text-align: center;
-  
+
   &.success {
     background-color: rgba(76, 175, 80, 0.1);
     color: #4caf50;
     border: 1px solid rgba(76, 175, 80, 0.3);
   }
-  
+
   &.error {
     background-color: rgba(255, 107, 107, 0.1);
     color: #ff6b6b;

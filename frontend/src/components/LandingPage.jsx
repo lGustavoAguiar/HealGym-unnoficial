@@ -60,10 +60,7 @@ const LandingPage = () => {
       <Features>
         <FeatureTitle>Por que escolher o HealGym?</FeatureTitle>
         <FeatureGrid>
-          <FeatureCard
-            whileHover={{ y: -10 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
+          <FeatureCard whileHover={{ y: -10 }} transition={{ type: 'spring', stiffness: 300 }}>
             <FiTarget size="min(5vw, 40px)" color="var(--accent)" />
             <FeatureCardTitle>Treino Personalizado</FeatureCardTitle>
             <FeatureCardText>
@@ -71,10 +68,7 @@ const LandingPage = () => {
             </FeatureCardText>
           </FeatureCard>
 
-          <FeatureCard
-            whileHover={{ y: -10 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
+          <FeatureCard whileHover={{ y: -10 }} transition={{ type: 'spring', stiffness: 300 }}>
             <GiMuscleUp size="min(5vw, 40px)" color="var(--accent)" />
             <FeatureCardTitle>Acompanhamento</FeatureCardTitle>
             <FeatureCardText>
@@ -82,10 +76,7 @@ const LandingPage = () => {
             </FeatureCardText>
           </FeatureCard>
 
-          <FeatureCard
-            whileHover={{ y: -10 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
+          <FeatureCard whileHover={{ y: -10 }} transition={{ type: 'spring', stiffness: 300 }}>
             <FiActivity size="min(5vw, 40px)" color="var(--accent)" />
             <FeatureCardTitle>Dieta Especializada</FeatureCardTitle>
             <FeatureCardText>
@@ -93,10 +84,7 @@ const LandingPage = () => {
             </FeatureCardText>
           </FeatureCard>
 
-          <FeatureCard
-            whileHover={{ y: -10 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
+          <FeatureCard whileHover={{ y: -10 }} transition={{ type: 'spring', stiffness: 300 }}>
             <FiUser size="min(5vw, 40px)" color="var(--accent)" />
             <FeatureCardTitle>Perfil Individual</FeatureCardTitle>
             <FeatureCardText>
@@ -125,7 +113,12 @@ const Hero = styled.section`
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   padding: 0;
   position: relative;
   overflow: hidden;
@@ -173,14 +166,14 @@ const HeroSubtitle = styled.p`
 `;
 
 const StartButton = styled(motion.button)`
-font-family: 'Poppins', sans-serif;
+  font-family: 'Poppins', sans-serif;
   padding: min(2.5vh, 20px) min(6vw, 50px);
   font-size: min(2vw, 1.1rem);
   background: var(--gold-gradient);
   color: var(--background);
   border-radius: 2px;
   transition: all 0.4s ease;
-  text-transform: uppercase; 
+  text-transform: uppercase;
   letter-spacing: 0.2vw;
   position: relative;
   z-index: 1;
@@ -202,7 +195,7 @@ const Features = styled.section`
   display: flex;
   flex-direction: column;
   align-items: center;
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -222,7 +215,7 @@ const FeatureTitle = styled.h2`
   position: relative;
   width: 100%;
   cursor: default;
-  
+
   &::after {
     content: '';
     position: absolute;

@@ -1,19 +1,19 @@
-import { GlobalStyles } from './styles/GlobalStyles'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
-import LandingPage from './components/LandingPage'
-import RegisterPage from './components/RegisterPage'
-import LoginPage from './components/LoginPage'
-import ForgotPasswordPage from './components/ForgotPasswordPage'
-import ResetPasswordPage from './components/ResetPasswordPage'
-import ConfirmDeletePage from './components/ConfirmDeletePage'
-import ProfileSetupPage from './components/ProfileSetupPage'
-import EditProfilePage from './components/EditProfilePage'
-import Dashboard from './components/Dashboard'
-import TreinoPage from './components/TreinoPage'
-import DietaPage from './components/DietaPage'
-import ProtectedRoute from './components/ProtectedRoute'
-import ProfileSetupGuard from './components/ProfileSetupGuard'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import LandingPage from './components/LandingPage';
+import RegisterPage from './components/RegisterPage';
+import LoginPage from './components/LoginPage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
+import ConfirmDeletePage from './components/ConfirmDeletePage';
+import ProfileSetupPage from './components/ProfileSetupPage';
+import EditProfilePage from './components/EditProfilePage';
+import Dashboard from './components/Dashboard';
+import TreinoPage from './components/TreinoPage';
+import DietaPage from './components/DietaPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import ProfileSetupGuard from './components/ProfileSetupGuard';
+import { GlobalStyles } from './styles/GlobalStyles';
 
 function App() {
   return (
@@ -27,58 +27,58 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route path="/confirm-delete/:token" element={<ConfirmDeletePage />} />
-          <Route 
-            path="/profile-setup" 
+          <Route
+            path="/profile-setup"
             element={
               <ProtectedRoute>
                 <ProfileSetupPage />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/edit-profile" 
+          <Route
+            path="/edit-profile"
             element={
               <ProtectedRoute>
                 <ProfileSetupGuard>
                   <EditProfilePage />
                 </ProfileSetupGuard>
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/dashboard" 
+          <Route
+            path="/dashboard"
             element={
               <ProtectedRoute>
                 <ProfileSetupGuard>
                   <Dashboard />
                 </ProfileSetupGuard>
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/treino" 
+          <Route
+            path="/treino"
             element={
               <ProtectedRoute>
                 <ProfileSetupGuard>
                   <TreinoPage />
                 </ProfileSetupGuard>
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/dieta" 
+          <Route
+            path="/dieta"
             element={
               <ProtectedRoute>
                 <ProfileSetupGuard>
                   <DietaPage />
                 </ProfileSetupGuard>
               </ProtectedRoute>
-            } 
+            }
           />
         </Routes>
       </Router>
     </AuthProvider>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -9,7 +9,7 @@ const ConfirmDeletePage = () => {
   const navigate = useNavigate();
   const { token } = useParams();
   const { logout } = useAuth();
-  
+
   const [isConfirming, setIsConfirming] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -18,7 +18,7 @@ const ConfirmDeletePage = () => {
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       document.body.style.overflow = '';
       document.documentElement.style.overflow = '';
@@ -31,17 +31,16 @@ const ConfirmDeletePage = () => {
 
     try {
       const response = await api.confirmAccountDeletion(token);
-      
+
       setMessage(response.message || 'Conta excluída com sucesso!');
       setIsSuccess(true);
       setShowConfirmation(false);
-      
+
       // Fazer logout após 3 segundos
       setTimeout(() => {
         logout();
         navigate('/', { replace: true });
       }, 3000);
-      
     } catch (error) {
       setMessage(error.message || 'Erro ao confirmar exclusão. O link pode ter expirado.');
       setIsSuccess(false);
@@ -68,7 +67,7 @@ const ConfirmDeletePage = () => {
             <div>Esta é sua última chance de reconsiderar</div>
             <div>Esta ação é permanente e irreversível</div>
           </PageSubtitle>
-          
+
           {!message && (
             <WarningContainer>
               <WarningIcon>🚨</WarningIcon>
@@ -77,7 +76,7 @@ const ConfirmDeletePage = () => {
                 Você está prestes a <strong>EXCLUIR PERMANENTEMENTE</strong> sua conta no HealGym.
                 Esta ação resultará na perda completa de:
               </WarningText>
-              
+
               <WarningList>
                 <li>🗑️ Todos os seus dados pessoais e de perfil</li>
                 <li>🗑️ Histórico completo de treinos e progressos</li>
@@ -97,7 +96,7 @@ const ConfirmDeletePage = () => {
                 >
                   💚 Não, Manter Minha Conta
                 </CancelButton>
-                
+
                 <ConfirmButton
                   onClick={() => setShowConfirmation(true)}
                   whileHover={{ scale: 1.05 }}
@@ -122,9 +121,7 @@ const ConfirmDeletePage = () => {
                 {isSuccess && <SuccessIcon>✅</SuccessIcon>}
                 {!isSuccess && <ErrorIcon>❌</ErrorIcon>}
                 <MessageText>{message}</MessageText>
-                {isSuccess && (
-                  <RedirectText>Redirecionando para a página inicial...</RedirectText>
-                )}
+                {isSuccess && <RedirectText>Redirecionando para a página inicial...</RedirectText>}
               </MessageContainer>
             )}
           </AnimatePresence>
@@ -151,20 +148,21 @@ const ConfirmDeletePage = () => {
               <ModalHeader>
                 <ModalTitle>💀 ÚLTIMA CONFIRMAÇÃO</ModalTitle>
               </ModalHeader>
-              
+
               <ModalBody>
                 <FinalWarningText>
                   <strong>ESTA É SUA ÚLTIMA CHANCE!</strong>
                 </FinalWarningText>
                 <FinalWarningText>
-                  Após clicar em "EXCLUIR AGORA", sua conta será <strong>PERMANENTEMENTE REMOVIDA </strong> 
-                   e você <strong>NUNCA MAIS</strong> poderá recuperá-la.
+                  Após clicar em "EXCLUIR AGORA", sua conta será{' '}
+                  <strong>PERMANENTEMENTE REMOVIDA </strong>e você <strong>NUNCA MAIS</strong>{' '}
+                  poderá recuperá-la.
                 </FinalWarningText>
                 <FinalConfirmQuestion>
                   Tem certeza absoluta que deseja continuar?
                 </FinalConfirmQuestion>
               </ModalBody>
-              
+
               <ModalFooter>
                 <ModalCancelButton
                   onClick={() => setShowConfirmation(false)}
@@ -196,7 +194,12 @@ const Container = styled.div`
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--gradient-start) 0%,
+    var(--gradient-mid) 50%,
+    var(--gradient-end) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,10 +262,10 @@ const PageSubtitle = styled.p`
   cursor: default;
   line-height: 1.4;
   font-weight: 600;
-  
+
   div {
     margin-bottom: 0.3rem;
-    
+
     &:last-child {
       margin-bottom: 0;
     }
@@ -284,10 +287,15 @@ const WarningIcon = styled.div`
   text-align: center;
   margin-bottom: min(2vh, 20px);
   animation: pulse 2s infinite;
-  
+
   @keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
   }
 `;
 
@@ -321,7 +329,7 @@ const WarningList = styled.ul`
   font-size: min(1.8vw, 1.1rem);
   margin: min(3vh, 30px) 0;
   padding-left: min(3vw, 30px);
-  
+
   li {
     margin-bottom: min(1vh, 12px);
     line-height: 1.4;
@@ -347,7 +355,7 @@ const ButtonGroup = styled.div`
   flex-direction: column;
   gap: min(2vh, 15px);
   margin-top: min(4vh, 40px);
-  
+
   @media (min-width: 768px) {
     flex-direction: row;
     justify-content: center;
@@ -406,13 +414,13 @@ const MessageContainer = styled(motion.div)`
   border-radius: 12px;
   text-align: center;
   margin-top: min(3vh, 30px);
-  
+
   &.success {
     background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
     border: 2px solid #16a34a;
     color: #166534;
   }
-  
+
   &.error {
     background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
     border: 2px solid #dc2626;
@@ -424,11 +432,21 @@ const SuccessIcon = styled.div`
   font-size: 3rem;
   margin-bottom: min(2vh, 15px);
   animation: bounce 1s infinite;
-  
+
   @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
   }
 `;
 
@@ -436,11 +454,18 @@ const ErrorIcon = styled.div`
   font-size: 3rem;
   margin-bottom: min(2vh, 15px);
   animation: shake 0.5s infinite;
-  
+
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-5px);
+    }
+    75% {
+      transform: translateX(5px);
+    }
   }
 `;
 
@@ -597,14 +622,14 @@ const ModalDeleteButton = styled(motion.button)`
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
     transition: left 0.5s;
   }
 
   &:hover {
     box-shadow: 0 6px 20px rgba(220, 38, 38, 0.6);
     transform: translateY(-2px);
-    
+
     &::before {
       left: 100%;
     }

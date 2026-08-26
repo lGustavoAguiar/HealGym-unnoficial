@@ -1,8 +1,6 @@
 import { body } from 'express-validator';
 
-const optionally = (validation, optional) => (
-  optional ? validation.optional() : validation
-);
+const optionally = (validation, optional) => (optional ? validation.optional() : validation);
 
 export const createProfileValidationRules = ({ optional = false } = {}) => [
   optionally(body('gender'), optional)
@@ -16,7 +14,9 @@ export const createProfileValidationRules = ({ optional = false } = {}) => [
     .withMessage('Peso deve estar entre 30 e 300 kg'),
   optionally(body('bodyType'), optional)
     .isIn(['ectomorfo', 'mesomorfo', 'endomorfo'])
-    .withMessage(optional ? 'Biotipo deve ser ectomorfo, mesomorfo ou endomorfo' : 'Biotipo inválido'),
+    .withMessage(
+      optional ? 'Biotipo deve ser ectomorfo, mesomorfo ou endomorfo' : 'Biotipo inválido',
+    ),
   optionally(body('age'), optional)
     .isInt({ min: 13, max: 120 })
     .withMessage('Idade deve estar entre 13 e 120 anos'),
