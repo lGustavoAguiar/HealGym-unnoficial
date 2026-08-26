@@ -609,10 +609,6 @@ const Container = styled.div`
   align-items: flex-start;
   justify-content: center;
   position: relative;
-
-  &.allow-scroll {
-    padding: min(2vh, 20px) 0;
-  }
 `;
 
 const LogoTitle = styled.h1`

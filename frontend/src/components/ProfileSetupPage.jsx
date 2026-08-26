@@ -8,7 +8,6 @@ import { validatePhysicalProfileField } from '../utils/profileValidation';
 
 const ProfileSetupPage = () => {
   const navigate = useNavigate();
-  const formRef = useRef(null);
   const { updateUser, logout } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -125,7 +124,7 @@ const ProfileSetupPage = () => {
   return (
     <Container className="custom-scroll">
       <LogoTitle onClick={handleLogoClick}>HealGym</LogoTitle>
-      <FormSection ref={formRef}>
+      <FormSection>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

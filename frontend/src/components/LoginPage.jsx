@@ -1,12 +1,11 @@
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const formRef = useRef(null);
   const { login, loading, isAuthenticated } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -116,7 +115,7 @@ const LoginPage = () => {
   return (
     <Container className="custom-scroll">
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
-      <FormSection ref={formRef}>
+      <FormSection>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

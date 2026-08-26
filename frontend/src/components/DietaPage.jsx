@@ -99,7 +99,6 @@ const DietaPage = () => {
     return {
       calorias: caloriasMeta,
       tmb: Math.round(tmb),
-      gastoEnergetico,
       imc: Math.round(imc * 10) / 10,
       classificacaoIMC,
       objetivo,
@@ -238,16 +237,13 @@ const DietaPage = () => {
       magnesio: 0,
       fosforo: 0,
       potassio: 0,
-      sodio: 0,
       zinco: 0,
       vitaminaA: 0,
       vitaminaC: 0,
       vitaminaD: 0,
       vitaminaE: 0,
       vitaminaB12: 0,
-      folato: 0,
-      gorduraSaturada: 0,
-      colesterol: 0
+      folato: 0
     };
 
     mealPlan.forEach(refeicao => {
@@ -262,7 +258,6 @@ const DietaPage = () => {
           totais.magnesio += (nutrition.magnesio || 0);
           totais.fosforo += (nutrition.fosforo || 0);
           totais.potassio += (nutrition.potassio || 0);
-          totais.sodio += (nutrition.sodio || 0);
           totais.zinco += (nutrition.zinco || 0);
           totais.vitaminaA += (nutrition.vitaminaA || 0);
           totais.vitaminaC += (nutrition.vitaminaC || 0);
@@ -279,7 +274,6 @@ const DietaPage = () => {
 
         // ⚠️ IMPORTANTE: Calorias NÃO vêm da tabela nutricional!
         // São calculadas APENAS pelos macros usando o modelo 4/4/9
-        // totais.calorias += (nutrition.calorias || 0) * fator; // ❌ NÃO USAR
         
         totais.proteinas += (nutrition.proteinas || 0) * fator;
         totais.carboidratos += (nutrition.carboidratos || 0) * fator;
@@ -290,7 +284,6 @@ const DietaPage = () => {
         totais.magnesio += (nutrition.magnesio || 0) * fator;
         totais.fosforo += (nutrition.fosforo || 0) * fator;
         totais.potassio += (nutrition.potassio || 0) * fator;
-        totais.sodio += (nutrition.sodio || 0) * fator;
         totais.zinco += (nutrition.zinco || 0) * fator;
         totais.vitaminaA += (nutrition.vitaminaA || 0) * fator;
         totais.vitaminaC += (nutrition.vitaminaC || 0) * fator;
@@ -298,8 +291,6 @@ const DietaPage = () => {
         totais.vitaminaE += (nutrition.vitaminaE || 0) * fator;
         totais.vitaminaB12 += (nutrition.vitaminaB12 || 0) * fator;
         totais.folato += (nutrition.folato || 0) * fator;
-        totais.gorduraSaturada += (nutrition.gorduraSaturada || 0) * fator;
-        totais.colesterol += (nutrition.colesterol || 0) * fator;
       });
     });
 

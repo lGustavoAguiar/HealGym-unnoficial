@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint src vite.config.js",
+    "knip": "knip",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^10.9.1",
     "globals": "^17.11.0",
+    "knip": "^6.32.2",
     "vite": "^7.1.2"
   }
 }

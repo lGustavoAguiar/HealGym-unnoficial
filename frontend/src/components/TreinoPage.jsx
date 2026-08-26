@@ -10,19 +10,16 @@ const TIPOS_DIVISAO = [
   {
     value: 'ABC',
     label: 'ABC — 3 dias',
-    short: '3 dias',
     detalhe: 'A: peito + tríceps · B: costas + bíceps · C: pernas + ombros'
   },
   {
     value: 'ABCD',
     label: 'ABCD — 4 dias',
-    short: '4 dias',
     detalhe: 'A: peito + tríceps · B: costas + bíceps · C: só pernas · D: ombros + braços'
   },
   {
     value: 'FULL_BODY',
     label: 'Full body',
-    short: 'Corpo inteiro',
     detalhe: 'Peito, costas, pernas, ombros e braços na mesma sessão'
   }
 ];
@@ -163,14 +160,6 @@ const TreinoPage = () => {
     carregarHistorico();
   }, []);
 
-  // Limpar timers ao desmontar
-  useEffect(() => {
-    return () => {
-      if (timerTreinoRef.current) clearInterval(timerTreinoRef.current);
-      if (timerDescansoRef.current) clearInterval(timerDescansoRef.current);
-    };
-  }, []);
-
   // Fechar modal com tecla ESC
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -242,7 +231,7 @@ const TreinoPage = () => {
         setHistorico(response.data);
       }
     } catch {
-      setHistorico([]);
+      // Preserva o histórico já carregado em falhas transitórias.
     } finally {
       setLoadingHistorico(false);
     }

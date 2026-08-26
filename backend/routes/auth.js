@@ -18,13 +18,25 @@ const authenticationLimiter = rateLimit({
   message: { error: 'Muitas tentativas. Tente novamente em alguns minutos.' },
 });
 
-const passwordRecoveryLimiter = rateLimit({
+const passwordRecoveryRequestLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { error: 'Muitas solicitações. Tente novamente em alguns minutos.' },
+  message: { error: 'Muitas solicitações de recuperação. Tente novamente em alguns minutos.' },
 });
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Muitas tentativas de redefinição. Tente novamente em alguns minutos.' },
+});
+
+const PASSWORD_RECOVERY_RESPONSE = {
+  message: 'Se o e-mail estiver cadastrado, você receberá as instruções de recuperação.',
+};
 
 const generateToken = (userId) => {
   return jwt.sign(
@@ -295,7 +307,7 @@ router.post('/verify-token', authenticate, (req, res) => {
   });
 });
 
-router.post('/forgot-password', passwordRecoveryLimiter, [
+router.post('/forgot-password', passwordRecoveryRequestLimiter, [
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -305,16 +317,8 @@ router.post('/forgot-password', passwordRecoveryLimiter, [
     const { email } = req.body;
     
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.json({
-        message: 'Se o e-mail estiver cadastrado, você receberá as instruções de recuperação.'
-      });
-    }
-
-    if (!user.isActive) {
-      return res.status(400).json({
-        error: 'Conta desativada. Entre em contato com o suporte.'
-      });
+    if (!user || !user.isActive) {
+      return res.json(PASSWORD_RECOVERY_RESPONSE);
     }
 
 
@@ -323,19 +327,7 @@ router.post('/forgot-password', passwordRecoveryLimiter, [
 
     try {
       const EmailService = (await import('../utils/emailSendGrid.js')).default;
-      const result = await EmailService.sendPasswordResetEmail(user.email, resetToken);
-      
-      if (result.devMode) {
-        res.json({
-          message: 'E-mail de recuperação enviado com sucesso!',
-          devMode: true,
-          note: 'Modo de desenvolvimento - configure as credenciais do Gmail para envio real'
-        });
-      } else {
-        res.json({
-          message: 'E-mail de recuperação enviado com sucesso!'
-        });
-      }
+      await EmailService.sendPasswordResetEmail(user.email, resetToken);
     } catch (emailError) {
       // Remover o token se falhou
       user.passwordResetToken = undefined;
@@ -343,10 +335,9 @@ router.post('/forgot-password', passwordRecoveryLimiter, [
       await user.save({ validateBeforeSave: false });
 
       console.error('Erro ao enviar email de recuperação:', emailError);
-      res.status(500).json({
-        error: 'Erro ao enviar e-mail de recuperação. Tente novamente.'
-      });
     }
+
+    return res.json(PASSWORD_RECOVERY_RESPONSE);
   } catch (error) {
     console.error('Erro na recuperação de senha:', error);
     res.status(500).json({
@@ -356,7 +347,7 @@ router.post('/forgot-password', passwordRecoveryLimiter, [
 });
 
 
-router.post('/reset-password/:token', passwordRecoveryLimiter, [
+router.post('/reset-password/:token', passwordResetLimiter, [
   body('password')
     .isLength({ min: 6 })
     .withMessage('Nova senha deve ter pelo menos 6 caracteres')
@@ -432,7 +423,7 @@ router.post('/request-account-deletion', authenticate, async (req, res) => {
         res.json({
           message: 'E-mail de confirmação de exclusão enviado com sucesso!',
           devMode: true,
-          note: 'Modo de desenvolvimento - configure as credenciais do Gmail para envio real'
+          note: 'Modo de desenvolvimento - use o link exibido no terminal ou configure o SendGrid'
         });
       } else {
         res.json({

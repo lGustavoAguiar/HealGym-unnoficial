@@ -21,10 +21,14 @@ class EmailService {
   }
 
   async sendPasswordResetEmail(email, resetToken) {
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+
     if (!this.initialized) {
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV !== 'development') {
         throw new Error('Serviço de e-mail não configurado.');
       }
+
+      console.warn(`[DESENVOLVIMENTO] Link para testar a recuperação de senha: ${resetUrl}`);
 
       return {
         success: true,
@@ -32,8 +36,6 @@ class EmailService {
         devMode: true,
       };
     }
-
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
 
     const msg = {
       to: email,
@@ -54,15 +56,17 @@ class EmailService {
   }
 
   async sendAccountDeletionEmail(email, deletionToken) {
+    const confirmationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-delete/${deletionToken}`;
+
     if (!this.initialized) {
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.NODE_ENV !== 'development') {
         throw new Error('Serviço de e-mail não configurado.');
       }
 
+      console.warn(`[DESENVOLVIMENTO] Link para testar a exclusão de conta: ${confirmationUrl}`);
+
       return { success: true, messageId: 'dev-mode-' + Date.now(), devMode: true };
     }
-
-    const confirmationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/confirm-delete/${deletionToken}`;
 
     const msg = {
       to: email,

@@ -1,12 +1,11 @@
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../services/api';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
-  const formRef = useRef(null);
 
   const [formData, setFormData] = useState({
     email: ''
@@ -89,7 +88,7 @@ const ForgotPasswordPage = () => {
   return (
     <Container>
       <LogoTitle onClick={() => navigate('/')}>HealGym</LogoTitle>
-      <FormSection ref={formRef}>
+      <FormSection>
         <motion.div
           key={animationKey}
           initial={{ opacity: 0, y: 20 }}

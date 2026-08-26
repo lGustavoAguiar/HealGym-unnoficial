@@ -174,9 +174,9 @@ const exerciseDatabase = {
 // Função para selecionar exercícios baseado no tempo disponível
 function selecionarExercicios(grupamento, tempoDisponivel) {
   const exerciciosSelecionados = [];
-  let seriesPadrao = 3;
-  let repeticoesPadrao = '8-12';
-  let descansoPadrao = '60-90s';
+  let seriesPadrao;
+  let repeticoesPadrao;
+  let descansoPadrao;
 
   // Ajustar volume baseado no tempo
   if (tempoDisponivel <= 30) {

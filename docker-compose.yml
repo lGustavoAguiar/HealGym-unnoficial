@@ -3,8 +3,8 @@ services:
     image: mongo:7.0-jammy
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Defina MONGO_ROOT_USERNAME no arquivo .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Defina MONGO_ROOT_PASSWORD no arquivo .env}
       MONGO_INITDB_DATABASE: healgym
     volumes:
       - mongodb_data:/data/db
@@ -20,11 +20,11 @@ services:
     environment:
       NODE_ENV: development
       PORT: 5000
-      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongodb:27017/healgym?authSource=admin
-      JWT_SECRET: ${JWT_SECRET}
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:?Defina MONGO_ROOT_USERNAME no arquivo .env}:${MONGO_ROOT_PASSWORD:?Defina MONGO_ROOT_PASSWORD no arquivo .env}@mongodb:27017/healgym?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
       FRONTEND_URL: http://localhost:3000
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
-      EMAIL_FROM: ${EMAIL_FROM}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
       USDA_API_KEY: ${USDA_API_KEY:-DEMO_KEY}
     volumes:
       - ./backend:/app

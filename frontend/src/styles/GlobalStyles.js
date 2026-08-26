@@ -4,7 +4,6 @@ import '@fontsource/cinzel/600.css';
 
 export const GlobalStyles = createGlobalStyle`
   :root {
-    --primary: #1a1a1a;
     --secondary: #2d2d2d;
     --accent: #C6A964;
     --accent-light: #D4B87B;
