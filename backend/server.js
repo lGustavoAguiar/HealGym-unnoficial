@@ -1,11 +1,11 @@
-import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import express from 'express';
 import helmet from 'helmet';
+import mongoose from 'mongoose';
 import authRoutes from './routes/auth.js';
-import userRoutes from './routes/users.js';
 import nutritionRoutes from './routes/nutrition.js';
+import userRoutes from './routes/users.js';
 import workoutRoutes from './routes/workouts.js';
 
 dotenv.config();
